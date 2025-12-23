@@ -23,7 +23,6 @@ function login(){
     document.getElementById("terminal").style.display="flex";
     setupSidebar();
     
-    // После логина перенаправляем на нужный раздел сразу
     if (CURRENT_ROLE === "ADMIN") {
         loadReports(renderReports);
     } else {
@@ -36,9 +35,10 @@ document.getElementById("login-btn").onclick = login;
 /* ===== SIDEBAR (ИЗМЕНЕНО) ===== */
 function setupSidebar(){
     const sidebar=document.getElementById("sidebar");
+    if (!sidebar) return; // Защита от ошибки
+
     sidebar.innerHTML="";
 
-    // Кнопка ОТЧЕТ МЛК видна ТОЛЬКО КУРАТОРУ
     if(CURRENT_ROLE==="CURATOR"){
         const btnMLK=document.createElement("button");
         btnMLK.textContent="ОТЧЕТ МЛК";
@@ -46,7 +46,6 @@ function setupSidebar(){
         sidebar.appendChild(btnMLK);
     }
 
-    // Кнопки REPORTS и ADMIN видны ТОЛЬКО АДМИНУ
     if(CURRENT_ROLE==="ADMIN"){
         const btnReports=document.createElement("button");
         btnReports.textContent="REPORTS";
@@ -68,7 +67,7 @@ function loadReports(callback){
         const data=snapshot.val()||{};
         reports = Object.keys(data).map(key => ({
             ...data[key],
-            id: key // Сохраняем ID внутри объекта
+            id: key 
         }));
         if(callback) callback();
     });
@@ -77,7 +76,8 @@ function loadReports(callback){
 /* ===== MLK SCREEN (КУРАТОР) (ИСПРАВЛЕНО СОЗДАНИЕ ЭЛЕМЕНТОВ) ===== */
 function renderMLKScreen(){
     const content = document.getElementById("content");
-    content.innerHTML = ""; // Очищаем полностью
+    if (!content) return; // Защита от ошибки
+    content.innerHTML = ""; 
 
     if(CURRENT_ROLE === "CURATOR") {
         const btnContainer = document.createElement("div");
@@ -104,8 +104,7 @@ function renderMLKScreen(){
 /* ===== MLK FORM (КУРАТОР) (ИСПРАВЛЕНО: Убедились, что listDiv существует) ===== */
 function renderMLKForm(){
     const listDiv = document.getElementById("mlk-list");
-    // Проверяем, что элемент найден, чтобы избежать ошибки Cannot set properties of null
-    if (!listDiv) return; 
+    if (!listDiv) return; // Защита от ошибки Cannot set properties of null
 
     listDiv.innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
@@ -132,12 +131,10 @@ function addMLKReport(){
     });
 }
 
-/* ===== TYPE EFFECT (УДАЛЕНО ИЗ ЭТОЙ ВЕРСИИ) ===== */
-
-
 /* ===== MLK LIST SCREEN (КУРАТОР) (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ HTML) ===== */
 function renderMLKList(){
     const listDiv = document.getElementById("mlk-list");
+    if (!listDiv) return; // Защита от ошибки
     listDiv.innerHTML = "";
 
     const filteredReports = (CURRENT_ROLE === "CURATOR") ? reports.filter(r=>r.author===CURRENT_ROLE) : reports;
@@ -156,7 +153,6 @@ function renderMLKList(){
         reportDiv.className = "report";
         listDiv.appendChild(reportDiv);
 
-        // Используем innerHTML напрямую
         reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>
@@ -170,6 +166,7 @@ function renderMLKList(){
 /* ===== REPORTS (ADMIN) ===== */
 function renderReports(){
     const content = document.getElementById("content");
+    if (!content) return; // Защита от ошибки
     if(CURRENT_ROLE!=="ADMIN"){ content.textContent="ACCESS DENIED"; return; }
     
     let html=`<h3>MLK REPORTS (ADMIN VIEW)</h3>`;
@@ -209,4 +206,8 @@ window.confirmReport = function(id) {
 }
 
 /* ===== ADMIN PANEL ===== */
-function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
+function renderAdmin(){ 
+    const content = document.getElementById("content");
+    if (!content) return; // Защита от ошибки
+    content.textContent="ADMIN PANEL ACTIVE"; 
+}

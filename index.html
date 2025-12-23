@@ -1,49 +1,34 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>SECURE CURATOR TERMINAL</title>
-    <link rel="stylesheet" href="style.css">
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+<meta charset="UTF-8">
+<title>SECURE CURATOR TERMINAL</title>
+<style>
+body { background:#000; color:#0f0; font-family:monospace; margin:0; }
+button { background:#111; color:#0f0; border:1px solid #0f0; padding:5px 10px; cursor:pointer; }
+button:hover { background:#0f0; color:#000; }
+#terminal { display:none; height:100vh; }
+#sidebar { width:200px; border-right:1px solid #0f0; padding:10px; }
+#content { flex:1; padding:10px; }
+input, textarea { width:100%; background:#000; color:#0f0; border:1px solid #0f0; padding:5px; }
+</style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
-    <h1>SECURE CURATOR TERMINAL</h1>
-    <input type="password" id="password" placeholder="ACCESS KEY">
-    <button onclick="login()">ENTER</button>
-    <div id="login-error"></div>
+    <input type="password" id="password" placeholder="Введите пароль">
+    <button onclick="login()">Войти</button>
+    <p id="login-error"></p>
 </div>
 
-<!-- TERMINAL -->
-<div id="terminal">
+<div id="terminal" style="display:flex;">
     <div id="sidebar"></div>
     <div id="content"></div>
 </div>
 
-<!-- Firebase config & app -->
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCGqNn_jx13SKHBYMZLhUJ7nEbK32vAJx4",
-  authDomain: "curatorterminal.firebaseapp.com",
-  databaseURL: "https://curatorterminal-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "curatorterminal",
-  storageBucket: "curatorterminal.firebasestorage.app",
-  messagingSenderId: "577721444184",
-  appId: "1:577721444184:web:58f4d0aeede9a8c0ba672d",
-  measurementId: "G-X0N5JT0K8D"
-};
-
-const app = firebase.initializeApp(firebaseConfig);
-const analytics = firebase.analytics(app);
-const db = firebase.database();
-</script>
-
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>

@@ -1,6 +1,6 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; // EOD
-const HASH_CURATOR = "be32";  // 123
+const HASH_ADMIN   = "10cda"; 
+const HASH_CURATOR = "be32";  
 let CURRENT_ROLE = null;
 
 function simpleHash(str){
@@ -40,12 +40,12 @@ function setupSidebar(){
     if(CURRENT_ROLE==="ADMIN"){
         const btnReports=document.createElement("button");
         btnReports.textContent="REPORTS";
-        btnReports.onclick=()=>openSection("reports");
+        btnReports.onclick=()=>renderReports(); // Исправлен прямой вызов
         sidebar.appendChild(btnReports);
 
         const btnAdmin=document.createElement("button");
         btnAdmin.textContent="ADMIN";
-        btnAdmin.onclick=()=>openSection("admin");
+        btnAdmin.onclick=()=>renderAdmin();
         sidebar.appendChild(btnAdmin);
     }
 }
@@ -54,10 +54,9 @@ function setupSidebar(){
 let reports=[];
 
 function loadReports(callback){
-    // Используем .once для получения данных из Firebase
     db.ref('mlk_reports').once('value').then(snapshot=>{
         const data=snapshot.val()||{};
-        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Сохраняем ID (ключ) вместе с данными
+        // Сохраняем ID ключа внутри каждого объекта
         reports = Object.keys(data).map(key => ({
             ...data[key],
             id: key
@@ -112,17 +111,15 @@ function addMLKReport(){
     const action = document.getElementById("mlk-action").value.trim();
     if(!tag||!action){ alert("Заполните все поля"); return; }
 
-    const newReportRef = db.ref('mlk_reports').push();
     const report = {tag, action, author: CURRENT_ROLE, time: new Date().toLocaleString(), confirmed: false, deleted: false};
 
-    newReportRef.set(report).then(()=>{
+    db.ref('mlk_reports').push(report).then(()=>{
         alert("Отчет сохранен");
         loadReports(renderMLKScreen);
     });
 }
 
 /* ===== TYPE EFFECT ===== */
-// Исправлено: работаем с отдельным контейнером для текста, чтобы не затирать кнопки
 function typeText(element, text, index = 0, callback) {
     if(index < text.length){
         element.innerHTML += text.charAt(index);
@@ -150,12 +147,12 @@ function renderMLKList(){
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
         
-        // Создаем контейнер для текста (чтобы анимация не ломала кнопки)
-        const textSpan = document.createElement("div");
-        reportDiv.appendChild(textSpan);
+        // Отдельный контейнер для текста, чтобы не затирать кнопки
+        const textContainer = document.createElement("div");
+        reportDiv.appendChild(textContainer);
         listDiv.appendChild(reportDiv);
 
-        const htmlContent = `
+        const html = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>
 <strong>ROLE:</strong> ${r.author}<br>
@@ -163,13 +160,11 @@ function renderMLKList(){
 <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
         `;
         
-        // Запускаем печать
-        typeText(textSpan, htmlContent, 0, () => {
-            // Добавляем кнопки только ПОСЛЕ завершения печати или отдельно
+        typeText(textContainer, html, 0, () => {
             if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
-                const actionsDiv = document.createElement("div");
-                actionsDiv.style.marginTop = "10px";
-
+                const actions = document.createElement("div");
+                actions.style.marginTop = "10px";
+                
                 const btnDel=document.createElement("button");
                 btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
                 btnDel.onclick=()=> deleteReport(r.id);
@@ -178,9 +173,9 @@ function renderMLKList(){
                 btnConfirm.textContent="Подтвердить";
                 btnConfirm.onclick=()=> confirmReport(r.id);
 
-                actionsDiv.appendChild(btnDel);
-                actionsDiv.appendChild(btnConfirm);
-                reportDiv.appendChild(actionsDiv);
+                actions.appendChild(btnDel);
+                actions.appendChild(btnConfirm);
+                reportDiv.appendChild(actions);
             }
         });
     });
@@ -188,34 +183,32 @@ function renderMLKList(){
 
 /* ===== REPORTS (ADMIN) ===== */
 function renderReports(){
-    if(CURRENT_ROLE!=="ADMIN"){ document.getElementById("content").textContent="REPORT LIST AVAILABLE FOR ADMIN ONLY"; return; }
+    const content = document.getElementById("content");
+    if(CURRENT_ROLE!=="ADMIN"){ content.textContent="ACCESS DENIED"; return; }
+    
     let html=`<h3>MLK REPORTS</h3>`;
     if(reports.length===0){ html+="<p>No reports</p>"; }
     else{
         html+=`<table>
             <tr><th>DISCORD</th><th>ACTION</th><th>ROLE</th><th>TIME</th><th>STATUS</th><th>ACTIONS</th></tr>`;
-        reports.forEach(r => {
-            let status="рассматривается";
-            if(r.deleted) status="удален";
-            else if(r.confirmed) status="подтвержден";
-
+        reports.forEach(r=>{
+            let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
             html+=`<tr>
                 <td>${r.tag}</td><td>${r.action}</td><td>${r.author}</td><td>${r.time}</td><td>${status}</td>
-                <td>${(!r.deleted&&!r.confirmed)?`<button onclick="confirmReport('${r.id}')">Подтвердить</button>
-                <button onclick="deleteReport('${r.id}')">Удалить</button>`:""}</td>
+                <td>${(!r.deleted&&!r.confirmed)?`
+                <button onclick="deleteReport('${r.id}')">Удалить</button>
+                <button onclick="confirmReport('${r.id}')">Подтвердить</button>`:""}</td>
             </tr>`;
         });
         html+="</table>";
     }
-    document.getElementById("content").innerHTML=html;
+    content.innerHTML=html;
 }
 
 /* ===== DELETE & CONFIRM ===== */
-// Делаем функции глобальными, чтобы onclick в строках таблицы их видел
 window.deleteReport = function(key){ 
     if(!confirm("Удалить этот отчет?")) return; 
     db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(() => {
-        // Перерисовываем тот экран, на котором находимся
         if(document.querySelector('table')) renderReports(); else renderMLKList();
     })); 
 }
@@ -228,11 +221,3 @@ window.confirmReport = function(key){
 
 /* ===== ADMIN PANEL ===== */
 function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
-
-/* ===== NAVIGATION ===== */
-function openSection(name){
-    if(name==="mlk") return renderMLKScreen();
-    if(name==="reports") return renderReports();
-    if(name==="admin") return renderAdmin();
-    document.getElementById("content").textContent="MODULE NOT FOUND";
-}

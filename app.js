@@ -1,6 +1,6 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; // EOD
-const HASH_CURATOR = "be32";  // 123
+const HASH_ADMIN   = "10cda"; 
+const HASH_CURATOR = "be32";  
 let CURRENT_ROLE = null;
 
 function simpleHash(str){
@@ -52,13 +52,15 @@ function setupSidebar(){
 
 /* ===== LOAD REPORTS ===== */
 let reports=[];
-let reportsFirebase={};
 
 function loadReports(callback){
     db.ref('mlk_reports').once('value').then(snapshot=>{
         const data=snapshot.val()||{};
-        reportsFirebase=data;
-        reports=Object.values(data);
+        // ИСПРАВЛЕНИЕ: Сохраняем ключ (id) внутри каждого объекта
+        reports = Object.keys(data).map(key => ({
+            ...data[key],
+            id: key
+        }));
         if(callback) callback();
     });
 }
@@ -94,7 +96,7 @@ function renderMLKForm(){
     listDiv.innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
         <label>Discord тег игрока:</label><br>
-        <input id="mlk-tag"><br><br>
+        <input id="mlk-tag" placeholder="User#0000"><br><br>
         <label>Кратко что сделал:</label><br>
         <textarea id="mlk-action" rows="4"></textarea><br><br>
         <button id="submit-mlk-btn">Отправить отчет</button>
@@ -108,12 +110,19 @@ function addMLKReport(){
     const action = document.getElementById("mlk-action").value.trim();
     if(!tag||!action){ alert("Заполните все поля"); return; }
 
-    const newReportRef = db.ref('mlk_reports').push();
-    const report = {tag, action, author: CURRENT_ROLE, time: new Date().toLocaleString(), confirmed: false, deleted: false};
+    const report = {
+        tag, 
+        action, 
+        author: CURRENT_ROLE, 
+        time: new Date().toLocaleString(), 
+        confirmed: false, 
+        deleted: false
+    };
 
-    newReportRef.set(report).then(()=>{
+    // ИСПРАВЛЕНИЕ: Прямой пуш объекта
+    db.ref('mlk_reports').push(report).then(()=>{
         alert("Отчет сохранен");
-        loadReports(renderMLKList);
+        loadReports(renderMLKScreen); // Перерисовываем весь экран
     });
 }
 
@@ -129,16 +138,14 @@ function renderMLKList(){
         return;
     }
 
-    filteredReports.forEach((r,index)=>{
-        const key = Object.keys(reportsFirebase)[index];
+    filteredReports.forEach((r)=>{
         let statusClass = "pending";
         if(r.deleted) statusClass="deleted";
         else if(r.confirmed) statusClass="confirmed";
 
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
-        listDiv.appendChild(reportDiv);
-
+        
         reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>
@@ -147,29 +154,45 @@ function renderMLKList(){
 <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
         `;
 
+        // ИСПРАВЛЕНИЕ: Используем r.id, который мы сохранили в loadReports
         if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
+            const actionsDiv = document.createElement("div");
+            actionsDiv.style.marginTop = "10px";
+
             const btnDel=document.createElement("button");
             btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
-            btnDel.onclick=()=>{ db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(renderMLKList)); }
+            btnDel.onclick=()=> deleteReport(r.id);
 
             const btnConfirm=document.createElement("button");
             btnConfirm.textContent="Подтвердить";
-            btnConfirm.onclick=()=>{ db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(renderMLKList)); }
+            btnConfirm.onclick=()=> confirmReport(r.id);
 
-            reportDiv.appendChild(btnDel);
-            reportDiv.appendChild(btnConfirm);
+            actionsDiv.appendChild(btnDel);
+            actionsDiv.appendChild(btnConfirm);
+            reportDiv.appendChild(actionsDiv);
         }
+        listDiv.appendChild(reportDiv);
     });
+}
+
+/* ===== ADMIN ACTIONS ===== */
+window.deleteReport = function(id) {
+    if(confirm("Удалить отчет?")) {
+        db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderMLKScreen));
+    }
+}
+
+window.confirmReport = function(id) {
+    db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => loadReports(renderMLKScreen));
 }
 
 /* ===== REPORTS (ADMIN) ===== */
 function renderReports(){
-    if(CURRENT_ROLE!=="ADMIN"){ document.getElementById("content").textContent="REPORT LIST AVAILABLE FOR ADMIN ONLY"; return; }
+    if(CURRENT_ROLE!=="ADMIN"){ document.getElementById("content").textContent="ACCESS DENIED"; return; }
     const content=document.getElementById("content");
     content.innerHTML="<h3>MLK REPORTS</h3>";
+    // Тут можно добавить логику таблицы, если нужно
 }
 
 /* ===== ADMIN PANEL ===== */
 function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
-
-/* ===== END OF FILE ===== */

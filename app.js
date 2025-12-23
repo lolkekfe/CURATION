@@ -31,7 +31,6 @@ let CURRENT_RANK = null;
 let CURRENT_STATIC_ID = null;
 let reports = [];
 let bans = [];
-
 let users = [];
 let whitelist = [];
 let passwords = {};
@@ -226,30 +225,6 @@ function checkIfBanned(username) {
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!user) return { banned: false };
     
-    const userBans = bans.filter(ban => 
-        ban.staticId === user.staticId && !ban.unbanned
-    );
-    
-    if (userBans.length > 0) {
-        const latestBan = userBans[userBans.length - 1];
-        return {
-            banned: true,
-            username: username,
-            staticId: user.staticId,
-            reason: latestBan.reason || "Причина не указана",
-            bannedBy: latestBan.bannedBy || "Неизвестно",
-            bannedDate: latestBan.bannedDate || "Неизвестно"
-        };
-    }
-    
-    return { banned: false };
-}
-
-/* ===== СИСТЕМА БАНОВ (ИСПРАВЛЕННЫЙ БЛОК) ===== */
-function checkIfBanned(username) {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) return { banned: false };
-    
     // Ищем активный бан по Static ID
     const activeBan = bans.find(ban => ban.staticId === user.staticId && !ban.unbanned);
     return activeBan ? { banned: true, ...activeBan } : { banned: false };
@@ -287,54 +262,131 @@ function banUser(username, reason) {
             showNotification(`Объект ${username} заблокирован`, "success");
             renderBanInterface();
         });
+        return true;
     });
 }
 
-/* Глобальные обработчики для кнопок в таблице */
-window.banByStaticId = function(staticId) {
-    const reason = prompt("Укажите причину блокировки:");
+function banByStaticId(staticId, reason) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав доступа", "error");
+        return Promise.reject();
+    }
+
     const user = users.find(u => u.staticId === staticId);
-    if (user && reason) {
-        banUser(user.username, reason);
+    if (!user) {
+        showNotification("Пользователь с таким Static ID не найден", "error");
+        return Promise.reject();
+    }
+
+    if (PROTECTED_USERS.includes(user.username)) {
+        showNotification("Ошибка: Попытка блокировки создателя", "error");
+        return Promise.reject();
+    }
+
+    const banData = {
+        username: user.username,
+        staticId: staticId,
+        reason: reason,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        unbanned: false
+    };
+
+    return db.ref('mlk_bans').push(banData).then(() => {
+        loadData(() => {
+            showNotification(`Пользователь ${user.username} заблокирован`, "success");
+            renderBanInterface();
+        });
+        return true;
+    });
+}
+
+function unbanByStaticId(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав доступа", "error");
+        return Promise.reject();
+    }
+
+    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
+    if (!ban) {
+        showNotification("Активный бан не найден", "error");
+        return Promise.reject();
+    }
+
+    return db.ref('mlk_bans/' + ban.id).update({ unbanned: true }).then(() => {
+        loadData(() => {
+            showNotification("Доступ восстановлен", "success");
+            renderBanInterface();
+        });
+        return true;
+    });
+}
+
+function promoteByStaticId(staticId, rank) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав доступа", "error");
+        return Promise.reject();
+    }
+
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return Promise.reject();
+    }
+
+    if (PROTECTED_USERS.includes(user.username)) {
+        showNotification("Нельзя изменять права защищенного пользователя", "error");
+        return Promise.reject();
+    }
+
+    return db.ref('mlk_users/' + user.id).update({
+        role: rank.name,
+        rank: rank.level
+    }).then(() => {
+        loadData(() => {
+            showNotification(`Пользователь ${user.username} повышен до ${rank.name}`, "success");
+            renderUsers();
+            renderBanInterface();
+        });
+        return true;
+    });
+}
+
+/* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С STATIC ID ===== */
+window.banByStaticId = function(staticId) {
+    const reason = prompt("Введите причину бана:");
+    if (reason && reason.trim()) {
+        banByStaticId(staticId, reason.trim());
     }
 };
 
 window.unbanByStaticId = function(staticId) {
-    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
-    if (ban && confirm("Восстановить доступ данному Static ID?")) {
-        db.ref('mlk_bans/' + ban.id).update({ unbanned: true }).then(() => {
-            loadData(() => {
-                renderBanInterface();
-                showNotification("Доступ восстановлен", "success");
-            });
-        });
-    }
+    unbanByStaticId(staticId);
 };
 
 window.promoteToAdminByStaticId = function(staticId) {
-    if (CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только Создатель может назначать админов", "error");
-        return;
-    }
-
-    const user = users.find(u => u.staticId === staticId);
-    if (user && confirm(`Повысить ${user.username} до Администратора?`)) {
-        db.ref('mlk_users/' + user.id).update({
-            role: RANKS.ADMIN.name,
-            rank: RANKS.ADMIN.level
-        }).then(() => {
-            loadData(() => {
-                renderUsers();
-                showNotification("Права обновлены", "success");
-            });
-        });
+    if (confirm("Повысить пользователя до администратора?")) {
+        promoteByStaticId(staticId, RANKS.ADMIN);
     }
 };
 
+window.promoteToSeniorByStaticId = function(staticId) {
+    if (confirm("Повысить пользователя до старшего куратора?")) {
+        promoteByStaticId(staticId, RANKS.SENIOR_CURATOR);
+    }
+};
+
+window.demoteToCuratorByStaticId = function(staticId) {
+    if (confirm("Понизить пользователя до куратора?")) {
+        promoteByStaticId(staticId, RANKS.CURATOR);
+    }
+};
+
+/* ===== ИНТЕРФЕЙС БАНОВ ===== */
 function renderBanInterface() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    }    
+    
     if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
         content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
         return;
@@ -350,7 +402,7 @@ function renderBanInterface() {
             
             <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
                 УПРАВЛЕНИЕ БЛОКИРОВКАМИ ПОЛЬЗОВАТЕЛЕЙ<br>
-                <span style="color: #c0b070;">ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛИ НЕ МОГУТ ВОЙТИ В СИСТЕМУ</span>
+                <span style="color: #c0b070;">ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛЫ НЕ МОГУТ ВОЙТИ В СИСТЕМУ</span>
             </p>
             
             <div class="zone-card" style="margin-bottom: 30px; border-color: #b43c3c;">
@@ -475,97 +527,57 @@ function renderBansTable(activeBans) {
     activeBans.forEach(ban => {
         const row = document.createElement('tr');
         row.innerHTML = `
-    <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
-        <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
-        ${user.username}
-        ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
-        ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
-    </td>
-    <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
-        ${user.staticId || "N/A"}
-    </td>
-    <td>${rankBadge}</td>
-    <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
-    <td>${user.lastLogin || "НИКОГДА"}</td>
-    <td>
-        ${isBanned ? 
-            '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
-            '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-check"></i> АКТИВЕН</span>'
-        }
-    </td>
-    <td>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <!-- Существующие кнопки по имени пользователя -->
-            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                    `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                        <i class="fas fa-star"></i> ПОВЫСИТЬ
-                    </button>` : 
-                    ''
-                }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
-                    `<button onclick="removeUser('${user.id}')" class="action-btn delete" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                        <i class="fas fa-trash"></i> УДАЛИТЬ
-                    </button>` : 
-                    ''
-                }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                    `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; padding: 3px 8px;">
-                        <i class="fas fa-ban"></i> БАН
-                    </button>` : 
-                    ''
-                }
-            </div>
-            
-            <!-- НОВЫЙ БЛОК: кнопки по STATIC ID -->
-            <div style="margin-top: 5px; padding-top: 5px; border-top: 1px dashed #4a4a3a;">
-                <div style="font-size: 0.7rem; color: #6a6a5a; margin-bottom: 3px;">ПО STATIC ID:</div>
-                <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-                    <!-- Кнопка повышения до админа -->
-                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                        `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                            <i class="fas fa-user-shield"></i> АДМ
-                        </button>` : 
-                        ''
-                    }
-                    <!-- Кнопка повышения до старшего куратора -->
-                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                        `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                            <i class="fas fa-star"></i> СТ.КУР
-                        </button>` : 
-                        ''
-                    }
-                    <!-- Кнопка понижения до куратора -->
-                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                        `<button onclick="demoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                            <i class="fas fa-user"></i> КУР
-                        </button>` : 
-                        ''
-                    }
-                    <!-- Кнопка бана -->
-                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                        `<button onclick="window.banByStaticId('${user.staticId}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                            <i class="fas fa-ban"></i> БАН
-                        </button>` : 
-                        ''
-                    }
-                    <!-- Кнопка разбана -->
-                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
-                        `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.7rem; padding: 2px 5px;">
-                            <i class="fas fa-unlock"></i> РАЗБАН
-                        </button>` : 
-                        ''
-                    }
-                </div>
-            </div>
-            
-            <!-- Статус пользователя -->
-            <span style="color: #8f9779; font-size: 0.85rem;">
-                ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
-            </span>
-        </div>
-    </td>
-`;
+            <td style="font-weight: 500; color: #b43c3c;">
+                <i class="fas fa-user-slash"></i> ${ban.username}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>${ban.bannedBy || "Неизвестно"}</td>
+            <td>${ban.bannedDate || "Неизвестно"}</td>
+            <td>
+                ${CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? `
+                    <button onclick="unbanByStaticId('${ban.staticId}')" class="action-btn confirm">
+                        <i class="fas fa-unlock"></i> РАЗБАН
+                    </button>
+                ` : '<span style="color: #8f9779;">НЕТ ДОСТУПА</span>'}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function renderBansHistory() {
+    const tableBody = document.getElementById("bans-history-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    bans.forEach(ban => {
+        const row = document.createElement('tr');
+        const isActive = !ban.unbanned;
+        
+        row.innerHTML = `
+            <td style="color: ${isActive ? '#b43c3c' : '#8f9779'}">
+                <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>
+                <span class="report-status ${isActive ? 'status-deleted' : 'status-confirmed'}" 
+                      style="display: inline-flex; padding: 4px 10px;">
+                    <i class="fas ${isActive ? 'fa-ban' : 'fa-check'}"></i>
+                    ${isActive ? 'АКТИВЕН' : 'СНЯТ'}
+                </span>
+            </td>
+            <td>${ban.bannedDate || "Неизвестно"}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
 
 function addBan() {
     const usernameInput = document.getElementById("ban-username");
@@ -584,32 +596,10 @@ function addBan() {
         return;
     }
     
-    const userExists = users.some(user => 
-        user.username.toLowerCase() === username.toLowerCase()
-    );
-    
-    if (!userExists) {
-        showNotification("Пользователь не найден в системе", "warning");
-        return;
-    }
-    
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) return;
-    
-    const isAlreadyBanned = bans.some(ban => 
-        ban.staticId === user.staticId && !ban.unbanned
-    );
-    
-    if (isAlreadyBanned) {
-        showNotification("Пользователь уже забанен", "warning");
-        return;
-    }
-    
     banUser(username, reason).then(success => {
         if (success) {
             if (usernameInput) usernameInput.value = "";
             if (reasonInput) reasonInput.value = "";
-            renderBanInterface();
         }
     });
 }
@@ -635,44 +625,9 @@ function addBanByStaticId() {
         if (success) {
             if (staticIdInput) staticIdInput.value = "";
             if (reasonInput) reasonInput.value = "";
-            renderBanInterface();
         }
     });
 }
-
-/* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С STATIC ID ===== */
-window.banByStaticId = function(staticId) {
-    const reason = prompt("Введите причину бана:");
-    if (reason && reason.trim()) {
-        banByStaticId(staticId, reason.trim());
-    }
-};
-
-window.unbanByStaticId = function(staticId) {
-    unbanByStaticId(staticId).then(success => {
-        if (success) {
-            renderBanInterface();
-        }
-    });
-};
-
-window.promoteToAdminByStaticId = function(staticId) {
-    if (confirm("Повысить пользователя до администратора?")) {
-        promoteByStaticId(staticId, RANKS.ADMIN);
-    }
-};
-
-window.promoteToSeniorByStaticId = function(staticId) {
-    if (confirm("Повысить пользователя до старшего куратора?")) {
-        promoteByStaticId(staticId, RANKS.SENIOR_CURATOR);
-    }
-};
-
-window.demoteToCuratorByStaticId = function(staticId) {
-    if (confirm("Понизить пользователя до куратора?")) {
-        promoteByStaticId(staticId, RANKS.CURATOR);
-    }
-};
 
 /* ===== ЛОГИКА ВХОДА С ПРОВЕРКОЙ БАНОВ И STATIC ID ===== */
 function login(){
@@ -1795,70 +1750,88 @@ function renderUsersTable() {
         }
         
         row.innerHTML = `
+            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
+                <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
+                ${user.username}
+                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${user.staticId || "N/A"}
+            </td>
+            <td>${rankBadge}</td>
+            <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
+            <td>${user.lastLogin || "НИКОГДА"}</td>
             <td>
-    <div style="display: flex; flex-direction: column; gap: 5px;">
-        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                    <i class="fas fa-star"></i> ПОВЫСИТЬ
-                </button>` : 
-                ''
-            }
-            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
-                `<button onclick="removeUser('${user.id}')" class="action-btn delete" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                    <i class="fas fa-trash"></i> УДАЛИТЬ
-                </button>` : 
-                ''
-            }
-            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; padding: 3px 8px;">
-                    <i class="fas fa-ban"></i> БАН
-                </button>` : 
-                ''
-            }
-        </div>
-        
-        <div style="margin-top: 5px; padding-top: 5px; border-top: 1px dashed #4a4a3a;">
-            <div style="font-size: 0.7rem; color: #6a6a5a; margin-bottom: 3px;">ПО STATIC ID:</div>
-            <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                    `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                        <i class="fas fa-user-shield"></i> АДМ
-                    </button>` : 
-                    ''
+                ${isBanned ? 
+                    '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
+                    '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-check"></i> АКТИВЕН</span>'
                 }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                    `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                        <i class="fas fa-star"></i> СТ.КУР
-                    </button>` : 
-                    ''
-                }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                    `<button onclick="demoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                        <i class="fas fa-user"></i> КУР
-                    </button>` : 
-                    ''
-                }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                    `<button onclick="window.banByStaticId('${user.staticId}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                        <i class="fas fa-ban"></i> БАН
-                    </button>` : 
-                    ''
-                }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
-                    `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.7rem; padding: 2px 5px;">
-                        <i class="fas fa-unlock"></i> РАЗБАН
-                    </button>` : 
-                    ''
-                }
-            </div>
-        </div>
-        
-        <span style="color: #8f9779; font-size: 0.85rem;">
-            ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
-        </span>
-    </div>
-</td>
+            </td>
+            <td>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
+                            `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-star"></i> ПОВЫСИТЬ
+                            </button>` : 
+                            ''
+                        }
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
+                            `<button onclick="removeUser('${user.id}')" class="action-btn delete" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-trash"></i> УДАЛИТЬ
+                            </button>` : 
+                            ''
+                        }
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
+                            `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-ban"></i> БАН
+                            </button>` : 
+                            ''
+                        }
+                    </div>
+                    
+                    <div style="margin-top: 5px; padding-top: 5px; border-top: 1px dashed #4a4a3a;">
+                        <div style="font-size: 0.7rem; color: #6a6a5a; margin-bottom: 3px;">ПО STATIC ID:</div>
+                        <div style="display: flex; gap: 3px; flex-wrap: wrap;">
+                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
+                                `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
+                                    <i class="fas fa-user-shield"></i> АДМ
+                                </button>` : 
+                                ''
+                            }
+                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
+                                `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
+                                    <i class="fas fa-star"></i> СТ.КУР
+                                </button>` : 
+                                ''
+                            }
+                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
+                                `<button onclick="demoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.7rem; padding: 2px 5px;">
+                                    <i class="fas fa-user"></i> КУР
+                                </button>` : 
+                                ''
+                            }
+                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
+                                `<button onclick="window.banByStaticId('${user.staticId}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.7rem; padding: 2px 5px;">
+                                    <i class="fas fa-ban"></i> БАН
+                                </button>` : 
+                                ''
+                            }
+                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
+                                `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.7rem; padding: 2px 5px;">
+                                    <i class="fas fa-unlock"></i> РАЗБАН
+                                </button>` : 
+                                ''
+                            }
+                        </div>
+                    </div>
+                    
+                    <span style="color: #8f9779; font-size: 0.85rem;">
+                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
+                    </span>
+                </div>
+            </td>
         `;
         
         tableBody.appendChild(row);
@@ -2092,6 +2065,3 @@ function renderSystem(){
         </div>
     `;
 }
-
-
-

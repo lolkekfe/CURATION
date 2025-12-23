@@ -17,21 +17,20 @@ const HASH_ADMIN   = "10cda"; // EOD
 const HASH_CURATOR = "be32";  // 123
 let CURRENT_ROLE = null;
 
-function simpleHash(str) {
-    let h = 0;
-    for (let i = 0; i < str.length; i++) {
-        h = (h << 5) - h + str.charCodeAt(i);
-        h |= 0;
+function simpleHash(str){
+    let h=0;
+    for(let i=0;i<str.length;i++){
+        h=(h<<5)-h+str.charCodeAt(i);
+        h|=0;
     }
     return h.toString(16);
 }
 
-function login() {
-    const input = document.getElementById("password").value.trim();
-    const hash = simpleHash(input);
-
-    if (hash === HASH_ADMIN) CURRENT_ROLE="ADMIN";
-    else if (hash === HASH_CURATOR) CURRENT_ROLE="CURATOR";
+function login(){
+    const input=document.getElementById("password").value.trim();
+    const hash=simpleHash(input);
+    if(hash===HASH_ADMIN) CURRENT_ROLE="ADMIN";
+    else if(hash===HASH_CURATOR) CURRENT_ROLE="CURATOR";
     else { document.getElementById("login-error").textContent="ACCESS DENIED"; return; }
 
     document.getElementById("login-screen").style.display="none";
@@ -41,11 +40,11 @@ function login() {
 }
 
 /* ===== SIDEBAR ===== */
-function setupSidebar() {
-    const sidebar = document.getElementById("sidebar");
+function setupSidebar(){
+    const sidebar=document.getElementById("sidebar");
     sidebar.innerHTML="";
 
-    const btnMLK = document.createElement("button");
+    const btnMLK=document.createElement("button");
     btnMLK.textContent="ОТЧЕТ МЛК";
     btnMLK.onclick=()=>renderMLKScreen();
     sidebar.appendChild(btnMLK);
@@ -69,7 +68,7 @@ let reportsFirebase={};
 
 function loadReports(callback){
     db.ref('mlk_reports').once('value').then(snapshot=>{
-        const data = snapshot.val()||{};
+        const data=snapshot.val()||{};
         reportsFirebase=data;
         reports=Object.values(data);
         if(callback) callback();
@@ -97,20 +96,18 @@ function renderMLKList(){
 
     filteredReports.forEach((r,index)=>{
         const key=Object.keys(reportsFirebase)[index];
-        let status="рассматривается";
-        if(r.deleted) status="удален";
-        else if(r.confirmed) status="подтвержден";
+        let statusClass="pending";
+        if(r.deleted) statusClass="deleted";
+        else if(r.confirmed) statusClass="confirmed";
 
         const reportDiv=document.createElement("div");
-        reportDiv.style.border="1px solid #0f0";
-        reportDiv.style.marginBottom="10px";
-        reportDiv.style.padding="8px";
+        reportDiv.className="report";
         reportDiv.innerHTML=`
             <strong>DISCORD:</strong> ${r.tag}<br>
             <strong>ACTION:</strong> ${r.action}<br>
             <strong>ROLE:</strong> ${r.author}<br>
             <strong>TIME:</strong> ${r.time}<br>
-            <strong>STATUS:</strong> ${status}
+            <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span>
         `;
 
         if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){

@@ -1,7 +1,7 @@
 /* ===== AUTH SYSTEM ===== */
 
-const HASH_ADMIN = "be32";   // заменить на свой хэш
-const HASH_CURATOR = "be32"; // заменить на свой хэш
+const HASH_ADMIN = "4b3e205";   // заменить на свой хэш
+const HASH_CURATOR = "4b3e205"; // заменить на свой хэш
 
 let CURRENT_ROLE = null;
 

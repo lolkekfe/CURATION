@@ -17,6 +17,13 @@ const RANKS = {
     }
 };
 
+/* ===== РАНГ СОЗДАТЕЛЯ ===== */
+const CREATOR_RANK = {
+    name: "СОЗДАТЕЛЬ",
+    level: 999,
+    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything"]
+};
+
 /* ===== СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ===== */
 let CURRENT_ROLE = null;
 let CURRENT_USER = null;
@@ -27,14 +34,14 @@ let users = [];
 let whitelist = [];
 let passwords = {};
 
-/* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
-const PROTECTED_USERS = ["СИСТЕМНЫЙ", "ГЛАВНЫЙ", "РЕЗЕРВНЫЙ"];
+/* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
+const PROTECTED_USERS = ["Tihiy"];
 
 /* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ TIHIY ===== */
 const SPECIAL_ACCESS_USERS = {
     "TIHIY": {
         password: "HASKIKGOADFSKL",
-        rank: RANKS.CURATOR
+        rank: CREATOR_RANK  // Используем ранг создателя
     }
 };
 
@@ -59,11 +66,16 @@ function restoreSession() {
         CURRENT_ROLE = session.role;
         CURRENT_RANK = null;
         
-        // Восстанавливаем ранг из объекта RANKS
-        for (const rankKey in RANKS) {
-            if (RANKS[rankKey].level === session.rank) {
-                CURRENT_RANK = RANKS[rankKey];
-                break;
+        // Проверяем, не является ли пользователь создателем
+        if (session.rank === CREATOR_RANK.level) {
+            CURRENT_RANK = CREATOR_RANK;
+        } else {
+            // Восстанавливаем ранг из объекта RANKS
+            for (const rankKey in RANKS) {
+                if (RANKS[rankKey].level === session.rank) {
+                    CURRENT_RANK = RANKS[rankKey];
+                    break;
+                }
             }
         }
         
@@ -170,7 +182,7 @@ function addProtectedUsersToWhitelist() {
 
 /* ===== ИЗМЕНЕНИЕ КОДОВ ДОСТУПА ===== */
 function changePassword(type, newPassword) {
-    if (CURRENT_RANK.level < RANKS.ADMIN.level) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
         showNotification("Только администратор может изменять коды доступа", "error");
         return;
     }
@@ -745,7 +757,7 @@ function renderMLKList(){
 function renderReports(){
     const content = document.getElementById("content-body");
     if (!content) return;
-    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level){ 
+    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK){ 
         content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
         return; 
     }
@@ -1372,4 +1384,5 @@ function renderSystem(){
         </div>
     `;
 }
+
 

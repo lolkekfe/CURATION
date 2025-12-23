@@ -61,7 +61,7 @@ function loadUsersAndWhitelist(callback) {
 /* ===== ДОБАВЛЕНИЕ ПЕРВОГО АДМИНА ПО УМОЛЧАНИЮ ===== */
 function addDefaultAdminToWhitelist() {
     // Здесь укажите ник администратора по умолчанию
-    const DEFAULT_ADMIN_USERNAME = "ADMIN"; // <--- ВПИШИТЕ СЮДА НИК АДМИНА
+    const DEFAULT_ADMIN_USERNAME = "Тихий"; // <--- ВПИШИТЕ СЮДА НИК АДМИНА
     
     return db.ref('mlk_whitelist').push({
         username: DEFAULT_ADMIN_USERNAME,
@@ -601,4 +601,5 @@ function renderAdmin(){
             <p>⏳ Отчетов на рассмотрении: <strong>${reports.filter(r => !r.confirmed && !r.deleted).length}</strong></p>
         </div>
     `;
+
 }

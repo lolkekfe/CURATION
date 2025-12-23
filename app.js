@@ -28,26 +28,48 @@ function simpleHash(str) {
     return h.toString(16);
 }
 
-/* ===== ENTER SYSTEM ===== */
+/* ===== TERMINAL & SIDEBAR ===== */
 let reports = [];
+let reportsFirebase = {};
+
+function setupSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.innerHTML = "";
+
+    const btnMLK = document.createElement("button");
+    btnMLK.textContent = "ОТЧЕТ МЛК";
+    btnMLK.onclick = () => openSection("mlk");
+    sidebar.appendChild(btnMLK);
+
+    if (CURRENT_ROLE === "ADMIN") {
+        const btnReports = document.createElement("button");
+        btnReports.textContent = "REPORTS";
+        btnReports.onclick = () => openSection("reports");
+        sidebar.appendChild(btnReports);
+
+        const btnAdmin = document.createElement("button");
+        btnAdmin.textContent = "ADMIN";
+        btnAdmin.onclick = () => openSection("admin");
+        sidebar.appendChild(btnAdmin);
+    }
+}
 
 function enterSystem() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("terminal").style.display = "flex";
 
+    setupSidebar();
     loadReports(() => {
-        if (CURRENT_ROLE === "CURATOR") {
-            openSection("mlk");
-        } else {
-            openSection("reports");
-        }
+        if (CURRENT_ROLE === "CURATOR") openSection("mlk");
+        else openSection("reports");
     });
 }
 
-/* ===== FIREBASE DB ===== */
+/* ===== FIREBASE ===== */
 function loadReports(callback) {
     db.ref('mlk_reports').once('value').then(snapshot => {
         const data = snapshot.val() || {};
+        reportsFirebase = data;
         reports = Object.values(data);
         if (callback) callback();
     });
@@ -93,21 +115,22 @@ function addMLKReport() {
         tag,
         action,
         author: CURRENT_ROLE,
-        time: new Date().toLocaleString()
+        time: new Date().toLocaleString(),
+        confirmed: false
     };
     newReportRef.set(report).then(() => {
         alert("Отчет сохранен");
         document.getElementById("mlk-tag").value = "";
         document.getElementById("mlk-action").value = "";
-        reports.push(report);
-        if (CURRENT_ROLE === "ADMIN") renderReports();
+        loadReports(() => { if (CURRENT_ROLE === "ADMIN") renderReports(); });
     });
 }
 
 /* ===== REPORTS (ADMIN ONLY) ===== */
 function renderReports() {
     if (CURRENT_ROLE !== "ADMIN") {
-        document.getElementById("content").textContent = "REPORT LIST AVAILABLE FOR ADMIN ONLY";
+        document.getElementById("content").textContent =
+            "REPORT LIST AVAILABLE FOR ADMIN ONLY";
         return;
     }
 
@@ -121,18 +144,34 @@ function renderReports() {
                 <th>ACTION</th>
                 <th>ROLE</th>
                 <th>TIME</th>
+                <th>ACTIONS</th>
             </tr>`;
-        reports.forEach(r => {
+        Object.keys(reportsFirebase).forEach(key => {
+            const r = reportsFirebase[key];
             html += `<tr>
                 <td>${r.tag}</td>
                 <td>${r.action}</td>
                 <td>${r.author}</td>
                 <td>${r.time}</td>
+                <td>
+                    <button onclick="deleteReport('${key}')">Удалить</button>
+                    <button onclick="confirmReport('${key}')">Подтвердить</button>
+                </td>
             </tr>`;
         });
         html += `</table>`;
     }
     document.getElementById("content").innerHTML = html;
+}
+
+/* ===== DELETE & CONFIRM ===== */
+function deleteReport(key) {
+    if (!confirm("Удалить этот отчет?")) return;
+    db.ref('mlk_reports/' + key).remove().then(() => loadReports(renderReports));
+}
+
+function confirmReport(key) {
+    db.ref('mlk_reports/' + key + '/confirmed').set(true).then(() => loadReports(renderReports));
 }
 
 /* ===== ADMIN PANEL ===== */

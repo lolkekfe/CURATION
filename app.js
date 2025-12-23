@@ -114,41 +114,27 @@ function addMLKReport() {
 
 /* ===== REPORT LIST (ADMIN ONLY) ===== */
 
-function renderReports() {
-    if (CURRENT_ROLE !== "ADMIN") {
-        document.getElementById("content").textContent =
-            "REPORT LIST AVAILABLE FOR ADMIN ONLY";
-        return;
+function openSection(name) {
+
+    if (name === "mlk") {
+        return renderMLK(); // КУРАТОР МОЖЕТ
     }
 
-    let html = `<h3>MLK REPORTS</h3>`;
-
-    if (reports.length === 0) {
-        html += `<p>No reports found</p>`;
-    } else {
-        html += `
-        <table>
-            <tr>
-                <th>DISCORD TAG</th>
-                <th>ACTIONS</th>
-                <th>ROLE</th>
-                <th>TIME</th>
-            </tr>`;
-
-        reports.forEach(r => {
-            html += `
-            <tr>
-                <td>${r.tag}</td>
-                <td>${r.action}</td>
-                <td>${r.author}</td>
-                <td>${r.time}</td>
-            </tr>`;
-        });
-
-        html += `</table>`;
+    if (name === "reports") {
+        return renderReports(); // ТОЛЬКО АДМИН
     }
 
-    document.getElementById("content").innerHTML = html;
+    if (name === "admin") {
+        if (CURRENT_ROLE !== "ADMIN") {
+            document.getElementById("content").textContent =
+                "ACCESS RESTRICTED";
+            return;
+        }
+        return renderAdmin();
+    }
+
+    document.getElementById("content").textContent =
+        "MODULE NOT FOUND";
 }
 
 /* ===== ADMIN PANEL ===== */
@@ -157,3 +143,4 @@ function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
+

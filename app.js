@@ -52,13 +52,16 @@ function setupSidebar(){
 
 /* ===== LOAD REPORTS ===== */
 let reports=[];
-let reportsFirebase={};
 
 function loadReports(callback){
+    // Используем .once для получения данных из Firebase
     db.ref('mlk_reports').once('value').then(snapshot=>{
         const data=snapshot.val()||{};
-        reportsFirebase=data;
-        reports=Object.values(data);
+        // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Сохраняем ID (ключ) вместе с данными
+        reports = Object.keys(data).map(key => ({
+            ...data[key],
+            id: key
+        }));
         if(callback) callback();
     });
 }
@@ -114,15 +117,16 @@ function addMLKReport(){
 
     newReportRef.set(report).then(()=>{
         alert("Отчет сохранен");
-        loadReports(renderMLKList);
+        loadReports(renderMLKScreen);
     });
 }
 
 /* ===== TYPE EFFECT ===== */
+// Исправлено: работаем с отдельным контейнером для текста, чтобы не затирать кнопки
 function typeText(element, text, index = 0, callback) {
     if(index < text.length){
         element.innerHTML += text.charAt(index);
-        setTimeout(()=>typeText(element,text,index+1,callback), 10);
+        setTimeout(()=>typeText(element,text,index+1,callback), 5);
     } else if(callback) callback();
 }
 
@@ -138,37 +142,47 @@ function renderMLKList(){
         return;
     }
 
-    filteredReports.forEach((r,index)=>{
-        const key = Object.keys(reportsFirebase)[index];
+    filteredReports.forEach((r)=>{
         let statusClass = "pending";
         if(r.deleted) statusClass="deleted";
         else if(r.confirmed) statusClass="confirmed";
 
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
+        
+        // Создаем контейнер для текста (чтобы анимация не ломала кнопки)
+        const textSpan = document.createElement("div");
+        reportDiv.appendChild(textSpan);
         listDiv.appendChild(reportDiv);
 
-        const text = `
+        const htmlContent = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>
 <strong>ROLE:</strong> ${r.author}<br>
 <strong>TIME:</strong> ${r.time}<br>
 <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
         `;
-        typeText(reportDiv, text);
+        
+        // Запускаем печать
+        typeText(textSpan, htmlContent, 0, () => {
+            // Добавляем кнопки только ПОСЛЕ завершения печати или отдельно
+            if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
+                const actionsDiv = document.createElement("div");
+                actionsDiv.style.marginTop = "10px";
 
-        if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
-            const btnDel=document.createElement("button");
-            btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
-            btnDel.onclick=()=>{ db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(renderMLKList)); }
+                const btnDel=document.createElement("button");
+                btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
+                btnDel.onclick=()=> deleteReport(r.id);
 
-            const btnConfirm=document.createElement("button");
-            btnConfirm.textContent="Подтвердить";
-            btnConfirm.onclick=()=>{ db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(renderMLKList)); }
+                const btnConfirm=document.createElement("button");
+                btnConfirm.textContent="Подтвердить";
+                btnConfirm.onclick=()=> confirmReport(r.id);
 
-            reportDiv.appendChild(btnDel);
-            reportDiv.appendChild(btnConfirm);
-        }
+                actionsDiv.appendChild(btnDel);
+                actionsDiv.appendChild(btnConfirm);
+                reportDiv.appendChild(actionsDiv);
+            }
+        });
     });
 }
 
@@ -180,16 +194,15 @@ function renderReports(){
     else{
         html+=`<table>
             <tr><th>DISCORD</th><th>ACTION</th><th>ROLE</th><th>TIME</th><th>STATUS</th><th>ACTIONS</th></tr>`;
-        Object.keys(reportsFirebase).forEach(key=>{
-            const r=reportsFirebase[key];
+        reports.forEach(r => {
             let status="рассматривается";
             if(r.deleted) status="удален";
             else if(r.confirmed) status="подтвержден";
 
             html+=`<tr>
                 <td>${r.tag}</td><td>${r.action}</td><td>${r.author}</td><td>${r.time}</td><td>${status}</td>
-                <td>${(!r.deleted&&!r.confirmed)?`<button onclick="deleteReport('${key}')">Удалить</button>
-                <button onclick="confirmReport('${key}')">Подтвердить</button>`:""}</td>
+                <td>${(!r.deleted&&!r.confirmed)?`<button onclick="confirmReport('${r.id}')">Подтвердить</button>
+                <button onclick="deleteReport('${r.id}')">Удалить</button>`:""}</td>
             </tr>`;
         });
         html+="</table>";
@@ -198,8 +211,20 @@ function renderReports(){
 }
 
 /* ===== DELETE & CONFIRM ===== */
-function deleteReport(key){ if(!confirm("Удалить этот отчет?")) return; db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(renderMLKList)); }
-function confirmReport(key){ db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(renderMLKList)); }
+// Делаем функции глобальными, чтобы onclick в строках таблицы их видел
+window.deleteReport = function(key){ 
+    if(!confirm("Удалить этот отчет?")) return; 
+    db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(() => {
+        // Перерисовываем тот экран, на котором находимся
+        if(document.querySelector('table')) renderReports(); else renderMLKList();
+    })); 
+}
+
+window.confirmReport = function(key){ 
+    db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(() => {
+        if(document.querySelector('table')) renderReports(); else renderMLKList();
+    })); 
+}
 
 /* ===== ADMIN PANEL ===== */
 function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }

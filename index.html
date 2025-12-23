@@ -3,135 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TERMINAL v2.0 | SECURE MLK SYSTEM</title>
+    <title>ЗОНА | Система отчетов</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Анимированный фон -->
-    <div class="matrix-bg"></div>
-    <div class="scanlines"></div>
+    <!-- Фон Зоны -->
+    <div class="zone-bg"></div>
+    <div class="radiation-overlay"></div>
+    <div class="static-overlay"></div>
     
-    <!-- Логин экран -->
+    <!-- Экран входа -->
     <div id="login-screen" class="login-container">
-        <div class="terminal-header">
-            <div class="pulse-dot"></div>
-            <h1><span class="glitch" data-text="SYSTEM_ACCESS">SYSTEM_ACCESS</span></h1>
-            <div class="terminal-status">
-                <span class="status-indicator online"></span>
-                <span class="status-text">CONNECTED</span>
+        <div class="zone-header">
+            <div class="geiger-counter">
+                <div class="geiger-dots">
+                    <span class="dot active"></span>
+                    <span class="dot active"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <div class="geiger-text">РАДИАЦИЯ: 0.8 mSv</div>
+            </div>
+            
+            <h1 class="zone-title">
+                <span class="title-part">СИСТЕМА</span>
+                <span class="title-part">ОТЧЕТОВ</span>
+                <span class="title-part">ЗОНЫ</span>
+            </h1>
+            
+            <div class="login-warning">
+                <i class="fas fa-radiation"></i>
+                <span>ДОСТУП РАЗРЕШЕН ТОЛЬКО ДЛЯ ПРОВЕРЕННЫХ СТАЛКЕРОВ</span>
             </div>
         </div>
         
-        <div class="login-box">
-            <div class="input-group">
-                <div class="input-label">
-                    <i class="fas fa-user-secret"></i>
-                    <span>IDENTIFICATION</span>
+        <div class="login-terminal">
+            <div class="terminal-screen">
+                <div class="screen-header">
+                    <span>ТЕРМИНАЛ ДОСТУПА</span>
+                    <span class="blink">█</span>
                 </div>
-                <input type="text" id="username" placeholder="ENTER_USERNAME" autocomplete="off">
-                <div class="input-line"></div>
-            </div>
-            
-            <div class="input-group">
-                <div class="input-label">
-                    <i class="fas fa-key"></i>
-                    <span>AUTH_CODE</span>
+                
+                <div class="screen-content">
+                    <div class="input-line">
+                        <span class="prompt">> ИДЕНТИФИКАЦИЯ:</span>
+                        <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off">
+                    </div>
+                    
+                    <div class="input-line">
+                        <span class="prompt">> КОД ДОСТУПА:</span>
+                        <input type="password" id="password" placeholder="********" autocomplete="off">
+                    </div>
+                    
+                    <div class="system-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>ЕСЛИ ВЫ НОВЫЙ СТАЛКЕР, БУДЕТ СОЗДАН ВАШ ПРОФИЛЬ</span>
+                    </div>
                 </div>
-                <input type="password" id="password" placeholder="********" autocomplete="off">
-                <div class="input-line"></div>
+                
+                <div class="screen-footer">
+                    <button id="login-btn" class="access-button">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>ПОДКЛЮЧИТЬСЯ</span>
+                    </button>
+                    
+                    <div id="login-error" class="error-display"></div>
+                </div>
             </div>
-            
-            <div class="login-hint">
-                <i class="fas fa-info-circle"></i>
-                <span> 
-            </div>
-            
-            <button id="login-btn" class="cyber-button">
-                <span class="cyber-button-text">INITIATE_SEQUENCE</span>
-                <div class="cyber-button-glitch"></div>
-            </button>
-            
-            <div id="login-error" class="error-message"></div>
         </div>
         
-        <div class="terminal-footer">
-            <div class="footer-text">
-                <span>v2.0.4</span>
-                <span class="blink">█</span>
-                <span>MLK SECURITY SYSTEM</span>
-                <span class="blink">█</span>
-                <span>[ENCRYPTED]</span>
+        <div class="zone-footer">
+            <div class="footer-info">
+                <span>ВЕРСИЯ: 1.3.7</span>
+                <span class="sep">|</span>
+                <span>СТАТУС: ОПЕРАТИВНЫЙ</span>
+                <span class="sep">|</span>
+                <span>СЕКТОР: Припять-12</span>
+            </div>
+            <div class="footer-warning">
+                <i class="fas fa-skull-crossbones"></i>
+                <span>АНОМАЛЬНАЯ АКТИВНОСТЬ ЗАФИКСИРОВАНА</span>
             </div>
         </div>
     </div>
 
-    <!-- Основной терминал -->
-    <div id="terminal" class="terminal-wrapper">
-        <!-- Сайдбар -->
-        <div id="sidebar" class="terminal-sidebar">
-            <div class="user-panel">
-                <div class="user-avatar">
-                    <i class="fas fa-terminal"></i>
-                    <div class="user-status"></div>
+    <!-- Основной интерфейс -->
+    <div id="terminal" class="zone-interface">
+        <!-- Боковая панель -->
+        <div id="sidebar" class="zone-sidebar">
+            <div class="stalker-profile">
+                <div class="profile-icon">
+                    <div class="gas-mask">
+                        <i class="fas fa-user-secret"></i>
+                    </div>
+                    <div class="stalker-rank" id="current-rank">НОВИЧОК</div>
                 </div>
-                <div class="user-info">
-                    <div class="username" id="current-username">USER_001</div>
-                    <div class="user-role" id="current-role">ACCESS_LEVEL</div>
-                </div>
-                <div class="user-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-shield-alt"></i>
-                        <span>SECURE</span>
+                
+                <div class="profile-info">
+                    <div class="stalker-name" id="current-username">НЕИЗВЕСТНЫЙ</div>
+                    <div class="stalker-faction" id="current-faction">СВОБОДНЫЙ СТАЛКЕР</div>
+                    <div class="profile-stats">
+                        <div class="stat">
+                            <i class="fas fa-heartbeat"></i>
+                            <span>ВЫЖИВАНИЕ: 87%</span>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>РЕПУТАЦИЯ: А</span>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="nav-divider">
-                <span>NAVIGATION</span>
+            <div class="zone-map">
+                <div class="map-header">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>НАВИГАЦИЯ СЕКТОРА</span>
+                </div>
+                
+                <nav class="nav-menu" id="nav-menu">
+                    <!-- Навигация будет добавлена через JS -->
+                </nav>
             </div>
             
-            <nav class="nav-menu" id="nav-menu">
-                <!-- Навигация будет добавлена через JS -->
-            </nav>
-            
-            <div class="system-info">
-                <div class="info-item">
-                    <i class="fas fa-database"></i>
-                    <span class="info-label">DB STATUS</span>
-                    <span class="info-value online">ACTIVE</span>
+            <div class="equipment-status">
+                <div class="equipment-header">
+                    <i class="fas fa-toolbox"></i>
+                    <span>СОСТОЯНИЕ СНАРЯЖЕНИЯ</span>
                 </div>
-                <div class="info-item">
-                    <i class="fas fa-bolt"></i>
-                    <span class="info-label">POWER</span>
-                    <div class="power-bar">
-                        <div class="power-level"></div>
+                
+                <div class="equipment-list">
+                    <div class="equipment-item">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>СВЯЗЬ:</span>
+                        <span class="status online">СТАБИЛЬНАЯ</span>
+                    </div>
+                    <div class="equipment-item">
+                        <i class="fas fa-database"></i>
+                        <span>БАЗА ДАННЫХ:</span>
+                        <span class="status online">АКТИВНА</span>
+                    </div>
+                    <div class="equipment-item">
+                        <i class="fas fa-battery-full"></i>
+                        <span>ПИТАНИЕ:</span>
+                        <div class="power-indicator">
+                            <div class="power-level"></div>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <button id="logout-btn" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>TERMINATE_SESSION</span>
+            <button id="logout-btn" class="extract-button">
+                <i class="fas fa-running"></i>
+                <span>ВЫЙТИ ИЗ СИСТЕМЫ</span>
             </button>
         </div>
 
         <!-- Основной контент -->
-        <div id="content" class="terminal-content">
+        <div id="content" class="zone-content">
             <div class="content-header">
-                <div class="header-title">
-                    <h2 id="content-title">SYSTEM_DASHBOARD</h2>
-                    <div class="title-line"></div>
+                <div class="header-left">
+                    <h2 id="content-title">КОМАНДНЫЙ ЦЕНТР</h2>
+                    <div class="header-line"></div>
                 </div>
-                <div class="header-controls">
-                    <div class="time-display">
+                
+                <div class="header-right">
+                    <div class="zone-time">
                         <i class="far fa-clock"></i>
                         <span id="current-time">00:00:00</span>
+                        <span class="time-zone">+2 GMT</span>
                     </div>
-                    <div class="notification-bell">
-                        <i class="far fa-bell"></i>
-                        <span class="notification-count">0</span>
+                    <div class="danger-level">
+                        <i class="fas fa-radiation-alt"></i>
+                        <span>УРОВЕНЬ ОПАСНОСТИ:</span>
+                        <span class="level medium">СРЕДНИЙ</span>
                     </div>
                 </div>
             </div>
@@ -141,13 +189,22 @@
             </div>
             
             <div class="content-footer">
-                <div class="footer-status">
-                    <span class="status-dot"></span>
-                    <span>SYSTEM_READY</span>
+                <div class="footer-left">
+                    <div class="transmission-status">
+                        <span class="status-dot active"></span>
+                        <span>ПЕРЕДАЧА ДАННЫХ АКТИВНА</span>
+                    </div>
+                    <div class="coordinates">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>КООРДИНАТЫ: 50.4504° N, 30.5244° E</span>
+                    </div>
                 </div>
-                <div class="footer-commands">
-                    <span>>_</span>
-                    <span class="command-line">Awaiting input...</span>
+                
+                <div class="footer-right">
+                    <div class="system-prompt">
+                        <span>>_</span>
+                        <span class="prompt-text" id="system-prompt">СИСТЕМА ГОТОВА К КОМАНДАМ</span>
+                    </div>
                 </div>
             </div>
         </div>

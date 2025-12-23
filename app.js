@@ -1,28 +1,49 @@
-/* ===== AUTH SYSTEM ===== */
+/* ===== СИСТЕМА РАНГОВ ЗОНЫ ===== */
+const RANKS = {
+    CURATOR: {
+        name: "КУРАТОР",
+        level: 1,
+        access: ["mlk_reports"]
+    },
+    SENIOR_CURATOR: {
+        name: "СТАРШИЙ КУРАТОР", 
+        level: 2,
+        access: ["mlk_reports", "all_reports", "users"]
+    },
+    ADMIN: {
+        name: "АДМИНИСТРАТОР",
+        level: 3,
+        access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system"]
+    }
+};
+
+/* ===== СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ===== */
 let CURRENT_ROLE = null;
 let CURRENT_USER = null;
+let CURRENT_RANK = null;
 let reports = [];
 
 let users = [];
 let whitelist = [];
-let passwords = {}; // Храним пароли из БД
+let passwords = {};
 
-// Специальные пользователи
-const SPECIAL_USERS = ["ADMIN", "Tihiy", "System"];
+/* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
+const PROTECTED_USERS = ["СИСТЕМНЫЙ", "ГЛАВНЫЙ", "РЕЗЕРВНЫЙ"];
 
-// Глобальные функции для кнопок в таблице ADMIN
+/* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
-    if(CURRENT_ROLE !== "ADMIN") return; 
+    if(CURRENT_RANK.level < RANKS.ADMIN.level) return; 
     if(confirm("Удалить отчет?")) {
         db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReports));
     }
 }
 
 window.confirmReport = function(id) {
-    if(CURRENT_ROLE !== "ADMIN") return;
+    if(CURRENT_RANK.level < RANKS.ADMIN.level) return;
     db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => loadReports(renderReports));
 }
 
+/* ===== ХЕШИРОВАНИЕ ===== */
 function simpleHash(str){
     let h=0;
     for(let i=0;i<str.length;i++){
@@ -34,33 +55,28 @@ function simpleHash(str){
 
 /* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
 function loadData(callback) {
-    // Загружаем пользователей
     db.ref('mlk_users').once('value').then(snapshot => {
         const data = snapshot.val() || {};
         users = Object.keys(data).map(key => ({...data[key], id: key}));
         
-        // Загружаем вайтлист
         return db.ref('mlk_whitelist').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
         whitelist = Object.keys(data).map(key => ({...data[key], id: key}));
         
-        // Загружаем пароли
         return db.ref('mlk_passwords').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
         passwords = data || {};
         
-        // Если пароли не установлены, создаем дефолтные
-        if (!passwords.admin || !passwords.curator || !passwords.special) {
+        if (!passwords.curator || !passwords.admin || !passwords.special) {
             return createDefaultPasswords().then(() => {
                 if (callback) callback();
             });
         }
         
-        // Если вайтлист пустой, добавляем специальных пользователей
         if (whitelist.length === 0) {
-            return addSpecialUsersToWhitelist().then(() => {
+            return addProtectedUsersToWhitelist().then(() => {
                 if (callback) callback();
             });
         } else {
@@ -72,29 +88,50 @@ function loadData(callback) {
     });
 }
 
-/* ===== СОЗДАНИЕ ДЕФОЛТНЫХ ПАРОЛЕЙ ===== */
+/* ===== СОЗДАНИЕ ДЕФОЛТНЫХ КОДОВ ===== */
 function createDefaultPasswords() {
     const defaultPasswords = {
-        admin: "EOD",           // Пароль для обычных админов
-        curator: "123",         // Пароль для кураторов
-        special: "HASKIKGOADFSKL" // Специальный пароль для ADMIN, Tihiy, System
+        curator: "123",
+        admin: "EOD",
+        special: "HASKIKGOADFSKL"
     };
     
     return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
-        console.log("Созданы дефолтные пароли в БД");
+        console.log("Созданы коды доступа по умолчанию");
         passwords = defaultPasswords;
     });
 }
 
-/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ ПАРОЛЕЙ ===== */
+/* ===== ДОБАВЛЕНИЕ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
+function addProtectedUsersToWhitelist() {
+    const promises = [];
+    
+    PROTECTED_USERS.forEach(username => {
+        promises.push(
+            db.ref('mlk_whitelist').push({
+                username: username,
+                addedBy: "СИСТЕМА",
+                addedDate: new Date().toLocaleString(),
+                isProtected: true
+            })
+        );
+    });
+    
+    return Promise.all(promises).then(() => {
+        console.log("Добавлены защищенные пользователи:", PROTECTED_USERS);
+        return loadData();
+    });
+}
+
+/* ===== ИЗМЕНЕНИЕ КОДОВ ДОСТУПА ===== */
 function changePassword(type, newPassword) {
-    if (CURRENT_ROLE !== "ADMIN") {
-        showNotification("Только администратор может изменять пароли", "error");
+    if (CURRENT_RANK.level < RANKS.ADMIN.level) {
+        showNotification("Только администратор может изменять коды доступа", "error");
         return;
     }
     
     if (!newPassword || newPassword.trim() === "") {
-        showNotification("Введите новый пароль", "error");
+        showNotification("Введите новый код", "error");
         return;
     }
     
@@ -103,38 +140,15 @@ function changePassword(type, newPassword) {
     
     return db.ref('mlk_passwords').update(updates).then(() => {
         passwords[type] = newPassword.trim();
-        showNotification(`Пароль "${type}" успешно изменен`, "success");
+        showNotification(`Код доступа изменен`, "success");
         return true;
     }).catch(error => {
-        showNotification("Ошибка изменения пароля: " + error.message, "error");
+        showNotification("Ошибка изменения кода: " + error.message, "error");
         return false;
     });
 }
 
-/* ===== ДОБАВЛЕНИЕ СПЕЦИАЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
-function addSpecialUsersToWhitelist() {
-    const promises = [];
-    
-    SPECIAL_USERS.forEach(username => {
-        promises.push(
-            db.ref('mlk_whitelist').push({
-                username: username,
-                addedBy: "SYSTEM",
-                addedDate: new Date().toLocaleString(),
-                isSpecial: true,
-                requiresSpecialPassword: true,
-                canOnlyLoginAsAdmin: true
-            })
-        );
-    });
-    
-    return Promise.all(promises).then(() => {
-        console.log("Добавлены специальные пользователи:", SPECIAL_USERS);
-        return loadData(); // Перезагружаем данные
-    });
-}
-
-/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА ===== */
+/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА С ПРОВЕРКОЙ ДУБЛИКАТОВ ===== */
 function login(){
     const input = document.getElementById("password").value.trim();
     const usernameInput = document.getElementById("username");
@@ -144,95 +158,108 @@ function login(){
     const errorElement = document.getElementById("login-error");
     if (errorElement) errorElement.textContent = "";
     
-    // Получаем хэши паролей из БД
-    const adminHash = simpleHash(passwords.admin || "EOD");
+    if (!username) {
+        showLoginError("ВВЕДИТЕ ПСЕВДОНИМ");
+        return;
+    }
+    
     const curatorHash = simpleHash(passwords.curator || "123");
+    const adminHash = simpleHash(passwords.admin || "EOD");
     const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
     
-    // Проверяем, является ли пользователь специальным
-    const isSpecialUser = SPECIAL_USERS.some(specialUser => 
-        specialUser.toLowerCase() === username.toLowerCase()
+    const existingUser = users.find(user => 
+        user.username.toLowerCase() === username.toLowerCase()
     );
     
-    // === СПЕЦИАЛЬНЫЕ ПОЛЬЗОВАТЕЛИ (ADMIN, Tihiy, System) ===
-    if (isSpecialUser) {
-        // Специальные пользователи могут войти ТОЛЬКО с специальным паролем как ADMIN
-        if (hash === specialHash) {
-            CURRENT_ROLE = "ADMIN";
-            CURRENT_USER = username;
-            completeLogin();
-        } else {
-            // Если введен пароль куратора или обычного админа - ОТКАЗ
-            if (hash === curatorHash) {
-                showLoginError("ЭТОТ ПОЛЬЗОВАТЕЛЬ НЕ МОЖЕТ ВОЙТИ КАК КУРАТОР");
-            } else if (hash === adminHash) {
-                showLoginError("ДЛЯ ЭТОГО АККАУНТА ТРЕБУЕТСЯ СПЕЦИАЛЬНЫЙ ПАРОЛЬ");
-            } else {
-                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ ДЛЯ СПЕЦИАЛЬНОГО АККАУНТА");
-            }
-            return;
-        }
-    }
-    // === ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ ===
-    else {
-        // Если введен пароль обычного администратора
+    /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
+    if (!existingUser) {
+        let userRank = RANKS.CURATOR;
+        
         if (hash === adminHash) {
-            // Проверяем вайтлист
             const isInWhitelist = whitelist.some(user => 
                 user.username.toLowerCase() === username.toLowerCase()
             );
             
             if (!isInWhitelist) {
-                showLoginError("НЕТУ В ВАЙТЛИСТЕ");
+                showLoginError("ДОСТУП ЗАПРЕЩЕН");
                 return;
             }
-            
-            CURRENT_ROLE = "ADMIN";
-            CURRENT_USER = username;
-        }
-        // Если введен пароль куратора
-        else if (hash === curatorHash) {
-            if (!username) {
-                showLoginError("ВВЕДИТЕ НИКНЕЙМ");
-                return;
-            }
-            
-            // Проверяем, не пытается ли куратор войти под именем специального пользователя
-            if (isSpecialUser) {
-                showLoginError("ЭТОТ ПОЛЬЗОВАТЕЛЬ НЕ МОЖЕТ ВОЙТИ КАК КУРАТОР");
-                return;
-            }
-            
-            // Регистрация/вход куратора
-            const existingUser = users.find(user => 
-                user.username.toLowerCase() === username.toLowerCase()
+            userRank = RANKS.ADMIN;
+        } else if (hash === curatorHash) {
+            userRank = RANKS.CURATOR;
+        } else if (hash === specialHash) {
+            const isProtected = PROTECTED_USERS.some(protectedUser => 
+                protectedUser.toLowerCase() === username.toLowerCase()
             );
             
-            if (!existingUser) {
-                const newUser = {
-                    username: username,
-                    role: "CURATOR",
-                    registrationDate: new Date().toLocaleString()
-                };
-                
-                db.ref('mlk_users').push(newUser).then(() => {
-                    loadData(() => {
-                        CURRENT_ROLE = "CURATOR";
-                        CURRENT_USER = username;
-                        completeLogin();
-                    });
-                });
+            if (!isProtected) {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
-            } else {
-                CURRENT_ROLE = existingUser.role;
-                CURRENT_USER = existingUser.username;
             }
-        }
-        else { 
-            showLoginError("ACCESS DENIED"); 
-            return; 
+            userRank = RANKS.ADMIN;
+        } else {
+            showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+            return;
         }
         
+        const newUser = {
+            username: username,
+            role: userRank.name,
+            rank: userRank.level,
+            registrationDate: new Date().toLocaleString(),
+            lastLogin: new Date().toLocaleString()
+        };
+        
+        db.ref('mlk_users').push(newUser).then(() => {
+            loadData(() => {
+                CURRENT_ROLE = userRank.name;
+                CURRENT_USER = username;
+                CURRENT_RANK = userRank;
+                completeLogin();
+            });
+        });
+        return;
+    }
+    
+    /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
+    else {
+        let isValidPassword = false;
+        let userRank = RANKS.CURATOR;
+        
+        if (existingUser.role === RANKS.ADMIN.name) {
+            userRank = RANKS.ADMIN;
+        } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
+            userRank = RANKS.SENIOR_CURATOR;
+        } else {
+            userRank = RANKS.CURATOR;
+        }
+        
+        if (userRank.level >= RANKS.ADMIN.level && hash === adminHash) {
+            isValidPassword = true;
+        } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && hash === adminHash) {
+            isValidPassword = true;
+        } else if (hash === curatorHash) {
+            isValidPassword = true;
+        } else if (hash === specialHash) {
+            const isProtected = PROTECTED_USERS.some(protectedUser => 
+                protectedUser.toLowerCase() === username.toLowerCase()
+            );
+            if (isProtected) {
+                isValidPassword = true;
+                userRank = RANKS.ADMIN;
+            }
+        }
+        
+        if (!isValidPassword) {
+            showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+            return;
+        }
+        
+        db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+        
+        CURRENT_ROLE = userRank.name;
+        CURRENT_USER = username;
+        CURRENT_RANK = userRank;
         completeLogin();
     }
 }
@@ -255,17 +282,17 @@ function completeLogin() {
     }
     
     setupSidebar();
+    updateSystemPrompt(`ПОДКЛЮЧЕНИЕ УСПЕШНО. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
     
-    if (CURRENT_ROLE === "ADMIN") {
-        loadReports(renderAdmin);
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+        loadReports(renderSystem);
     } else {
         loadReports(renderMLKScreen);
     }
 }
 
-/* ===== UI УЛУШЕНИЯ И НАВИГАЦИЯ ===== */
+/* ===== UI ИНИЦИАЛИЗАЦИЯ ===== */
 document.addEventListener('DOMContentLoaded', function() {
-    // Обновление времени в реальном времени
     function updateTime() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ru-RU', {
@@ -283,11 +310,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTime, 1000);
     updateTime();
     
-    // Добавляем анимацию для кнопки входа
     const loginBtn = document.getElementById('login-btn');
     if (loginBtn) {
         loginBtn.onclick = function() {
-            // Анимация нажатия
             loginBtn.style.transform = 'scale(0.98)';
             setTimeout(() => {
                 loginBtn.style.transform = '';
@@ -296,7 +321,6 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
-    // Добавляем поддержку Enter в форме
     document.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             const activeElement = document.activeElement;
@@ -306,46 +330,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Инициализация
     loadData();
 });
 
-/* ===== SIDEBAR И НАВИГАЦИЯ ===== */
+/* ===== НАВИГАЦИЯ И SIDEBAR ===== */
 function setupSidebar(){
     const sidebar = document.getElementById("sidebar");
     const navMenu = document.getElementById("nav-menu");
     
     if (!sidebar || !navMenu) return;
     
-    // Очищаем навигацию
     navMenu.innerHTML = '';
     
-    // Обновляем информацию пользователя
     const usernameElement = document.getElementById('current-username');
-    const roleElement = document.getElementById('current-role');
+    const rankElement = document.getElementById('current-rank');
     
     if (usernameElement && CURRENT_USER) {
         usernameElement.textContent = CURRENT_USER.toUpperCase();
     }
     
-    if (roleElement && CURRENT_ROLE) {
-        roleElement.textContent = CURRENT_ROLE === 'ADMIN' ? 'ADMIN_ACCESS' : 'CURATOR_ACCESS';
+    if (rankElement && CURRENT_RANK) {
+        rankElement.textContent = CURRENT_RANK.name;
     }
     
-    // Добавляем навигационные кнопки
-    if (CURRENT_ROLE === 'CURATOR') {
-        addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТ МЛК', renderMLKScreen);
-    }
+    addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
-    if (CURRENT_ROLE === 'ADMIN') {
+    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
-        addNavButton(navMenu, 'fas fa-users', 'ВАЙТЛИСТ', renderWhitelist);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
-        addNavButton(navMenu, 'fas fa-key', 'ПАРОЛИ', renderPasswords);
-        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderAdmin);
     }
     
-    // Добавляем кнопку выхода
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
+        addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
+        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
+    }
+    
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.onclick = logout;
@@ -360,19 +380,16 @@ function addNavButton(container, icon, text, onClick) {
         <span>${text}</span>
     `;
     button.onclick = function() {
-        // Убираем active у всех кнопок
         document.querySelectorAll('.nav-button').forEach(btn => {
             btn.classList.remove('active');
         });
-        // Добавляем active текущей
         button.classList.add('active');
-        // Выполняем действие
         onClick();
-        // Обновляем заголовок
         const titleElement = document.getElementById('content-title');
         if (titleElement) {
             titleElement.textContent = text;
         }
+        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
     };
     container.appendChild(button);
 }
@@ -380,6 +397,7 @@ function addNavButton(container, icon, text, onClick) {
 function logout() {
     CURRENT_ROLE = null;
     CURRENT_USER = null;
+    CURRENT_RANK = null;
     
     const terminal = document.getElementById('terminal');
     const loginScreen = document.getElementById('login-screen');
@@ -389,7 +407,6 @@ function logout() {
         loginScreen.style.display = 'flex';
     }
     
-    // Сбрасываем форму
     document.getElementById('password').value = '';
     const usernameInput = document.getElementById('username');
     if (usernameInput) usernameInput.value = '';
@@ -397,7 +414,6 @@ function logout() {
     const errorElement = document.getElementById('login-error');
     if (errorElement) errorElement.textContent = '';
     
-    // Сбрасываем активные кнопки
     document.querySelectorAll('.nav-button').forEach(btn => {
         btn.classList.remove('active');
     });
@@ -405,18 +421,14 @@ function logout() {
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
 function showNotification(message, type = "info") {
-    // Создаем элемент уведомления
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
     
-    // Добавляем в body
     document.body.appendChild(notification);
     
-    // Показываем с анимацией
     setTimeout(() => notification.classList.add('show'), 10);
     
-    // Удаляем через 5 секунд
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => {
@@ -427,7 +439,14 @@ function showNotification(message, type = "info") {
     }, 5000);
 }
 
-/* ===== LOAD REPORTS ===== */
+function updateSystemPrompt(message) {
+    const promptElement = document.getElementById('system-prompt');
+    if (promptElement) {
+        promptElement.textContent = message;
+    }
+}
+
+/* ===== ЗАГРУЗКА ОТЧЕТОВ ===== */
 function loadReports(callback){
     db.ref('mlk_reports').once('value').then(snapshot=>{
         const data = snapshot.val() || {};
@@ -440,13 +459,13 @@ function loadReports(callback){
     });
 }
 
-/* ===== MLK SCREEN (КУРАТОР) ===== */
+/* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
 function renderMLKScreen(){
     const content = document.getElementById("content-body");
     if (!content) return;
     content.innerHTML = ''; 
 
-    if (CURRENT_ROLE === "CURATOR") {
+    if (CURRENT_RANK.level === RANKS.CURATOR.level) {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
         btnContainer.style.justifyContent = "flex-end";
@@ -454,7 +473,7 @@ function renderMLKScreen(){
 
         const addBtn = document.createElement("button");
         addBtn.className = "btn-primary";
-        addBtn.innerHTML = '<i class="fas fa-plus"></i> ДОБАВИТЬ ОТЧЕТ';
+        addBtn.innerHTML = '<i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ';
         addBtn.onclick = renderMLKForm;
 
         btnContainer.appendChild(addBtn);
@@ -474,26 +493,26 @@ function renderMLKForm(){
 
     content.innerHTML = `
         <div class="form-container">
-            <h3 style="color: #00ff9d; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-file-medical"></i> НОВЫЙ ОТЧЕТ МЛК
-            </h3>
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-file-medical"></i> НОВЫЙ ОТЧЕТ
+            </h2>
             
             <div class="form-group">
-                <label class="form-label">Discord тег игрока</label>
-                <input type="text" id="mlk-tag" class="form-input" placeholder="User#0000 или username">
+                <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
+                <input type="text" id="mlk-tag" class="form-input" placeholder="УКАЖИТЕ ИДЕНТИФИКАТОР">
             </div>
             
             <div class="form-group">
-                <label class="form-label">Кратко что сделал</label>
-                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="Опишите нарушение или действие..."></textarea>
+                <label class="form-label">ОПИСАНИЕ НАРУШЕНИЯ</label>
+                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="ПОДРОБНО ОПИШИТЕ НАРУШЕНИЕ..."></textarea>
             </div>
             
             <div class="form-actions">
                 <button onclick="renderMLKScreen()" class="btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Назад
+                    <i class="fas fa-arrow-left"></i> ОТМЕНА
                 </button>
                 <button id="submit-mlk-btn" class="btn-primary">
-                    <i class="fas fa-paper-plane"></i> Отправить отчет
+                    <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
                 </button>
             </div>
         </div>
@@ -501,7 +520,6 @@ function renderMLKForm(){
     
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
     
-    // Добавляем обработчик Enter для удобства
     document.getElementById("mlk-action").addEventListener('keypress', function(e) {
         if (e.key === 'Enter' && e.ctrlKey) {
             addMLKReport();
@@ -514,11 +532,11 @@ function addMLKReport(){
     const action = document.getElementById("mlk-action").value.trim();
     
     if(!tag){ 
-        showNotification("Введите Discord тег игрока", "error");
+        showNotification("Введите идентификатор нарушителя", "error");
         return; 
     }
     if(!action){ 
-        showNotification("Опишите действие игрока", "error");
+        showNotification("Опишите нарушение", "error");
         return; 
     }
 
@@ -544,16 +562,16 @@ function renderMLKList(){
     const listDiv = document.getElementById("mlk-list");
     if (!listDiv) return; 
     
-    const filteredReports = (CURRENT_ROLE === "CURATOR") 
+    const filteredReports = (CURRENT_RANK.level === RANKS.CURATOR.level) 
         ? reports.filter(r => r.author === CURRENT_USER)
         : reports;
 
     if(filteredReports.length===0){ 
         listDiv.innerHTML=`
-            <div style="text-align: center; padding: 50px; color: rgba(0, 255, 157, 0.5);">
+            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
                 <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                <h3>Нет отчетов</h3>
-                <p>Создайте свой первый отчет МЛК</p>
+                <h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3>
+                <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ</p>
             </div>
         `; 
         return; 
@@ -589,13 +607,13 @@ function renderMLKList(){
                     <i class="fas ${statusIcon}"></i>
                     ${status}
                 </div>
-                ${CURRENT_ROLE === 'ADMIN' && !r.confirmed && !r.deleted ? `
+                ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
                 <div class="table-actions">
                     <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
-                        <i class="fas fa-check"></i> Подтвердить
+                        <i class="fas fa-check"></i> ПОДТВЕРДИТЬ
                     </button>
                     <button onclick="deleteReport('${r.id}')" class="action-btn delete">
-                        <i class="fas fa-trash"></i> Удалить
+                        <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>
                 </div>
                 ` : ''}
@@ -605,61 +623,62 @@ function renderMLKList(){
     });
 }
 
+/* ===== СТРАНИЦА ВСЕХ ОТЧЕТОВ ===== */
 function renderReports(){
     const content = document.getElementById("content-body");
     if (!content) return;
-    if(CURRENT_ROLE!=="ADMIN"){ 
-        content.innerHTML = '<div class="error-message">ACCESS DENIED</div>'; 
+    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level){ 
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
         return; 
     }
 
     let html = `
         <div style="margin-bottom: 30px;">
-            <h3 style="color: #00ff9d; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-list-alt"></i> ВСЕ ОТЧЕТЫ МЛК
-            </h3>
-            <p style="color: rgba(0, 255, 157, 0.7);">Общее количество: ${reports.length}</p>
+            <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
+            </h2>
+            <p style="color: rgba(192, 176, 112, 0.7);">ОБЩЕЕ КОЛИЧЕСТВО: ${reports.length}</p>
         </div>
     `;
     
     if(reports.length===0){ 
         html+=`
-            <div style="text-align: center; padding: 50px; color: rgba(0, 255, 157, 0.5);">
+            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
                 <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                <h3>База данных пуста</h3>
-                <p>Отчеты еще не созданы</p>
+                <h3>БАЗА ДАННЫХ ПУСТА</h3>
+                <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
             </div>
         `; 
     }
     else{
         html+=`
             <div class="dashboard-grid" style="margin-bottom: 30px;">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-value">${reports.filter(r => !r.confirmed && !r.deleted).length}</div>
-                    <div class="stat-label">На рассмотрении</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-clock"></i></div>
+                    <div class="card-value">${reports.filter(r => !r.confirmed && !r.deleted).length}</div>
+                    <div class="card-label">НА РАССМОТРЕНИИ</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check"></i></div>
-                    <div class="stat-value">${reports.filter(r => r.confirmed).length}</div>
-                    <div class="stat-label">Подтверждено</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-check"></i></div>
+                    <div class="card-value">${reports.filter(r => r.confirmed).length}</div>
+                    <div class="card-label">ПОДТВЕРЖДЕНО</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-trash"></i></div>
-                    <div class="stat-value">${reports.filter(r => r.deleted).length}</div>
-                    <div class="stat-label">Удалено</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-trash"></i></div>
+                    <div class="card-value">${reports.filter(r => r.deleted).length}</div>
+                    <div class="card-label">УДАЛЕНО</div>
                 </div>
             </div>
             
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>DISCORD</th>
-                        <th>ACTION</th>
+                        <th>ИДЕНТИФИКАТОР</th>
+                        <th>НАРУШЕНИЕ</th>
                         <th>АВТОР</th>
-                        <th>TIME</th>
-                        <th>STATUS</th>
-                        <th>ACTIONS</th>
+                        <th>ВРЕМЯ</th>
+                        <th>СТАТУС</th>
+                        <th>ДЕЙСТВИЯ</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -670,7 +689,7 @@ function renderReports(){
             let statusClass = r.deleted ? "status-deleted" : (r.confirmed?"status-confirmed":"status-pending");
             let statusIcon = r.deleted ? "fa-trash" : (r.confirmed?"fa-check":"fa-clock");
             
-            const actionsHtml = (!r.deleted && !r.confirmed) ?
+            const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
                 `<div class="table-actions">
                     <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
                         <i class="fas fa-check"></i>
@@ -699,87 +718,66 @@ function renderReports(){
     content.innerHTML=html;
 }
 
-/* ===== ADMIN PANEL - ПАРОЛИ ===== */
+/* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
 function renderPasswords() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
         <div class="form-container">
-            <h3 style="color: #00ff9d; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-key"></i> УПРАВЛЕНИЕ ПАРОЛЯМИ
-            </h3>
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
+            </h2>
             
-            <p style="color: rgba(0, 255, 157, 0.7); margin-bottom: 30px; line-height: 1.6;">
-                Здесь можно изменить пароли для входа в систему<br>
-                <span style="color: #ff0;">⚠️ Изменения вступят в силу немедленно</span>
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                ИЗМЕНЕНИЕ КОДОВ ДОСТУПА В СИСТЕМУ<br>
+                <span style="color: #c0b070;">ИЗМЕНЕНИЯ ВСТУПАЮТ В СИЛУ НЕМЕДЛЕННО</span>
             </p>
             
-            <div class="stat-card" style="margin-bottom: 25px;">
-                <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
-                <h4 style="color: #00ff9d; margin-bottom: 15px;">Пароль для администраторов</h4>
-                <p style="color: rgba(0, 255, 157, 0.7); margin-bottom: 15px;">
-                    Используется обычными администраторами из вайтлиста
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="admin-password" class="form-input" 
-                           value="${passwords.admin || ''}" placeholder="Новый пароль">
-                    <button onclick="updatePassword('admin')" class="btn-primary">
-                        <i class="fas fa-save"></i> Изменить
-                    </button>
-                </div>
-            </div>
-            
-            <div class="stat-card" style="margin-bottom: 25px;">
-                <div class="stat-icon"><i class="fas fa-users"></i></div>
-                <h4 style="color: #00ff9d; margin-bottom: 15px;">Пароль для кураторов</h4>
-                <p style="color: rgba(0, 255, 157, 0.7); margin-bottom: 15px;">
-                    Используется обычными кураторами для входа
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-users"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ КУРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="curator-password" class="form-input" 
-                           value="${passwords.curator || ''}" placeholder="Новый пароль">
+                           value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД">
                     <button onclick="updatePassword('curator')" class="btn-primary">
-                        <i class="fas fa-save"></i> Изменить
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
                     </button>
                 </div>
             </div>
             
-            <div class="stat-card" style="border-color: #ff0; background: rgba(255, 255, 0, 0.05);">
-                <div class="stat-icon" style="color: #ff0;"><i class="fas fa-shield-alt"></i></div>
-                <h4 style="color: #ff0; margin-bottom: 15px;">Специальный пароль</h4>
-                <p style="color: rgba(255, 255, 0, 0.8); margin-bottom: 15px;">
-                    Только для защищенных аккаунтов: ADMIN, Tihiy, System
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="admin-password" class="form-input" 
+                           value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('admin')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="special-password" class="form-input" 
-                           value="${passwords.special || ''}" placeholder="Новый пароль"
-                           style="border-color: #ff0;">
+                           value="${passwords.special || ''}" placeholder="НОВЫЙ КОД"
+                           style="border-color: #c0b070;">
                     <button onclick="updatePassword('special')" class="btn-primary" 
-                            style="border-color: #ff0; color: #ff0; background: rgba(255, 255, 0, 0.1);">
-                        <i class="fas fa-save"></i> Изменить
+                            style="border-color: #c0b070;">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
                     </button>
-                </div>
-                <p style="color: #ff0; font-size: 0.85rem; margin-top: 15px;">
-                    ⚠️ Этот пароль используется только специальными пользователями и НЕ работает для обычных администраторов
-                </p>
-            </div>
-            
-            <div style="margin-top: 40px; padding: 20px; background: rgba(0, 255, 157, 0.05); border-radius: 4px; border: 1px solid rgba(0, 255, 157, 0.2);">
-                <h4 style="color: #00ff9d; margin-bottom: 15px;"><i class="fas fa-info-circle"></i> Текущие пароли</h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div>
-                        <div style="color: rgba(0, 255, 157, 0.7); font-size: 0.9rem;">Администраторы</div>
-                        <div style="color: #00ff9d; font-family: 'Orbitron', sans-serif; font-size: 1.1rem;">${passwords.admin || 'не установлен'}</div>
-                    </div>
-                    <div>
-                        <div style="color: rgba(0, 255, 157, 0.7); font-size: 0.9rem;">Кураторы</div>
-                        <div style="color: #00ff9d; font-family: 'Orbitron', sans-serif; font-size: 1.1rem;">${passwords.curator || 'не установлен'}</div>
-                    </div>
-                    <div>
-                        <div style="color: rgba(255, 255, 0, 0.7); font-size: 0.9rem;">Защищенные аккаунты</div>
-                        <div style="color: #ff0; font-family: 'Orbitron', sans-serif; font-size: 1.1rem;">${passwords.special || 'не установлен'}</div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -792,17 +790,16 @@ function updatePassword(type) {
     const newPassword = input ? input.value.trim() : "";
     
     if (!newPassword) {
-        showNotification("Введите новый пароль", "error");
+        showNotification("Введите новый код", "error");
         return;
     }
     
     if (newPassword.length < 3) {
-        showNotification("Пароль должен содержать минимум 3 символа", "error");
+        showNotification("Код должен содержать минимум 3 символа", "error");
         return;
     }
     
-    let typeName = getPasswordTypeName(type);
-    let confirmMessage = `Изменить пароль для ${typeName}?\nНовый пароль: ${'*'.repeat(newPassword.length)}`;
+    let confirmMessage = `Изменить код доступа?\nНовый код: ${'*'.repeat(newPassword.length)}`;
     
     if (!confirm(confirmMessage)) {
         return;
@@ -815,65 +812,53 @@ function updatePassword(type) {
     });
 }
 
-function getPasswordTypeName(type) {
-    switch(type) {
-        case 'admin': return 'администраторов';
-        case 'curator': return 'кураторов';
-        case 'special': return 'защищенных аккаунтов';
-        default: return type;
-    }
-}
-
-/* ===== ADMIN PANEL - ВАЙТЛИСТ ===== */
+/* ===== СТРАНИЦА СПИСКА ДОСТУПА ===== */
 function renderWhitelist() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
         <div class="form-container">
-            <h3 style="color: #00ff9d; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-users"></i> УПРАВЛЕНИЕ ВАЙТЛИСТОМ
-            </h3>
+            <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-users"></i> СПИСОК ДОСТУПА
+            </h2>
             
-            <p style="color: rgba(0, 255, 157, 0.7); margin-bottom: 30px; line-height: 1.6;">
-                Только пользователи из этого списка могут входить как администраторы<br>
-                <span style="color: #ff0;">🔒 Специальные пользователи: только со специальным паролем (${passwords.special || 'не установлен'})</span><br>
-                <span style="color: #0f0;">👑 Обычные администраторы: пароль (${passwords.admin || 'EOD'})</span>
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ
             </p>
             
-            <div class="stat-card" style="margin-bottom: 30px;">
-                <div class="stat-icon"><i class="fas fa-user-plus"></i></div>
-                <h4 style="color: #00ff9d; margin-bottom: 15px;">Добавить в вайтлист</h4>
+            <div class="zone-card" style="margin-bottom: 30px;">
+                <div class="card-icon"><i class="fas fa-user-plus"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="text" id="new-whitelist-user" class="form-input" 
-                           placeholder="Введите никнейм для вайтлиста">
+                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ">
                     <button onclick="addToWhitelist()" class="btn-primary">
-                        <i class="fas fa-plus"></i> Добавить
+                        <i class="fas fa-plus"></i> ДОБАВИТЬ
                     </button>
                 </div>
             </div>
             
             <div>
-                <h4 style="color: #00ff9d; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> Текущий вайтлист
-                    <span style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.7);">(${whitelist.length} пользователей)</span>
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-list"></i> ТЕКУЩИЙ СПИСОК
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${whitelist.length})</span>
                 </h4>
                 
                 ${whitelist.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(0, 255, 157, 0.5); border: 1px dashed rgba(0, 255, 157, 0.3); border-radius: 4px;">
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
                         <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>Вайтлист пуст</h4>
-                        <p>Добавьте первого пользователя выше</p>
+                        <h4>СПИСОК ПУСТ</h4>
+                        <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
                     </div>
                 ` : `
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Никнейм</th>
-                                <th>Тип</th>
-                                <th>Добавил</th>
-                                <th>Дата добавления</th>
-                                <th>Действия</th>
+                                <th>ПСЕВДОНИМ</th>
+                                <th>ДОБАВИЛ</th>
+                                <th>ДАТА ДОБАВЛЕНИЯ</th>
+                                <th>ДЕЙСТВИЯ</th>
                             </tr>
                         </thead>
                         <tbody id="whitelist-table-body">
@@ -897,28 +882,22 @@ function renderWhitelistTable() {
     
     whitelist.forEach(user => {
         const row = document.createElement('tr');
-        const isSpecial = SPECIAL_USERS.some(specialUser => 
-            specialUser.toLowerCase() === user.username.toLowerCase()
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
         );
         
         row.innerHTML = `
-            <td style="font-weight: 500; color: ${isSpecial ? '#ff0' : '#00ff9d'}">
-                <i class="fas ${isSpecial ? 'fa-shield-alt' : 'fa-user'}"></i>
+            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : '#8cb43c'}">
+                <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
                 ${user.username}
             </td>
+            <td>${user.addedBy || "СИСТЕМА"}</td>
+            <td>${user.addedDate || "НЕИЗВЕСТНО"}</td>
             <td>
-                ${isSpecial ? 
-                    `<span style="color: #ff0;"><i class="fas fa-key"></i> Пароль: ${passwords.special || 'специальный'}</span>` : 
-                    `<span style="color: #0f0;"><i class="fas fa-unlock"></i> Пароль: ${passwords.admin || 'EOD'}</span>`
-                }
-            </td>
-            <td>${user.addedBy || "система"}</td>
-            <td>${user.addedDate || "неизвестно"}</td>
-            <td>
-                ${isSpecial ? 
-                    `<span style="color: #888; font-size: 0.85rem;"><i class="fas fa-lock"></i> защищен</span>` : 
+                ${isProtected ? 
+                    `<span style="color: #8f9779; font-size: 0.85rem;">ЗАЩИЩЕН</span>` : 
                     `<button onclick="removeFromWhitelist('${user.id}')" class="action-btn delete">
-                        <i class="fas fa-trash"></i> Удалить
+                        <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>`
                 }
             </td>
@@ -933,18 +912,18 @@ function addToWhitelist() {
     const username = input ? input.value.trim() : "";
     
     if (!username) {
-        showNotification("Введите никнейм", "error");
+        showNotification("Введите псевдоним", "error");
         return;
     }
     
-    if (SPECIAL_USERS.some(specialUser => 
-        specialUser.toLowerCase() === username.toLowerCase())) {
-        showNotification("Это системный аккаунт, уже добавлен", "warning");
+    if (PROTECTED_USERS.some(protectedUser => 
+        protectedUser.toLowerCase() === username.toLowerCase())) {
+        showNotification("Этот пользователь уже в системе", "warning");
         return;
     }
     
     if (whitelist.some(user => user.username.toLowerCase() === username.toLowerCase())) {
-        showNotification("Пользователь уже в вайтлисте", "warning");
+        showNotification("Пользователь уже в списке доступа", "warning");
         return;
     }
     
@@ -952,11 +931,11 @@ function addToWhitelist() {
         username: username,
         addedBy: CURRENT_USER,
         addedDate: new Date().toLocaleString(),
-        isSpecial: false
+        isProtected: false
     }).then(() => {
         loadData(() => {
             renderWhitelist();
-            showNotification(`Пользователь "${username}" добавлен в вайтлист\nПароль для входа: ${passwords.admin || 'EOD'}`, "success");
+            showNotification(`Пользователь "${username}" добавлен в список доступа`, "success");
             if (input) input.value = "";
         });
     }).catch(error => {
@@ -969,78 +948,84 @@ function removeFromWhitelist(id) {
     
     if (!userToRemove) return;
     
-    if (userToRemove.isSpecial) {
-        showNotification("Нельзя удалить системный аккаунт", "error");
+    if (userToRemove.isProtected) {
+        showNotification("Нельзя удалить защищенного пользователя", "error");
         return;
     }
     
-    if (!confirm(`Удалить пользователя "${userToRemove.username}" из вайтлиста?`)) return;
+    if (!confirm(`Удалить пользователя "${userToRemove.username}" из списка доступа?`)) return;
     
     db.ref('mlk_whitelist/' + id).remove().then(() => {
         loadData(() => {
             renderWhitelist();
-            showNotification("Пользователь удален из вайтлиста", "success");
+            showNotification("Пользователь удален из списка доступа", "success");
         });
     }).catch(error => {
         showNotification("Ошибка: " + error.message, "error");
     });
 }
 
-/* ===== ADMIN PANEL - ПОЛЬЗОВАТЕЛИ ===== */
+/* ===== СТРАНИЦА ПОЛЬЗОВАТЕЛЕЙ ===== */
 function renderUsers() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
         <div class="form-container">
-            <h3 style="color: #00ff9d; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-user-friends"></i> ЗАРЕГИСТРИРОВАННЫЕ ПОЛЬЗОВАТЕЛИ
-            </h3>
+            <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ СТАЛКЕРЫ
+            </h2>
             
-            <p style="color: rgba(0, 255, 157, 0.7); margin-bottom: 30px;">
-                Все пользователи, которые вошли в систему
+            <p style="color: #8f9779; margin-bottom: 30px;">
+                ВСЕ ПОЛЬЗОВАТЕЛИ, КОТОРЫЕ ВОШЛИ В СИСТЕМУ
             </p>
             
             <div style="margin-bottom: 30px;">
                 <div class="dashboard-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-users"></i></div>
-                        <div class="stat-value">${users.length}</div>
-                        <div class="stat-label">Всего пользователей</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-users"></i></div>
+                        <div class="card-value">${users.length}</div>
+                        <div class="card-label">ВСЕГО СТАЛКЕРОВ</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
-                        <div class="stat-value">${users.filter(u => u.role === 'ADMIN').length}</div>
-                        <div class="stat-label">Администраторов</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="card-value">${users.filter(u => u.role === RANKS.ADMIN.name).length}</div>
+                        <div class="card-label">АДМИНИСТРАТОРЫ</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
-                        <div class="stat-value">${users.filter(u => u.role === 'CURATOR').length}</div>
-                        <div class="stat-label">Кураторов</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-star"></i></div>
+                        <div class="card-value">${users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length}</div>
+                        <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user"></i></div>
+                        <div class="card-value">${users.filter(u => u.role === RANKS.CURATOR.name).length}</div>
+                        <div class="card-label">КУРАТОРЫ</div>
                     </div>
                 </div>
             </div>
             
             <div>
-                <h4 style="color: #00ff9d; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> Список пользователей
-                    <span style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.7);">(${users.length} записей)</span>
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-list"></i> СПИСОК СТАЛКЕРОВ
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${users.length})</span>
                 </h4>
                 
                 ${users.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(0, 255, 157, 0.5); border: 1px dashed rgba(0, 255, 157, 0.3); border-radius: 4px;">
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
                         <i class="fas fa-user-friends" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>Нет пользователей</h4>
-                        <p>Пользователи появятся после регистрации</p>
+                        <h4>НЕТ ПОЛЬЗОВАТЕЛЕЙ</h4>
+                        <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
                     </div>
                 ` : `
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Никнейм</th>
-                                <th>Роль</th>
-                                <th>Дата регистрации</th>
-                                <th>Действия</th>
+                                <th>ПСЕВДОНИМ</th>
+                                <th>РАНГ</th>
+                                <th>РЕГИСТРАЦИЯ</th>
+                                <th>ПОСЛЕДНИЙ ВХОД</th>
+                                <th>ДЕЙСТВИЯ</th>
                             </tr>
                         </thead>
                         <tbody id="users-table-body">
@@ -1064,33 +1049,42 @@ function renderUsersTable() {
     
     users.forEach(user => {
         const row = document.createElement('tr');
-        const isSpecial = SPECIAL_USERS.some(specialUser => 
-            specialUser.toLowerCase() === user.username.toLowerCase()
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
         );
         const isCurrentUser = user.username === CURRENT_USER;
         
+        let rankBadge = '';
+        if (user.role === RANKS.ADMIN.name) {
+            rankBadge = '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-user-shield"></i> АДМИНИСТРАТОР</span>';
+        } else if (user.role === RANKS.SENIOR_CURATOR.name) {
+            rankBadge = '<span class="report-status status-pending" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-star"></i> СТАРШИЙ КУРАТОР</span>';
+        } else {
+            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(140, 180, 60, 0.1); color: #8cb43c; border: 1px solid rgba(140, 180, 60, 0.3);"><i class="fas fa-user"></i> КУРАТОР</span>';
+        }
+        
         row.innerHTML = `
-            <td style="font-weight: 500; color: ${isSpecial ? '#ff0' : isCurrentUser ? '#00ff9d' : 'rgba(0, 255, 157, 0.9)'}">
-                <i class="fas ${isSpecial ? 'fa-shield-alt' : user.role === 'ADMIN' ? 'fa-user-shield' : 'fa-user-tie'}"></i>
+            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : '#8f9779'}">
+                <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
                 ${user.username}
-                ${isCurrentUser ? ' <span style="color: #00ff9d; font-size: 0.8rem;">(вы)</span>' : ''}
+                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
             </td>
+            <td>${rankBadge}</td>
+            <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
+            <td>${user.lastLogin || "НИКОГДА"}</td>
             <td>
-                <span class="report-status ${user.role === 'ADMIN' ? 'status-confirmed' : 'status-pending'}" 
-                      style="display: inline-flex; padding: 4px 10px;">
-                    <i class="fas ${user.role === 'ADMIN' ? 'fa-user-shield' : 'fa-user-tie'}"></i>
-                    ${user.role === 'ADMIN' ? 'Администратор' : 'Куратор'}
-                </span>
-            </td>
-            <td>${user.registrationDate || "неизвестно"}</td>
-            <td>
-                ${!isSpecial && !isCurrentUser ? 
-                    `<button onclick="removeUser('${user.id}')" class="action-btn delete">
-                        <i class="fas fa-trash"></i> Удалить
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
+                    `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px;">
+                        <i class="fas fa-star"></i> ПОВЫСИТЬ
                     </button>` : 
-                    `<span style="color: #888; font-size: 0.85rem;">
-                        <i class="fas ${isSpecial ? 'fa-lock' : 'fa-info-circle'}"></i>
-                        ${isSpecial ? 'защищен' : 'текущий'}
+                    ''
+                }
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level ? 
+                    `<button onclick="removeUser('${user.id}')" class="action-btn delete">
+                        <i class="fas fa-trash"></i> УДАЛИТЬ
+                    </button>` : 
+                    `<span style="color: #8f9779; font-size: 0.85rem;">
+                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
                     </span>`
                 }
             </td>
@@ -1100,17 +1094,36 @@ function renderUsersTable() {
     });
 }
 
+function promoteToSeniorCurator(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    if (!confirm(`Повысить ${user.username} до старшего куратора?`)) return;
+    
+    db.ref('mlk_users/' + userId).update({
+        role: RANKS.SENIOR_CURATOR.name,
+        rank: RANKS.SENIOR_CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            renderUsers();
+            showNotification("Ранг успешно повышен", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
 function removeUser(id) {
     const userToRemove = users.find(user => user.id === id);
     
     if (!userToRemove) return;
     
-    const isSpecial = SPECIAL_USERS.some(specialUser => 
-        specialUser.toLowerCase() === userToRemove.username.toLowerCase()
+    const isProtected = PROTECTED_USERS.some(protectedUser => 
+        protectedUser.toLowerCase() === userToRemove.username.toLowerCase()
     );
     
-    if (isSpecial) {
-        showNotification("Нельзя удалить системного пользователя", "error");
+    if (isProtected) {
+        showNotification("Нельзя удалить защищенного пользователя", "error");
         return;
     }
     
@@ -1126,122 +1139,115 @@ function removeUser(id) {
     });
 }
 
-/* ===== ADMIN PANEL - СИСТЕМА ===== */
-function renderAdmin(){
+/* ===== СТРАНИЦА СИСТЕМЫ ===== */
+function renderSystem(){
     const content = document.getElementById("content-body");
     if (!content) return;
     
-    const isSpecial = SPECIAL_USERS.some(specialUser => 
-        specialUser.toLowerCase() === CURRENT_USER.toLowerCase()
-    );
-    
-    // Подсчитываем статистику
     const pendingReports = reports.filter(r => !r.confirmed && !r.deleted).length;
     const confirmedReports = reports.filter(r => r.confirmed).length;
     const deletedReports = reports.filter(r => r.deleted).length;
-    const adminUsers = users.filter(u => u.role === 'ADMIN').length;
-    const curatorUsers = users.filter(u => u.role === 'CURATOR').length;
+    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
+    const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
+    const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
     
     content.innerHTML = `
         <div class="form-container">
-            <h3 style="color: #00ff9d; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-cogs"></i> СИСТЕМА
-                ${isSpecial ? '<span style="color: #ff0; font-size: 1.5rem; margin-left: 10px;">🔒</span>' : ''}
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
+            </h2>
+            
+            <div class="zone-card" style="margin-bottom: 30px;">
+                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <div class="card-value">${CURRENT_USER}</div>
+                <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
+                <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
+                    РАНГ: ${CURRENT_RANK.name}
+                </div>
+            </div>
+            
+            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
             </h3>
             
-            <div style="margin-bottom: 30px; padding: 20px; background: rgba(0, 255, 157, 0.05); border-radius: 4px; border: 1px solid rgba(0, 255, 157, 0.2);">
-                <p style="color: #00ff9d; font-size: 1.1rem; margin-bottom: 10px;">
-                    Добро пожаловать, <strong>${CURRENT_USER}</strong>${isSpecial ? ' (Защищенный аккаунт)' : ''}!
-                </p>
-                <p style="color: rgba(0, 255, 157, 0.7);">
-                    Выберите раздел в боковой панели для управления системой.
-                </p>
-            </div>
-            
-            <h4 style="color: #00ff9d; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-chart-bar"></i> Статистика системы
-            </h4>
-            
             <div class="dashboard-grid" style="margin-bottom: 30px;">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-database"></i></div>
-                    <div class="stat-value">${reports.length}</div>
-                    <div class="stat-label">Всего отчетов</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-database"></i></div>
+                    <div class="card-value">${reports.length}</div>
+                    <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-value">${users.length}</div>
-                    <div class="stat-label">Пользователей</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <div class="card-value">${users.length}</div>
+                    <div class="card-label">СТАЛКЕРОВ</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="stat-value">${whitelist.length}</div>
-                    <div class="stat-label">В вайтлисте</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-shield-alt"></i></div>
-                    <div class="stat-value">${SPECIAL_USERS.length}</div>
-                    <div class="stat-label">Защищенных</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${whitelist.length}</div>
+                    <div class="card-label">В СПИСКЕ ДОСТУПА</div>
                 </div>
             </div>
             
             <div class="dashboard-grid" style="margin-bottom: 30px;">
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                    <div class="stat-value">${pendingReports}</div>
-                    <div class="stat-label">На рассмотрении</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-clock"></i></div>
+                    <div class="card-value">${pendingReports}</div>
+                    <div class="card-label">НА РАССМОТРЕНИИ</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-check"></i></div>
-                    <div class="stat-value">${confirmedReports}</div>
-                    <div class="stat-label">Подтверждено</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-check"></i></div>
+                    <div class="card-value">${confirmedReports}</div>
+                    <div class="card-label">ПОДТВЕРЖДЕНО</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-trash"></i></div>
-                    <div class="stat-value">${deletedReports}</div>
-                    <div class="stat-label">Удалено</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
-                    <div class="stat-value">${curatorUsers}</div>
-                    <div class="stat-label">Кураторов</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-trash"></i></div>
+                    <div class="card-value">${deletedReports}</div>
+                    <div class="card-label">УДАЛЕНО</div>
                 </div>
             </div>
             
-            ${isSpecial ? `
-            <div style="margin-top: 30px; padding: 20px; background: rgba(255, 255, 0, 0.1); border-radius: 4px; border: 1px solid #ff0;">
-                <h4 style="color: #ff0; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
-                    <i class="fas fa-shield-alt"></i> Защищенный аккаунт
-                </h4>
-                <div style="color: rgba(255, 255, 0, 0.9); line-height: 1.6;">
-                    <p><i class="fas fa-key"></i> Может входить ТОЛЬКО с паролем: <strong>${passwords.special || 'не установлен'}</strong></p>
-                    <p><i class="fas fa-ban"></i> Не может войти как куратор (пароль ${passwords.curator || '123'} не работает)</p>
-                    <p><i class="fas fa-ban"></i> Не может войти с обычным паролем админа (${passwords.admin || 'EOD'} не работает)</p>
-                    <p><i class="fas fa-lock"></i> Не может быть удален из системы</p>
+            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
+            </h3>
+            
+            <div class="dashboard-grid">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${adminUsers}</div>
+                    <div class="card-label">АДМИНИСТРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <div class="card-value">${seniorCurators}</div>
+                    <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user"></i></div>
+                    <div class="card-value">${curators}</div>
+                    <div class="card-label">КУРАТОРЫ</div>
                 </div>
             </div>
-            ` : ''}
             
-            <div style="margin-top: 30px; padding: 20px; background: rgba(10, 15, 20, 0.7); border-radius: 4px; border: 1px solid rgba(0, 255, 157, 0.2);">
-                <h4 style="color: #00ff9d; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
-                    <i class="fas fa-info-circle"></i> Информация о системе
+            <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;">
+                    <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
                 </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; color: rgba(0, 255, 157, 0.8);">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
                     <div>
-                        <div style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.6);">Версия системы</div>
-                        <div>v2.0.4</div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
+                        <div>1.3.7</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.6);">База данных</div>
-                        <div>Firebase Realtime</div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
+                        <div>ОПЕРАТИВНАЯ</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.6);">Последнее обновление</div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
                         <div>${new Date().toLocaleDateString('ru-RU')}</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.9rem; color: rgba(0, 255, 157, 0.6);">Статус</div>
-                        <div style="color: #00ff9d;"><i class="fas fa-circle" style="font-size: 0.7rem;"></i> Активен</div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
+                        <div style="color: #8cb43c;">АКТИВЕН</div>
                     </div>
                 </div>
             </div>

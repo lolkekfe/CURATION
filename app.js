@@ -74,12 +74,11 @@ function loadReports(callback){
     });
 }
 
-/* ===== MLK SCREEN (КУРАТОР) ===== */
+/* ===== MLK SCREEN (КУРАТОР) (ИСПРАВЛЕНО СОЗДАНИЕ ЭЛЕМЕНТОВ) ===== */
 function renderMLKScreen(){
     const content = document.getElementById("content");
-    content.innerHTML = "";
+    content.innerHTML = ""; // Очищаем полностью
 
-    // Кнопка "+" видна только Куратору
     if(CURRENT_ROLE === "CURATOR") {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
@@ -95,15 +94,19 @@ function renderMLKScreen(){
         content.appendChild(btnContainer);
     }
 
-    const listDiv = document.getElementById("mlk-list");
+    const listDiv = document.createElement("div");
+    listDiv.id = "mlk-list";
     content.appendChild(listDiv);
 
     renderMLKList();
 }
 
-/* ===== MLK FORM (КУРАТОР) ===== */
+/* ===== MLK FORM (КУРАТОР) (ИСПРАВЛЕНО: Убедились, что listDiv существует) ===== */
 function renderMLKForm(){
     const listDiv = document.getElementById("mlk-list");
+    // Проверяем, что элемент найден, чтобы избежать ошибки Cannot set properties of null
+    if (!listDiv) return; 
+
     listDiv.innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
         <label>Discord тег игрока:</label><br>
@@ -128,6 +131,9 @@ function addMLKReport(){
         loadReports(renderMLKScreen);
     });
 }
+
+/* ===== TYPE EFFECT (УДАЛЕНО ИЗ ЭТОЙ ВЕРСИИ) ===== */
+
 
 /* ===== MLK LIST SCREEN (КУРАТОР) (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ HTML) ===== */
 function renderMLKList(){

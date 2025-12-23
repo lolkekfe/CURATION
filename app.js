@@ -38,7 +38,7 @@ function setupSidebar() {
 
     const btnMLK = document.createElement("button");
     btnMLK.textContent = "ОТЧЕТ МЛК";
-    btnMLK.onclick = () => openSection("mlk");
+    btnMLK.onclick = () => renderMLKScreen();
     sidebar.appendChild(btnMLK);
 
     if (CURRENT_ROLE === "ADMIN") {
@@ -59,10 +59,7 @@ function enterSystem() {
     document.getElementById("terminal").style.display = "flex";
 
     setupSidebar();
-    loadReports(() => {
-        if (CURRENT_ROLE === "CURATOR") openSection("mlk");
-        else openSection("reports");
-    });
+    loadReports(() => renderMLKScreen());
 }
 
 /* ===== FIREBASE ===== */
@@ -75,24 +72,10 @@ function loadReports(callback) {
     });
 }
 
-/* ===== NAVIGATION ===== */
-function openSection(name) {
-    if (name === "mlk") return renderMLKScreen();
-    if (name === "reports") return renderReports();
-    if (name === "admin") {
-        if (CURRENT_ROLE !== "ADMIN") {
-            document.getElementById("content").textContent = "ACCESS RESTRICTED";
-            return;
-        }
-        return renderAdmin();
-    }
-    document.getElementById("content").textContent = "MODULE NOT FOUND";
-}
-
-/* ===== MLK SCREEN WITH + BUTTON ===== */
+/* ===== MLK SCREEN ===== */
 function renderMLKScreen() {
     document.getElementById("content").innerHTML = `
-        <div style="display:flex; justify-content: flex-end;">
+        <div style="display:flex; justify-content: flex-end; margin-bottom: 10px;">
             <button id="add-mlk-btn">+</button>
         </div>
         <div id="mlk-list"></div>
@@ -107,8 +90,7 @@ function renderMLKList() {
     const listDiv = document.getElementById("mlk-list");
     listDiv.innerHTML = "";
 
-    // Для CURATOR показываем только свои отчеты
-    const filteredReports = (CURRENT_ROLE === "CURATOR") 
+    const filteredReports = (CURRENT_ROLE === "CURATOR")
         ? reports.filter(r => r.author === CURRENT_ROLE)
         : reports;
 
@@ -135,7 +117,6 @@ function renderMLKList() {
             <strong>STATUS:</strong> ${status}
         `;
 
-        // Если ADMIN, добавляем кнопки
         if (CURRENT_ROLE === "ADMIN" && !r.deleted && !r.confirmed) {
             const btnDel = document.createElement("button");
             btnDel.textContent = "Удалить";
@@ -160,7 +141,8 @@ function renderMLKList() {
 
 /* ===== MLK FORM ===== */
 function renderMLKForm() {
-    document.getElementById("mlk-list").innerHTML = `
+    const listDiv = document.getElementById("mlk-list");
+    listDiv.innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
         <label>Discord тег игрока:</label><br>
         <input id="mlk-tag"><br><br>
@@ -192,7 +174,7 @@ function addMLKReport() {
 
     newReportRef.set(report).then(() => {
         alert("Отчет сохранен");
-        renderMLKScreen(); // Возвращаемся к пустому экрану с кнопкой +
+        renderMLKScreen(); // возвращаемся к списку с кнопкой "+"
         loadReports(renderMLKList);
     });
 }

@@ -170,4 +170,6 @@ function renderReports(){
 }
 
 /* ===== ADMIN PANEL ===== */
-function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
+function renderAdmin(){ 
+    document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; 
+}

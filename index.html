@@ -1,31 +1,162 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<title>SECURE CURATOR TERMINAL</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL v2.0 | SECURE MLK SYSTEM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Анимированный фон -->
+    <div class="matrix-bg"></div>
+    <div class="scanlines"></div>
+    
+    <!-- Логин экран -->
+    <div id="login-screen" class="login-container">
+        <div class="terminal-header">
+            <div class="pulse-dot"></div>
+            <h1><span class="glitch" data-text="SYSTEM_ACCESS">SYSTEM_ACCESS</span></h1>
+            <div class="terminal-status">
+                <span class="status-indicator online"></span>
+                <span class="status-text">CONNECTED</span>
+            </div>
+        </div>
+        
+        <div class="login-box">
+            <div class="input-group">
+                <div class="input-label">
+                    <i class="fas fa-user-secret"></i>
+                    <span>IDENTIFICATION</span>
+                </div>
+                <input type="text" id="username" placeholder="ENTER_USERNAME" autocomplete="off">
+                <div class="input-line"></div>
+            </div>
+            
+            <div class="input-group">
+                <div class="input-label">
+                    <i class="fas fa-key"></i>
+                    <span>AUTH_CODE</span>
+                </div>
+                <input type="password" id="password" placeholder="********" autocomplete="off">
+                <div class="input-line"></div>
+            </div>
+            
+            <div class="login-hint">
+                <i class="fas fa-info-circle"></i>
+                <span> 
+            </div>
+            
+            <button id="login-btn" class="cyber-button">
+                <span class="cyber-button-text">INITIATE_SEQUENCE</span>
+                <div class="cyber-button-glitch"></div>
+            </button>
+            
+            <div id="login-error" class="error-message"></div>
+        </div>
+        
+        <div class="terminal-footer">
+            <div class="footer-text">
+                <span>v2.0.4</span>
+                <span class="blink">█</span>
+                <span>MLK SECURITY SYSTEM</span>
+                <span class="blink">█</span>
+                <span>[ENCRYPTED]</span>
+            </div>
+        </div>
+    </div>
 
-<div id="login-screen" class="center-screen">
-    <input type="password" id="password" placeholder="Введите пароль">
-    <button id="login-btn">Войти</button>
-    <p id="login-error"></p>
-</div>
+    <!-- Основной терминал -->
+    <div id="terminal" class="terminal-wrapper">
+        <!-- Сайдбар -->
+        <div id="sidebar" class="terminal-sidebar">
+            <div class="user-panel">
+                <div class="user-avatar">
+                    <i class="fas fa-terminal"></i>
+                    <div class="user-status"></div>
+                </div>
+                <div class="user-info">
+                    <div class="username" id="current-username">USER_001</div>
+                    <div class="user-role" id="current-role">ACCESS_LEVEL</div>
+                </div>
+                <div class="user-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>SECURE</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="nav-divider">
+                <span>NAVIGATION</span>
+            </div>
+            
+            <nav class="nav-menu" id="nav-menu">
+                <!-- Навигация будет добавлена через JS -->
+            </nav>
+            
+            <div class="system-info">
+                <div class="info-item">
+                    <i class="fas fa-database"></i>
+                    <span class="info-label">DB STATUS</span>
+                    <span class="info-value online">ACTIVE</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-bolt"></i>
+                    <span class="info-label">POWER</span>
+                    <div class="power-bar">
+                        <div class="power-level"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="logout-btn" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>TERMINATE_SESSION</span>
+            </button>
+        </div>
 
-<div id="terminal">
-    <div id="sidebar"></div>
-    <div id="content"></div>
-</div>
+        <!-- Основной контент -->
+        <div id="content" class="terminal-content">
+            <div class="content-header">
+                <div class="header-title">
+                    <h2 id="content-title">SYSTEM_DASHBOARD</h2>
+                    <div class="title-line"></div>
+                </div>
+                <div class="header-controls">
+                    <div class="time-display">
+                        <i class="far fa-clock"></i>
+                        <span id="current-time">00:00:00</span>
+                    </div>
+                    <div class="notification-bell">
+                        <i class="far fa-bell"></i>
+                        <span class="notification-count">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-body" id="content-body">
+                <!-- Контент будет загружаться здесь -->
+            </div>
+            
+            <div class="content-footer">
+                <div class="footer-status">
+                    <span class="status-dot"></span>
+                    <span>SYSTEM_READY</span>
+                </div>
+                <div class="footer-commands">
+                    <span>>_</span>
+                    <span class="command-line">Awaiting input...</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<!-- 1. Сначала Firebase SDK (Убедитесь, что эти URL доступны) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
-<!-- 2. Затем ваша инициализация Firebase -->
-<script src="firebase.js"></script>
-
-<!-- 3. Затем ваша основная логика приложения -->
-<script src="app.js"></script>
+    <!-- Скрипты -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="firebase.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

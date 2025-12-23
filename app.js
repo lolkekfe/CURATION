@@ -118,6 +118,14 @@ function addMLKReport(){
     });
 }
 
+/* ===== TYPE EFFECT ===== */
+function typeText(element, text, index = 0, callback) {
+    if(index < text.length){
+        element.innerHTML += text.charAt(index);
+        setTimeout(()=>typeText(element,text,index+1,callback), 10);
+    } else if(callback) callback();
+}
+
 /* ===== MLK LIST ===== */
 function renderMLKList(){
     const listDiv = document.getElementById("mlk-list");
@@ -138,13 +146,16 @@ function renderMLKList(){
 
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
-        reportDiv.innerHTML = `
-            <strong>DISCORD:</strong> ${r.tag}<br>
-            <strong>ACTION:</strong> ${r.action}<br>
-            <strong>ROLE:</strong> ${r.author}<br>
-            <strong>TIME:</strong> ${r.time}<br>
-            <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span>
+        listDiv.appendChild(reportDiv);
+
+        const text = `
+<strong>DISCORD:</strong> ${r.tag}<br>
+<strong>ACTION:</strong> ${r.action}<br>
+<strong>ROLE:</strong> ${r.author}<br>
+<strong>TIME:</strong> ${r.time}<br>
+<strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
         `;
+        typeText(reportDiv, text);
 
         if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
             const btnDel=document.createElement("button");
@@ -158,8 +169,6 @@ function renderMLKList(){
             reportDiv.appendChild(btnDel);
             reportDiv.appendChild(btnConfirm);
         }
-
-        listDiv.appendChild(reportDiv);
     });
 }
 

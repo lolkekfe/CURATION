@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>SECURE CURATOR TERMINAL</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
 </head>
 <body>
 
@@ -25,6 +29,25 @@
 
     <div id="content"></div>
 </div>
+
+<!-- Firebase config & app -->
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCGqNn_jx13SKHBYMZLhUJ7nEbK32vAJx4",
+  authDomain: "curatorterminal.firebaseapp.com",
+  databaseURL: "https://curatorterminal-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "curatorterminal",
+  storageBucket: "curatorterminal.firebasestorage.app",
+  messagingSenderId: "577721444184",
+  appId: "1:577721444184:web:58f4d0aeede9a8c0ba672d",
+  measurementId: "G-X0N5JT0K8D"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const analytics = firebase.analytics(app);
+const db = firebase.database();
+</script>
 
 <script src="app.js"></script>
 </body>

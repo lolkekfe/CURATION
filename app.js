@@ -141,4 +141,33 @@ function renderMLKList(){
 
         reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
-<strong>ACTION:</strong
+<strong>ACTION:</strong> ${r.action}<br>
+<strong>ROLE:</strong> ${r.author}<br>
+<strong>TIME:</strong> ${r.time}<br>
+<strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
+        `;
+
+        if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
+            const btnDel=document.createElement("button");
+            btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
+            btnDel.onclick=()=>{ db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(renderMLKList)); }
+
+            const btnConfirm=document.createElement("button");
+            btnConfirm.textContent="Подтвердить";
+            btnConfirm.onclick=()=>{ db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(renderMLKList)); }
+
+            reportDiv.appendChild(btnDel);
+            reportDiv.appendChild(btnConfirm);
+        }
+    });
+}
+
+/* ===== REPORTS (ADMIN) ===== */
+function renderReports(){
+    if(CURRENT_ROLE!=="ADMIN"){ document.getElementById("content").textContent="REPORT LIST AVAILABLE FOR ADMIN ONLY"; return; }
+    const content=document.getElementById("content");
+    content.innerHTML="<h3>MLK REPORTS</h3>";
+}
+
+/* ===== ADMIN PANEL ===== */
+function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }

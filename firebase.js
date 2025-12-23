@@ -9,6 +9,6 @@ const firebaseConfig = {
   measurementId: "G-X0N5JT0K8D"
 };
 
-// Firebase 8
+// Firebase 8 глобально
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();

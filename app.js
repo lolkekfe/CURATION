@@ -334,7 +334,7 @@ window.promoteToAdminByStaticId = function(staticId) {
 function renderBanInterface() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    
+    }    
     if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
         content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
         return;
@@ -2092,5 +2092,6 @@ function renderSystem(){
         </div>
     `;
 }
+
 
 

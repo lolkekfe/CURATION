@@ -10,7 +10,6 @@ body {
 }
 
 /* LOGIN */
-
 #login-screen {
     height: 100vh;
     display: flex;
@@ -47,10 +46,10 @@ body {
 }
 
 /* TERMINAL */
-
 #terminal {
     display: none;
     height: 100vh;
+    display: flex;
 }
 
 #sidebar {
@@ -81,7 +80,6 @@ body {
 }
 
 /* TABLE */
-
 table {
     width: 100%;
     border-collapse: collapse;

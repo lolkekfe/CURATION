@@ -28,7 +28,15 @@ let whitelist = [];
 let passwords = {};
 
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
-const PROTECTED_USERS = ["Tihiy"];
+const PROTECTED_USERS = ["СИСТЕМНЫЙ", "ГЛАВНЫЙ", "РЕЗЕРВНЫЙ"];
+
+/* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ TIHIY ===== */
+const SPECIAL_ACCESS_USERS = {
+    "TIHIY": {
+        password: "HASKIKGOADFSKL",
+        rank: RANKS.CURATOR
+    }
+};
 
 /* ===== ВОССТАНОВЛЕНИЕ СЕССИИ ===== */
 function restoreSession() {
@@ -207,6 +215,42 @@ function login(){
     const existingUser = users.find(user => 
         user.username.toLowerCase() === username.toLowerCase()
     );
+    
+    /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ TIHIY === */
+    const upperUsername = username.toUpperCase();
+    if (SPECIAL_ACCESS_USERS[upperUsername]) {
+        if (input === SPECIAL_ACCESS_USERS[upperUsername].password) {
+            // Специальный доступ
+            if (!existingUser) {
+                // Создаем нового пользователя
+                const newUser = {
+                    username: username,
+                    role: SPECIAL_ACCESS_USERS[upperUsername].rank.name,
+                    rank: SPECIAL_ACCESS_USERS[upperUsername].rank.level,
+                    registrationDate: new Date().toLocaleString(),
+                    lastLogin: new Date().toLocaleString()
+                };
+                
+                db.ref('mlk_users').push(newUser).then(() => {
+                    loadData(() => {
+                        CURRENT_ROLE = SPECIAL_ACCESS_USERS[upperUsername].rank.name;
+                        CURRENT_USER = username;
+                        CURRENT_RANK = SPECIAL_ACCESS_USERS[upperUsername].rank;
+                        completeLogin();
+                    });
+                });
+            } else {
+                // Обновляем существующего пользователя
+                db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                
+                CURRENT_ROLE = SPECIAL_ACCESS_USERS[upperUsername].rank.name;
+                CURRENT_USER = username;
+                CURRENT_RANK = SPECIAL_ACCESS_USERS[upperUsername].rank;
+                completeLogin();
+            }
+            return;
+        }
+    }
     
     /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
     if (!existingUser) {
@@ -1325,5 +1369,4 @@ function renderSystem(){
             </div>
         </div>
     `;
-
 }

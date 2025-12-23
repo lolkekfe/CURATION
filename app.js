@@ -245,257 +245,91 @@ function checkIfBanned(username) {
     return { banned: false };
 }
 
-/* ФУНКЦИЯ БАНА (ИСПРАВЛЕНА) */
+/* ===== СИСТЕМА БАНОВ (ИСПРАВЛЕННЫЙ БЛОК) ===== */
+function checkIfBanned(username) {
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) return { banned: false };
+    
+    // Ищем активный бан по Static ID
+    const activeBan = bans.find(ban => ban.staticId === user.staticId && !ban.unbanned);
+    return activeBan ? { banned: true, ...activeBan } : { banned: false };
+}
+
 function banUser(username, reason) {
+    // Проверка прав (минимум СТАРШИЙ КУРАТОР)
     if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только старший куратор и выше может банить", "error");
-        return Promise.reject("Недостаточно прав");
+        showNotification("Недостаточно прав доступа", "error");
+        return Promise.reject();
     }
 
-    if (!username || !reason) {
-        showNotification("Введите имя пользователя и причину", "error");
-        return Promise.reject("Не указаны данные");
-    }
-    
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!user) {
-        showNotification("Пользователь не найден", "error");
-        return Promise.reject("Пользователь не найден");
+        showNotification("Сталкер не найден в базе", "error");
+        return Promise.reject();
     }
-    
-    if (PROTECTED_USERS.some(protectedUser => 
-        protectedUser.toLowerCase() === username.toLowerCase())) {
-        showNotification("Нельзя забанить защищенного пользователя", "error");
-        return Promise.reject("Защищенный пользователь");
+
+    if (PROTECTED_USERS.includes(user.username)) {
+        showNotification("Ошибка: Попытка блокировки создателя", "error");
+        return Promise.reject();
     }
-    
-    if (username.toLowerCase() === CURRENT_USER.toLowerCase()) {
-        showNotification("Нельзя забанить самого себя", "error");
-        return Promise.reject("Нельзя забанить себя");
-    }
-    
-    const isAlreadyBanned = bans.some(ban => 
-        ban.staticId === user.staticId && !ban.unbanned
-    );
-    
-    if (isAlreadyBanned) {
-        showNotification("Пользователь уже забанен", "warning");
-        return Promise.reject("Уже забанен");
-    }
-    
+
     const banData = {
-        username: username,
+        username: user.username,
         staticId: user.staticId,
         reason: reason,
         bannedBy: CURRENT_USER,
-        bannedByStaticId: CURRENT_STATIC_ID,
         bannedDate: new Date().toLocaleString(),
-        unbanned: false,
-        unbannedBy: null,
-        unbannedByStaticId: null,
-        unbannedDate: null
+        unbanned: false
     };
-    
+
     return db.ref('mlk_bans').push(banData).then(() => {
         loadData(() => {
-            showNotification(`Пользователь ${username} забанен`, "success");
+            showNotification(`Объект ${username} заблокирован`, "success");
+            renderBanInterface();
         });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка при бане: " + error.message, "error");
-        return false;
     });
 }
 
-/* ===== БАН ПО STATIC ID ===== */
-function banByStaticId(staticId, reason) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только старший куратор и выше может банить", "error");
-        return Promise.reject("Недостаточно прав");
-    }
-    
-    if (!staticId || !reason) {
-        showNotification("Введите STATIC ID и причину", "error");
-        return Promise.reject("Не указаны данные");
-    }
-    
+/* Глобальные обработчики для кнопок в таблице */
+window.banByStaticId = function(staticId) {
+    const reason = prompt("Укажите причину блокировки:");
     const user = users.find(u => u.staticId === staticId);
-    if (!user) {
-        showNotification("Пользователь с таким STATIC ID не найден", "error");
-        return Promise.reject("Пользователь не найден");
+    if (user && reason) {
+        banUser(user.username, reason);
     }
-    
-    if (PROTECTED_USERS.some(protectedUser => 
-        protectedUser.toLowerCase() === user.username.toLowerCase())) {
-        showNotification("Нельзя забанить защищенного пользователя", "error");
-        return Promise.reject("Защищенный пользователь");
-    }
-    
-    if (user.username.toLowerCase() === CURRENT_USER.toLowerCase()) {
-        showNotification("Нельзя забанить самого себя", "error");
-        return Promise.reject("Нельзя забанить себя");
-    }
-    
-    const isAlreadyBanned = bans.some(ban => 
-        ban.staticId === staticId && !ban.unbanned
-    );
-    
-    if (isAlreadyBanned) {
-        showNotification("Пользователь уже забанен", "warning");
-        return Promise.reject("Уже забанен");
-    }
-    
-    const banData = {
-        username: user.username,
-        staticId: staticId,
-        reason: reason,
-        bannedBy: CURRENT_USER,
-        bannedByStaticId: CURRENT_STATIC_ID,
-        bannedDate: new Date().toLocaleString(),
-        unbanned: false,
-        unbannedBy: null,
-        unbannedByStaticId: null,
-        unbannedDate: null
-    };
-    
-    return db.ref('mlk_bans').push(banData).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${user.username} (${staticId}) забанен`, "success");
-        });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка при бане: " + error.message, "error");
-        return false;
-    });
-}
+};
 
-/* ===== РАЗБАН ПО STATIC ID ===== */
-function unbanByStaticId(staticId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только старший куратор и выше может разбанивать", "error");
-        return Promise.reject("Недостаточно прав");
-    }
-    
-    const activeBan = bans.find(ban => 
-        ban.staticId === staticId && !ban.unbanned
-    );
-    
-    if (!activeBan) {
-        showNotification("Активный бан с таким STATIC ID не найден", "error");
-        return Promise.reject("Бан не найден");
-    }
-    
-    if (!confirm(`Разбанить пользователя ${activeBan.username} (${staticId})?`)) {
-        return Promise.reject("Отменено");
-    }
-    
-    const banId = activeBan.id;
-    return db.ref('mlk_bans/' + banId).update({
-        unbanned: true,
-        unbannedBy: CURRENT_USER,
-        unbannedByStaticId: CURRENT_STATIC_ID,
-        unbannedDate: new Date().toLocaleString()
-    }).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${activeBan.username} (${staticId}) разбанен`, "success");
+window.unbanByStaticId = function(staticId) {
+    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
+    if (ban && confirm("Восстановить доступ данному Static ID?")) {
+        db.ref('mlk_bans/' + ban.id).update({ unbanned: true }).then(() => {
+            loadData(() => {
+                renderBanInterface();
+                showNotification("Доступ восстановлен", "success");
+            });
         });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка при разбане: " + error.message, "error");
-        return false;
-    });
-}
+    }
+};
 
-/* ===== ПОВЫШЕНИЕ ПО STATIC ID ===== */
-function promoteByStaticId(staticId, targetRank) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только старший куратор и выше может повышать", "error");
-        return Promise.reject("Недостаточно прав");
-    }
-    
-    if (!staticId || !targetRank) {
-        showNotification("Введите STATIC ID и выберите ранг", "error");
-        return Promise.reject("Не указаны данные");
-    }
-    
-    const user = users.find(u => u.staticId === staticId);
-    if (!user) {
-        showNotification("Пользователь с таким STATIC ID не найден", "error");
-        return Promise.reject("Пользователь не найден");
-    }
-    
-    if (PROTECTED_USERS.some(protectedUser => 
-        protectedUser.toLowerCase() === user.username.toLowerCase())) {
-        showNotification("Нельзя изменить ранг защищенного пользователя", "error");
-        return Promise.reject("Защищенный пользователь");
-    }
-    
-    if (user.username.toLowerCase() === CURRENT_USER.toLowerCase()) {
-        showNotification("Нельзя изменить свой собственный ранг", "error");
-        return Promise.reject("Нельзя изменить свой ранг");
-    }
-    
-    if (targetRank.level > CURRENT_RANK.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Нельзя повышать до ранга выше своего", "error");
-        return Promise.reject("Недостаточно прав");
-    }
-    
-    let rankName, rankLevel;
-    if (targetRank === RANKS.ADMIN) {
-        rankName = RANKS.ADMIN.name;
-        rankLevel = RANKS.ADMIN.level;
-    } else if (targetRank === RANKS.SENIOR_CURATOR) {
-        rankName = RANKS.SENIOR_CURATOR.name;
-        rankLevel = RANKS.SENIOR_CURATOR.level;
-    } else {
-        rankName = RANKS.CURATOR.name;
-        rankLevel = RANKS.CURATOR.level;
-    }
-    
-    if (!confirm(`Повысить ${user.username} (${staticId}) до ${rankName}?`)) {
-        return Promise.reject("Отменено");
-    }
-    
-    return db.ref('mlk_users/' + user.id).update({
-        role: rankName,
-        rank: rankLevel
-    }).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${user.username} повышен до ${rankName}`, "success");
-        });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка при повышении: " + error.message, "error");
-        return false;
-    });
-}
-
-function unbanUser(banId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Только старший куратор и выше может разбанивать", "error");
+window.promoteToAdminByStaticId = function(staticId) {
+    if (CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только Создатель может назначать админов", "error");
         return;
     }
-    
-    const ban = bans.find(b => b.id === banId);
-    if (!ban) return;
-    
-    if (!confirm(`Разбанить пользователя ${ban.username}?`)) return;
-    
-    return db.ref('mlk_bans/' + banId).update({
-        unbanned: true,
-        unbannedBy: CURRENT_USER,
-        unbannedByStaticId: CURRENT_STATIC_ID,
-        unbannedDate: new Date().toLocaleString()
-    }).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${ban.username} разбанен`, "success");
+
+    const user = users.find(u => u.staticId === staticId);
+    if (user && confirm(`Повысить ${user.username} до Администратора?`)) {
+        db.ref('mlk_users/' + user.id).update({
+            role: RANKS.ADMIN.name,
+            rank: RANKS.ADMIN.level
+        }).then(() => {
+            loadData(() => {
+                renderUsers();
+                showNotification("Права обновлены", "success");
+            });
         });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка при разбане: " + error.message, "error");
-        return false;
-    });
-}
+    }
+};
 
 function renderBanInterface() {
     const content = document.getElementById("content-body");
@@ -2258,4 +2092,5 @@ function renderSystem(){
         </div>
     `;
 }
+
 

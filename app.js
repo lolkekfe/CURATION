@@ -1,6 +1,6 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; // EOD
-const HASH_CURATOR = "be32";  // 123
+const HASH_ADMIN   = "10cda"; 
+const HASH_CURATOR = "be32";  
 let CURRENT_ROLE = null;
 
 function simpleHash(str){
@@ -23,7 +23,6 @@ function login(){
     document.getElementById("terminal").style.display="flex";
     setupSidebar();
     
-    // После логина перенаправляем на нужный раздел сразу
     if (CURRENT_ROLE === "ADMIN") {
         loadReports(renderReports);
     } else {
@@ -33,12 +32,11 @@ function login(){
 
 document.getElementById("login-btn").onclick = login;
 
-/* ===== SIDEBAR (ИЗМЕНЕНО) ===== */
+/* ===== SIDEBAR ===== */
 function setupSidebar(){
     const sidebar=document.getElementById("sidebar");
     sidebar.innerHTML="";
 
-    // Кнопка ОТЧЕТ МЛК видна ТОЛЬКО КУРАТОРУ
     if(CURRENT_ROLE==="CURATOR"){
         const btnMLK=document.createElement("button");
         btnMLK.textContent="ОТЧЕТ МЛК";
@@ -46,7 +44,6 @@ function setupSidebar(){
         sidebar.appendChild(btnMLK);
     }
 
-    // Кнопки REPORTS и ADMIN видны ТОЛЬКО АДМИНУ
     if(CURRENT_ROLE==="ADMIN"){
         const btnReports=document.createElement("button");
         btnReports.textContent="REPORTS";
@@ -79,7 +76,6 @@ function renderMLKScreen(){
     const content = document.getElementById("content");
     content.innerHTML = "";
 
-    // Кнопка "+" видна только Куратору
     if(CURRENT_ROLE === "CURATOR") {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
@@ -94,7 +90,6 @@ function renderMLKScreen(){
         btnContainer.appendChild(addBtn);
         content.appendChild(btnContainer);
     }
-
 
     const listDiv = document.createElement("div");
     listDiv.id = "mlk-list";
@@ -131,7 +126,7 @@ function addMLKReport(){
     });
 }
 
-/* ===== TYPE EFFECT (Оставлено без изменений) ===== */
+/* ===== TYPE EFFECT (Можно удалить, так как больше не используется для отчетов) ===== */
 function typeText(element, text, index = 0, callback) {
     if(index < text.length){
         element.innerHTML += text.charAt(index);
@@ -139,14 +134,12 @@ function typeText(element, text, index = 0, callback) {
     } else if(callback) callback();
 }
 
-/* ===== MLK LIST SCREEN (ИЗМЕНЕНО: Без кнопок действий) ===== */
+/* ===== MLK LIST SCREEN (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ HTML) ===== */
 function renderMLKList(){
     const listDiv = document.getElementById("mlk-list");
     listDiv.innerHTML = "";
 
-    // Куратор видит только свои отчеты
     const filteredReports = (CURRENT_ROLE === "CURATOR") ? reports.filter(r=>r.author===CURRENT_ROLE) : reports;
-
 
     if(filteredReports.length === 0){
         listDiv.innerHTML = "<p>Нет отчетов</p>";
@@ -160,30 +153,22 @@ function renderMLKList(){
 
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
-        
-        const textContainer = document.createElement("div");
-        reportDiv.appendChild(textContainer);
         listDiv.appendChild(reportDiv);
 
-        const html = `
+        // ИСПРАВЛЕНИЕ: Используем innerHTML напрямую, без typeText
+        reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>
 <strong>ROLE:</strong> ${r.author}<br>
 <strong>TIME:</strong> ${r.time}<br>
 <strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
         `;
-        
-        typeText(textContainer, html, 0, () => {
-            // Кнопки действий УБРАНЫ из этого представления
-        });
-        listDiv.appendChild(reportDiv);
     });
 }
 
-/* ===== REPORTS (ADMIN) (ИЗМЕНЕНО: С кнопками действий) ===== */
+/* ===== REPORTS (ADMIN) ===== */
 function renderReports(){
     const content = document.getElementById("content");
-    // Администратор всегда видит полный список
     if(CURRENT_ROLE!=="ADMIN"){ content.textContent="ACCESS DENIED"; return; }
     
     let html=`<h3>MLK REPORTS (ADMIN VIEW)</h3>`;
@@ -194,7 +179,6 @@ function renderReports(){
         reports.forEach(r=>{
             let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
             
-            // Кнопки видны только если отчет еще не подтвержден и не удален
             const actionsHtml = (!r.deleted && !r.confirmed) ?
                 `<button onclick="confirmReport('${r.id}')">Подтвердить</button>
                  <button onclick="deleteReport('${r.id}')">Удалить</button>` :
@@ -212,7 +196,6 @@ function renderReports(){
 
 /* ===== ADMIN ACTIONS (Глобальные функции для совместимости) ===== */
 window.deleteReport = function(id) {
-    // Проверяем, что действие выполняет Администратор
     if(CURRENT_ROLE !== "ADMIN") return; 
     if(confirm("Удалить отчет?")) {
         db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReports));
@@ -220,7 +203,6 @@ window.deleteReport = function(id) {
 }
 
 window.confirmReport = function(id) {
-    // Проверяем, что действие выполняет Администратор
     if(CURRENT_ROLE !== "ADMIN") return;
     db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => loadReports(renderReports));
 }

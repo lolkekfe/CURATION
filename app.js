@@ -28,7 +28,7 @@ let whitelist = [];
 let passwords = {};
 
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
-const PROTECTED_USERS = ["СИСТЕМНЫЙ", "ГЛАВНЫЙ", "РЕЗЕРВНЫЙ"];
+const PROTECTED_USERS = ["Tihiy"];
 
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
@@ -1253,4 +1253,5 @@ function renderSystem(){
             </div>
         </div>
     `;
+
 }

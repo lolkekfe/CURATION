@@ -39,6 +39,8 @@ function login(){
     loadReports(renderMLKScreen);
 }
 
+document.getElementById("login-btn").onclick = login;
+
 /* ===== SIDEBAR ===== */
 function setupSidebar(){
     const sidebar=document.getElementById("sidebar");
@@ -83,26 +85,60 @@ function renderMLKScreen(){
         </div>
         <div id="mlk-list"></div>
     `;
-    document.getElementById("add-mlk-btn").onclick=()=>renderMLKForm();
+
+    document.getElementById("add-mlk-btn").onclick = renderMLKForm;
     renderMLKList();
+}
+
+function renderMLKForm(){
+    document.getElementById("mlk-list").innerHTML=`
+        <h3>ОТЧЕТ МЛК</h3>
+        <label>Discord тег игрока:</label><br>
+        <input id="mlk-tag"><br><br>
+        <label>Кратко что сделал:</label><br>
+        <textarea id="mlk-action" rows="4"></textarea><br><br>
+        <button id="submit-mlk-btn">Отправить отчет</button>
+    `;
+
+    document.getElementById("submit-mlk-btn").onclick = addMLKReport;
+}
+
+/* ===== ADD MLK REPORT ===== */
+function addMLKReport(){
+    const tag = document.getElementById("mlk-tag").value.trim();
+    const action = document.getElementById("mlk-action").value.trim();
+    if(!tag||!action){ alert("Заполните все поля"); return; }
+
+    const newReportRef = db.ref('mlk_reports').push();
+    const report = {tag, action, author: CURRENT_ROLE, time: new Date().toLocaleString(), confirmed: false, deleted: false};
+
+    newReportRef.set(report).then(()=>{
+        alert("Отчет сохранен");
+        loadReports(renderMLKList);
+    });
 }
 
 /* ===== MLK LIST ===== */
 function renderMLKList(){
-    const listDiv=document.getElementById("mlk-list");
-    listDiv.innerHTML="";
-    const filteredReports=(CURRENT_ROLE==="CURATOR")?reports.filter(r=>r.author===CURRENT_ROLE):reports;
-    if(filteredReports.length===0){ listDiv.innerHTML="<p>Нет отчетов</p>"; return; }
+    const listDiv = document.getElementById("mlk-list");
+    listDiv.innerHTML = "";
+
+    const filteredReports = (CURRENT_ROLE === "CURATOR") ? reports.filter(r=>r.author===CURRENT_ROLE) : reports;
+
+    if(filteredReports.length === 0){
+        listDiv.innerHTML = "<p>Нет отчетов</p>";
+        return;
+    }
 
     filteredReports.forEach((r,index)=>{
-        const key=Object.keys(reportsFirebase)[index];
-        let statusClass="pending";
+        const key = Object.keys(reportsFirebase)[index];
+        let statusClass = "pending";
         if(r.deleted) statusClass="deleted";
         else if(r.confirmed) statusClass="confirmed";
 
-        const reportDiv=document.createElement("div");
-        reportDiv.className="report";
-        reportDiv.innerHTML=`
+        const reportDiv = document.createElement("div");
+        reportDiv.className = "report";
+        reportDiv.innerHTML = `
             <strong>DISCORD:</strong> ${r.tag}<br>
             <strong>ACTION:</strong> ${r.action}<br>
             <strong>ROLE:</strong> ${r.author}<br>
@@ -124,33 +160,6 @@ function renderMLKList(){
         }
 
         listDiv.appendChild(reportDiv);
-    });
-}
-
-/* ===== MLK FORM ===== */
-function renderMLKForm(){
-    document.getElementById("mlk-list").innerHTML=`
-        <h3>ОТЧЕТ МЛК</h3>
-        <label>Discord тег игрока:</label><br>
-        <input id="mlk-tag"><br><br>
-        <label>Кратко что сделал:</label><br>
-        <textarea id="mlk-action" rows="4"></textarea><br><br>
-        <button onclick="addMLKReport()">Отправить отчет</button>
-    `;
-}
-
-/* ===== ADD MLK REPORT ===== */
-function addMLKReport(){
-    const tag=document.getElementById("mlk-tag").value.trim();
-    const action=document.getElementById("mlk-action").value.trim();
-    if(!tag||!action){ alert("Заполните все поля"); return; }
-
-    const newReportRef=db.ref('mlk_reports').push();
-    const report={tag,action,author:CURRENT_ROLE,time:new Date().toLocaleString(),confirmed:false,deleted:false};
-    newReportRef.set(report).then(()=>{
-        alert("Отчет сохранен");
-        renderMLKScreen();
-        loadReports(renderMLKList);
     });
 }
 
@@ -185,3 +194,11 @@ function confirmReport(key){ db.ref('mlk_reports/'+key+'/confirmed').set(true).t
 
 /* ===== ADMIN PANEL ===== */
 function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
+
+/* ===== NAVIGATION ===== */
+function openSection(name){
+    if(name==="mlk") return renderMLKScreen();
+    if(name==="reports") return renderReports();
+    if(name==="admin") return renderAdmin();
+    document.getElementById("content").textContent="MODULE NOT FOUND";
+}

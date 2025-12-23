@@ -832,3 +832,170 @@ function renderAdmin(){
         ` : ''}
     `;
 }
+
+/* ===== UI ENHANCEMENTS ===== */
+document.addEventListener('DOMContentLoaded', function() {
+    // Обновление времени в реальном времени
+    function updateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('ru-RU', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = timeString;
+        }
+    }
+    
+    setInterval(updateTime, 1000);
+    updateTime();
+    
+    // Обновление UI при входе
+    window.updateUIAfterLogin = function() {
+        const usernameElement = document.getElementById('current-username');
+        const roleElement = document.getElementById('current-role');
+        
+        if (usernameElement && CURRENT_USER) {
+            usernameElement.textContent = CURRENT_USER.toUpperCase();
+        }
+        
+        if (roleElement && CURRENT_ROLE) {
+            roleElement.textContent = CURRENT_ROLE === 'ADMIN' ? 'ADMIN_ACCESS' : 'CURATOR_ACCESS';
+        }
+        
+        // Обновляем навигацию
+        setupSidebar();
+    };
+    
+    // Улучшенная функция setupSidebar
+    window.setupSidebar = function() {
+        const sidebar = document.getElementById('sidebar');
+        const navMenu = document.getElementById('nav-menu');
+        
+        if (!sidebar || !navMenu) return;
+        
+        // Очищаем навигацию
+        navMenu.innerHTML = '';
+        
+        if (CURRENT_ROLE === 'CURATOR') {
+            addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТ МЛК', renderMLKScreen);
+        }
+        
+        if (CURRENT_ROLE === 'ADMIN') {
+            addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
+            addNavButton(navMenu, 'fas fa-users', 'ВАЙТЛИСТ', renderWhitelist);
+            addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
+            addNavButton(navMenu, 'fas fa-key', 'ПАРОЛИ', renderPasswords);
+            addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderAdmin);
+        }
+        
+        // Добавляем кнопку выхода
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.onclick = logout;
+        }
+        
+        // Обновляем UI
+        updateUIAfterLogin();
+    };
+    
+    function addNavButton(container, icon, text, onClick) {
+        const button = document.createElement('button');
+        button.className = 'nav-button';
+        button.innerHTML = `
+            <i class="${icon}"></i>
+            <span>${text}</span>
+        `;
+        button.onclick = function() {
+            // Убираем active у всех кнопок
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Добавляем active текущей
+            button.classList.add('active');
+            // Выполняем действие
+            onClick();
+            // Обновляем заголовок
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) {
+                titleElement.textContent = text;
+            }
+        };
+        container.appendChild(button);
+    }
+    
+    // Улучшенная функция выхода
+    window.logout = function() {
+        CURRENT_ROLE = null;
+        CURRENT_USER = null;
+        
+        const terminal = document.getElementById('terminal');
+        const loginScreen = document.getElementById('login-screen');
+        
+        if (terminal && loginScreen) {
+            terminal.style.display = 'none';
+            loginScreen.style.display = 'flex';
+        }
+        
+        // Сбрасываем форму
+        document.getElementById('password').value = '';
+        const usernameInput = document.getElementById('username');
+        if (usernameInput) usernameInput.value = '';
+        
+        const errorElement = document.getElementById('login-error');
+        if (errorElement) errorElement.textContent = '';
+        
+        // Сбрасываем активные кнопки
+        document.querySelectorAll('.nav-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+    };
+    
+    // Улучшенная функция completeLogin
+    window.completeLogin = function() {
+        const loginScreen = document.getElementById('login-screen');
+        const terminal = document.getElementById('terminal');
+        
+        if (loginScreen && terminal) {
+            loginScreen.style.display = 'none';
+            terminal.style.display = 'flex';
+        }
+        
+        setupSidebar();
+        
+        if (CURRENT_ROLE === 'ADMIN') {
+            loadReports(renderAdmin);
+        } else {
+            loadReports(renderMLKScreen);
+        }
+    };
+    
+    // Добавляем анимацию для кнопки входа
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) {
+        loginBtn.onclick = function() {
+            // Анимация нажатия
+            loginBtn.style.transform = 'scale(0.98)';
+            setTimeout(() => {
+                loginBtn.style.transform = '';
+                login();
+            }, 150);
+        };
+    }
+    
+    // Добавляем поддержку Enter в форме
+    document.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) {
+                login();
+            }
+        }
+    });
+    
+    // Инициализация
+    loadData();
+});

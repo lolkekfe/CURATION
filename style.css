@@ -14,8 +14,13 @@ body {
     height: 100vh;
 }
 
+/* Добавил стиль для поля никнейма */
+#username {
+    margin-bottom: 10px !important;
+}
+
 input, textarea {
-    width: 100%;
+    width: 200px; /* Изменил с 100% на 200px для формы логина */
     background: #111;
     border: 1px solid #0f0;
     color: #0f0;
@@ -24,6 +29,11 @@ input, textarea {
     font-size: 14px;
     margin-bottom: 10px;
     box-shadow: 0 0 5px #0f0;
+}
+
+/* Для текстовых полей в формах оставлю 100% */
+#content input, #content textarea {
+    width: 100%;
 }
 
 button {
@@ -62,6 +72,7 @@ button:hover {
 #sidebar button {
     margin-bottom: 15px;
     text-align: left;
+    width: 100%;
 }
 
 #content {
@@ -70,6 +81,16 @@ button:hover {
     overflow-y: auto;
     background: #0a0a0a;
     position: relative;
+}
+
+/* Добавил стиль для информации о пользователе */
+.user-info {
+    background: #111;
+    border: 1px solid #0f0;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #0f0;
 }
 
 .report {
@@ -101,14 +122,19 @@ button:hover {
 table {
     width: 100%;
     border-collapse: collapse;
+    margin-top: 10px;
 }
 th, td {
     border: 1px solid #0f0;
-    padding: 6px;
+    padding: 8px;
     text-align: left;
 }
 th {
     background: #111;
+}
+
+tr:hover {
+    background: rgba(0, 255, 0, 0.05);
 }
 
 #content::-webkit-scrollbar {
@@ -119,4 +145,32 @@ th {
 }
 #content::-webkit-scrollbar-thumb {
     background: #0f0;
+}
+
+/* Добавил стили для сообщений об ошибках */
+#login-error {
+    color: #ff4444;
+    margin-top: 10px;
+    min-height: 20px;
+}
+
+/* Стиль для кнопки выхода */
+.logout-btn {
+    background: #300 !important;
+    margin-top: 20px !important;
+    border-color: #f44 !important;
+}
+
+.logout-btn:hover {
+    background: #f44 !important;
+}
+
+/* Стиль для статистики */
+.stats-panel {
+    background: #111;
+    border: 1px solid #0f0;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px #0f0 inset;
 }

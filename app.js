@@ -28,7 +28,7 @@ let whitelist = [];
 let passwords = {};
 
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
-const PROTECTED_USERS = ["СИСТЕМНЫЙ", "ГЛАВНЫЙ", "РЕЗЕРВНЫЙ"];
+const PROTECTED_USERS = ["Tihiy"];
 
 /* ===== ВОССТАНОВЛЕНИЕ СЕССИИ ===== */
 function restoreSession() {
@@ -1325,4 +1325,5 @@ function renderSystem(){
             </div>
         </div>
     `;
+
 }

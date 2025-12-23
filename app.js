@@ -77,7 +77,7 @@ function loadReports(callback) {
 
 /* ===== NAVIGATION ===== */
 function openSection(name) {
-    if (name === "mlk") return renderMLK();
+    if (name === "mlk") return renderMLKScreen();
     if (name === "reports") return renderReports();
     if (name === "admin") {
         if (CURRENT_ROLE !== "ADMIN") {
@@ -89,9 +89,78 @@ function openSection(name) {
     document.getElementById("content").textContent = "MODULE NOT FOUND";
 }
 
-/* ===== MLK REPORT ===== */
-function renderMLK() {
+/* ===== MLK SCREEN WITH + BUTTON ===== */
+function renderMLKScreen() {
     document.getElementById("content").innerHTML = `
+        <div style="display:flex; justify-content: flex-end;">
+            <button id="add-mlk-btn">+</button>
+        </div>
+        <div id="mlk-list"></div>
+    `;
+
+    document.getElementById("add-mlk-btn").onclick = () => renderMLKForm();
+    renderMLKList();
+}
+
+/* ===== MLK LIST ===== */
+function renderMLKList() {
+    const listDiv = document.getElementById("mlk-list");
+    listDiv.innerHTML = "";
+
+    // Для CURATOR показываем только свои отчеты
+    const filteredReports = (CURRENT_ROLE === "CURATOR") 
+        ? reports.filter(r => r.author === CURRENT_ROLE)
+        : reports;
+
+    if (filteredReports.length === 0) {
+        listDiv.innerHTML = "<p>Нет отчетов</p>";
+        return;
+    }
+
+    filteredReports.forEach((r, index) => {
+        const key = Object.keys(reportsFirebase)[index];
+        let status = "рассматривается";
+        if (r.deleted) status = "удален";
+        else if (r.confirmed) status = "подтвержден";
+
+        const reportDiv = document.createElement("div");
+        reportDiv.style.border = "1px solid #00ff99";
+        reportDiv.style.marginBottom = "10px";
+        reportDiv.style.padding = "8px";
+        reportDiv.innerHTML = `
+            <strong>DISCORD:</strong> ${r.tag}<br>
+            <strong>ACTION:</strong> ${r.action}<br>
+            <strong>ROLE:</strong> ${r.author}<br>
+            <strong>TIME:</strong> ${r.time}<br>
+            <strong>STATUS:</strong> ${status}
+        `;
+
+        // Если ADMIN, добавляем кнопки
+        if (CURRENT_ROLE === "ADMIN" && !r.deleted && !r.confirmed) {
+            const btnDel = document.createElement("button");
+            btnDel.textContent = "Удалить";
+            btnDel.style.marginRight = "5px";
+            btnDel.onclick = () => {
+                db.ref('mlk_reports/' + key + '/deleted').set(true).then(() => loadReports(renderMLKList));
+            };
+
+            const btnConfirm = document.createElement("button");
+            btnConfirm.textContent = "Подтвердить";
+            btnConfirm.onclick = () => {
+                db.ref('mlk_reports/' + key + '/confirmed').set(true).then(() => loadReports(renderMLKList));
+            };
+
+            reportDiv.appendChild(btnDel);
+            reportDiv.appendChild(btnConfirm);
+        }
+
+        listDiv.appendChild(reportDiv);
+    });
+}
+
+/* ===== MLK FORM ===== */
+function renderMLKForm() {
+    document.getElementById("mlk-list").innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
         <label>Discord тег игрока:</label><br>
         <input id="mlk-tag"><br><br>
@@ -101,6 +170,7 @@ function renderMLK() {
     `;
 }
 
+/* ===== ADD MLK REPORT ===== */
 function addMLKReport() {
     const tag = document.getElementById("mlk-tag").value.trim();
     const action = document.getElementById("mlk-action").value.trim();
@@ -116,13 +186,14 @@ function addMLKReport() {
         action,
         author: CURRENT_ROLE,
         time: new Date().toLocaleString(),
-        confirmed: false
+        confirmed: false,
+        deleted: false
     };
+
     newReportRef.set(report).then(() => {
         alert("Отчет сохранен");
-        document.getElementById("mlk-tag").value = "";
-        document.getElementById("mlk-action").value = "";
-        loadReports(() => { if (CURRENT_ROLE === "ADMIN") renderReports(); });
+        renderMLKScreen(); // Возвращаемся к пустому экрану с кнопкой +
+        loadReports(renderMLKList);
     });
 }
 
@@ -136,7 +207,7 @@ function renderReports() {
 
     let html = `<h3>MLK REPORTS</h3>`;
     if (reports.length === 0) {
-        html += `<p>No reports</p>`;
+        html += "<p>No reports</p>";
     } else {
         html += `<table>
             <tr>
@@ -144,18 +215,24 @@ function renderReports() {
                 <th>ACTION</th>
                 <th>ROLE</th>
                 <th>TIME</th>
+                <th>STATUS</th>
                 <th>ACTIONS</th>
             </tr>`;
         Object.keys(reportsFirebase).forEach(key => {
             const r = reportsFirebase[key];
+            let status = "рассматривается";
+            if (r.deleted) status = "удален";
+            else if (r.confirmed) status = "подтвержден";
+
             html += `<tr>
                 <td>${r.tag}</td>
                 <td>${r.action}</td>
                 <td>${r.author}</td>
                 <td>${r.time}</td>
+                <td>${status}</td>
                 <td>
-                    <button onclick="deleteReport('${key}')">Удалить</button>
-                    <button onclick="confirmReport('${key}')">Подтвердить</button>
+                    ${(!r.deleted && !r.confirmed) ? `<button onclick="deleteReport('${key}')">Удалить</button>
+                    <button onclick="confirmReport('${key}')">Подтвердить</button>` : ""}
                 </td>
             </tr>`;
         });
@@ -167,11 +244,17 @@ function renderReports() {
 /* ===== DELETE & CONFIRM ===== */
 function deleteReport(key) {
     if (!confirm("Удалить этот отчет?")) return;
-    db.ref('mlk_reports/' + key).remove().then(() => loadReports(renderReports));
+    db.ref('mlk_reports/' + key + '/deleted').set(true).then(() => loadReports(() => {
+        if (CURRENT_ROLE === "ADMIN") renderReports();
+        else renderMLKList();
+    }));
 }
 
 function confirmReport(key) {
-    db.ref('mlk_reports/' + key + '/confirmed').set(true).then(() => loadReports(renderReports));
+    db.ref('mlk_reports/' + key + '/confirmed').set(true).then(() => loadReports(() => {
+        if (CURRENT_ROLE === "ADMIN") renderReports();
+        else renderMLKList();
+    }));
 }
 
 /* ===== ADMIN PANEL ===== */

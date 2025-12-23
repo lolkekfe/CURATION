@@ -29,6 +29,21 @@ let passwords = {};
 
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛИ ===== */
 const PROTECTED_USERS = ["Tihiy"];
+const ADMIN_CREATOR = "Tihiy"; // Только Tihiy может создавать аккаунты
+
+/* ===== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ IP ===== */
+function getUserIP() {
+    // В реальном приложении здесь был бы запрос к серверу
+    // Для демонстрации используем фиктивный IP
+    return localStorage.getItem('user_ip') || generateFakeIP();
+}
+
+function generateFakeIP() {
+    // Генерируем фиктивный IP для демонстрации
+    const ip = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    localStorage.setItem('user_ip', ip);
+    return ip;
+}
 
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
@@ -112,7 +127,8 @@ function addProtectedUsersToWhitelist() {
                 username: username,
                 addedBy: "СИСТЕМА",
                 addedDate: new Date().toLocaleString(),
-                isProtected: true
+                isProtected: true,
+                isCreator: username === ADMIN_CREATOR // Помечаем Tihiy как создателя
             })
         );
     });
@@ -148,12 +164,86 @@ function changePassword(type, newPassword) {
     });
 }
 
-/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА С ПРОВЕРКОЙ ДУБЛИКАТОВ ===== */
+/* ===== ФУНКЦИЯ ДЛЯ СОЗДАНИЯ АККАУНТОВ (ТОЛЬКО Tihiy) ===== */
+function createUserAccount(username, password, rankType) {
+    if (CURRENT_USER !== ADMIN_CREATOR) {
+        showNotification("Только Tihiy может создавать аккаунты", "error");
+        return Promise.reject("Permission denied");
+    }
+    
+    const hash = simpleHash(password);
+    const adminHash = simpleHash(passwords.admin || "EOD");
+    const curatorHash = simpleHash(passwords.curator || "123");
+    const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
+    
+    let userRank = RANKS.CURATOR;
+    let isValidPassword = false;
+    
+    // Проверяем пароль и определяем ранг
+    if (rankType === 'admin' && hash === adminHash) {
+        userRank = RANKS.ADMIN;
+        isValidPassword = true;
+    } else if (rankType === 'senior' && hash === adminHash) {
+        userRank = RANKS.SENIOR_CURATOR;
+        isValidPassword = true;
+    } else if (rankType === 'curator' && hash === curatorHash) {
+        userRank = RANKS.CURATOR;
+        isValidPassword = true;
+    }
+    
+    if (!isValidPassword) {
+        showNotification("Неверный код доступа для указанного ранга", "error");
+        return Promise.reject("Invalid password");
+    }
+    
+    // Проверяем, нет ли уже пользователя с таким именем
+    const existingUser = users.find(user => 
+        user.username.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (existingUser) {
+        showNotification("Пользователь с таким именем уже существует", "error");
+        return Promise.reject("User already exists");
+    }
+    
+    const newUser = {
+        username: username,
+        role: userRank.name,
+        rank: userRank.level,
+        registrationDate: new Date().toLocaleString(),
+        lastLogin: new Date().toLocaleString(),
+        createdBy: CURRENT_USER,
+        ip: getUserIP()
+    };
+    
+    // Если это админ, добавляем в вайтлист
+    if (userRank.level >= RANKS.ADMIN.level) {
+        return db.ref('mlk_whitelist').push({
+            username: username,
+            addedBy: CURRENT_USER,
+            addedDate: new Date().toLocaleString(),
+            isProtected: false
+        }).then(() => {
+            return db.ref('mlk_users').push(newUser);
+        }).then(() => {
+            showNotification(`Аккаунт ${username} создан успешно (ранг: ${userRank.name})`, "success");
+            return loadData(() => renderUsers());
+        });
+    } else {
+        return db.ref('mlk_users').push(newUser).then(() => {
+            showNotification(`Аккаунт ${username} создан успешно (ранг: ${userRank.name})`, "success");
+            return loadData(() => renderUsers());
+        });
+    }
+}
+
+/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА С ПРОВЕРКОЙ IP ===== */
 function login(){
     const input = document.getElementById("password").value.trim();
     const usernameInput = document.getElementById("username");
     const username = usernameInput ? usernameInput.value.trim() : "";
     const hash = simpleHash(input);
+    const userIP = getUserIP();
     
     const errorElement = document.getElementById("login-error");
     if (errorElement) errorElement.textContent = "";
@@ -173,6 +263,14 @@ function login(){
     
     /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
     if (!existingUser) {
+        // Проверяем, есть ли уже аккаунт с этого IP
+        const ipExists = users.some(user => user.ip === userIP);
+        
+        if (ipExists) {
+            showLoginError("С ЭТОГО УСТРОЙСТВА УЖЕ ЕСТЬ АККАУНТ");
+            return;
+        }
+        
         let userRank = RANKS.CURATOR;
         
         if (hash === adminHash) {
@@ -207,7 +305,8 @@ function login(){
             role: userRank.name,
             rank: userRank.level,
             registrationDate: new Date().toLocaleString(),
-            lastLogin: new Date().toLocaleString()
+            lastLogin: new Date().toLocaleString(),
+            ip: userIP
         };
         
         db.ref('mlk_users').push(newUser).then(() => {
@@ -223,6 +322,12 @@ function login(){
     
     /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
     else {
+        // Проверяем IP для существующих пользователей
+        if (existingUser.ip && existingUser.ip !== userIP) {
+            showLoginError("НЕВЕРНОЕ УСТРОЙСТВО ДЛЯ ЭТОГО АККАУНТА");
+            return;
+        }
+        
         let isValidPassword = false;
         let userRank = RANKS.CURATOR;
         
@@ -253,6 +358,11 @@ function login(){
         if (!isValidPassword) {
             showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
             return;
+        }
+        
+        // Обновляем IP если его не было
+        if (!existingUser.ip) {
+            db.ref('mlk_users/' + existingUser.id + '/ip').set(userIP);
         }
         
         db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
@@ -364,6 +474,11 @@ function setupSidebar(){
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
+        
+        // Только Tihiy видит кнопку создания аккаунтов
+        if (CURRENT_USER === ADMIN_CREATOR) {
+            addNavButton(navMenu, 'fas fa-user-plus', 'СОЗДАТЬ АККАУНТ', renderCreateAccount);
+        }
     }
     
     const logoutBtn = document.getElementById('logout-btn');
@@ -623,6 +738,87 @@ function renderMLKList(){
     });
 }
 
+/* ===== СТРАНИЦА СОЗДАНИЯ АККАУНТА (ТОЛЬКО ДЛЯ Tihiy) ===== */
+function renderCreateAccount() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    content.innerHTML = `
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-user-plus"></i> СОЗДАНИЕ АККАУНТА
+            </h2>
+            
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                ТОЛЬКО Tihiy МОЖЕТ СОЗДАВАТЬ НОВЫЕ АККАУНТЫ<br>
+                <span style="color: #c0b070;">КАЖДЫЙ АККАУНТ ПРИВЯЗАН К УНИКАЛЬНОМУ IP</span>
+            </p>
+            
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-user-circle"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ДАННЫЕ АККАУНТА</h4>
+                
+                <div class="form-group">
+                    <label class="form-label">ПСЕВДОНИМ</label>
+                    <input type="text" id="new-account-username" class="form-input" placeholder="ВВЕДИТЕ ПСЕВДОНИМ">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">КОД ДОСТУПА</label>
+                    <input type="password" id="new-account-password" class="form-input" placeholder="ВВЕДИТЕ КОД ДОСТУПА">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">РАНГ АККАУНТА</label>
+                    <select id="new-account-rank" class="form-input">
+                        <option value="curator">КУРАТОР (код: ${passwords.curator})</option>
+                        <option value="senior">СТАРШИЙ КУРАТОР (код: ${passwords.admin})</option>
+                        <option value="admin">АДМИНИСТРАТОР (код: ${passwords.admin})</option>
+                    </select>
+                </div>
+                
+                <div style="margin-top: 20px;">
+                    <button onclick="submitCreateAccount()" class="btn-primary" style="width: 100%;">
+                        <i class="fas fa-user-plus"></i> СОЗДАТЬ АККАУНТ
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;">
+                    <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ
+                </h4>
+                <div style="color: #8f9779; line-height: 1.6;">
+                    <p>• КАЖДЫЙ АККАУНТ ПРИВЯЗАН К УНИКАЛЬНОМУ IP-АДРЕСУ</p>
+                    <p>• ОДИН ПОЛЬЗОВАТЕЛЬ МОЖЕТ ИМЕТЬ ТОЛЬКО ОДИН АККАУНТ</p>
+                    <p>• ПРИ СОЗДАНИИ АДМИНИСТРАТОРА ОН АВТОМАТИЧЕСКИ ДОБАВЛЯЕТСЯ В СПИСОК ДОСТУПА</p>
+                    <p>• СОЗДАТЕЛЬ: ${CURRENT_USER}</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function submitCreateAccount() {
+    const username = document.getElementById('new-account-username').value.trim();
+    const password = document.getElementById('new-account-password').value.trim();
+    const rank = document.getElementById('new-account-rank').value;
+    
+    if (!username) {
+        showNotification("Введите псевдоним", "error");
+        return;
+    }
+    
+    if (!password) {
+        showNotification("Введите код доступа", "error");
+        return;
+    }
+    
+    createUserAccount(username, password, rank).catch(error => {
+        console.error("Ошибка создания аккаунта:", error);
+    });
+}
+
 /* ===== СТРАНИЦА ВСЕХ ОТЧЕТОВ ===== */
 function renderReports(){
     const content = document.getElementById("content-body");
@@ -751,9 +947,9 @@ function renderPasswords() {
             
             <div class="zone-card" style="margin-bottom: 25px;">
                 <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ И АДМИНИСТРАТОРОВ</h4>
                 <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ И АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="admin-password" class="form-input" 
@@ -766,19 +962,20 @@ function renderPasswords() {
             
             <div class="zone-card" style="border-color: #c0b070;">
                 <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД (ТОЛЬКО ДЛЯ Tihiy)</h4>
                 <p style="color: #8f9779; margin-bottom: 15px;">
                     ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="special-password" class="form-input" 
                            value="${passwords.special || ''}" placeholder="НОВЫЙ КОД"
-                           style="border-color: #c0b070;">
+                           style="border-color: #c0b070;" ${CURRENT_USER !== ADMIN_CREATOR ? 'disabled' : ''}>
                     <button onclick="updatePassword('special')" class="btn-primary" 
-                            style="border-color: #c0b070;">
+                            style="border-color: #c0b070;" ${CURRENT_USER !== ADMIN_CREATOR ? 'disabled' : ''}>
                         <i class="fas fa-save"></i> ИЗМЕНИТЬ
                     </button>
                 </div>
+                ${CURRENT_USER !== ADMIN_CREATOR ? '<p style="color: #b43c3c; margin-top: 10px; font-size: 0.9rem;">ТОЛЬКО Tihiy МОЖЕТ ИЗМЕНЯТЬ ЭТОТ КОД</p>' : ''}
             </div>
         </div>
     `;
@@ -858,6 +1055,7 @@ function renderWhitelist() {
                                 <th>ПСЕВДОНИМ</th>
                                 <th>ДОБАВИЛ</th>
                                 <th>ДАТА ДОБАВЛЕНИЯ</th>
+                                <th>СТАТУС</th>
                                 <th>ДЕЙСТВИЯ</th>
                             </tr>
                         </thead>
@@ -890,12 +1088,19 @@ function renderWhitelistTable() {
             <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : '#8cb43c'}">
                 <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
                 ${user.username}
+                ${user.isCreator ? ' <span style="color: #c0b070; font-size: 0.8rem;">(СОЗДАТЕЛЬ)</span>' : ''}
             </td>
             <td>${user.addedBy || "СИСТЕМА"}</td>
             <td>${user.addedDate || "НЕИЗВЕСТНО"}</td>
             <td>
                 ${isProtected ? 
-                    `<span style="color: #8f9779; font-size: 0.85rem;">ЗАЩИЩЕН</span>` : 
+                    '<span style="color: #c0b070;">ЗАЩИЩЕН</span>' : 
+                    '<span style="color: #8cb43c;">АКТИВЕН</span>'
+                }
+            </td>
+            <td>
+                ${isProtected ? 
+                    `<span style="color: #8f9779; font-size: 0.85rem;">НЕДОСТУПНО</span>` : 
                     `<button onclick="removeFromWhitelist('${user.id}')" class="action-btn delete">
                         <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>`
@@ -977,7 +1182,8 @@ function renderUsers() {
             </h2>
             
             <p style="color: #8f9779; margin-bottom: 30px;">
-                ВСЕ ПОЛЬЗОВАТЕЛИ, КОТОРЫЕ ВОШЛИ В СИСТЕМУ
+                ВСЕ ПОЛЬЗОВАТЕЛИ, КОТОРЫЕ ВОШЛИ В СИСТЕМУ<br>
+                <span style="color: #c0b070; font-size: 0.9rem;">КАЖДЫЙ АККАУНТ ПРИВЯЗАН К УНИКАЛЬНОМУ IP</span>
             </p>
             
             <div style="margin-bottom: 30px;">
@@ -1023,6 +1229,7 @@ function renderUsers() {
                             <tr>
                                 <th>ПСЕВДОНИМ</th>
                                 <th>РАНГ</th>
+                                <th>IP</th>
                                 <th>РЕГИСТРАЦИЯ</th>
                                 <th>ПОСЛЕДНИЙ ВХОД</th>
                                 <th>ДЕЙСТВИЯ</th>
@@ -1068,8 +1275,12 @@ function renderUsersTable() {
                 <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
                 ${user.username}
                 ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+                ${user.createdBy ? ` <span style="color: #6a6a5a; font-size: 0.8rem;">(создал: ${user.createdBy})</span>` : ''}
             </td>
             <td>${rankBadge}</td>
+            <td style="font-family: monospace; font-size: 0.85rem; color: #6a6a5a;">
+                ${user.ip || 'НЕИЗВЕСТНО'}
+            </td>
             <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
             <td>${user.lastLogin || "НИКОГДА"}</td>
             <td>
@@ -1079,12 +1290,12 @@ function renderUsersTable() {
                     </button>` : 
                     ''
                 }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level ? 
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.username !== ADMIN_CREATOR ? 
                     `<button onclick="removeUser('${user.id}')" class="action-btn delete">
                         <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>` : 
                     `<span style="color: #8f9779; font-size: 0.85rem;">
-                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
+                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : user.username === ADMIN_CREATOR ? 'СОЗДАТЕЛЬ' : ''}
                     </span>`
                 }
             </td>
@@ -1118,6 +1329,11 @@ function removeUser(id) {
     
     if (!userToRemove) return;
     
+    if (userToRemove.username === ADMIN_CREATOR) {
+        showNotification("Нельзя удалить создателя системы", "error");
+        return;
+    }
+    
     const isProtected = PROTECTED_USERS.some(protectedUser => 
         protectedUser.toLowerCase() === userToRemove.username.toLowerCase()
     );
@@ -1150,6 +1366,7 @@ function renderSystem(){
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const uniqueIPs = [...new Set(users.map(u => u.ip).filter(ip => ip))].length;
     
     content.innerHTML = `
         <div class="form-container">
@@ -1164,6 +1381,7 @@ function renderSystem(){
                 <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
                     РАНГ: ${CURRENT_RANK.name}
                 </div>
+                ${CURRENT_USER === ADMIN_CREATOR ? '<div style="margin-top: 5px; color: #c0b070; font-size: 0.85rem;">СТАТУС: СОЗДАТЕЛЬ СИСТЕМЫ</div>' : ''}
             </div>
             
             <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
@@ -1180,6 +1398,11 @@ function renderSystem(){
                     <div class="card-icon"><i class="fas fa-users"></i></div>
                     <div class="card-value">${users.length}</div>
                     <div class="card-label">СТАЛКЕРОВ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-network-wired"></i></div>
+                    <div class="card-value">${uniqueIPs}</div>
+                    <div class="card-label">УНИКАЛЬНЫХ IP</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
@@ -1235,11 +1458,11 @@ function renderSystem(){
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                        <div>1.3.7</div>
+                        <div>1.4.0</div>
                     </div>
                     <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
-                        <div>ОПЕРАТИВНАЯ</div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">СОЗДАТЕЛЬ</div>
+                        <div>Tihiy</div>
                     </div>
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
@@ -1253,5 +1476,4 @@ function renderSystem(){
             </div>
         </div>
     `;
-
 }

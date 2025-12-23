@@ -1,4 +1,3 @@
-/* ===== GENERAL ===== */
 body {
     margin:0;
     font-family: 'Courier New', monospace;
@@ -42,14 +41,12 @@ button:hover {
     box-shadow: 0 0 10px #0f0;
 }
 
-/* ===== TERMINAL ===== */
 #terminal {
     display:none;
     flex-direction: row;
     height:100vh;
 }
 
-/* ===== SIDEBAR ===== */
 #sidebar {
     width:200px;
     border-right:1px solid #0f0;
@@ -63,7 +60,6 @@ button:hover {
     margin-bottom:10px;
 }
 
-/* ===== CONTENT ===== */
 #content {
     flex:1;
     padding:15px;
@@ -71,7 +67,6 @@ button:hover {
     background:#0a0a0a;
 }
 
-/* ===== MLK REPORT BLOCK ===== */
 .report {
     border:1px solid #0f0;
     padding:10px;
@@ -95,7 +90,6 @@ button:hover {
 .status.confirmed { color:#0f0; }
 .status.deleted { color:#f00; }
 
-/* ===== ADD BUTTON + ===== */
 #add-mlk-btn {
     font-size:20px;
     font-weight:bold;
@@ -103,7 +97,6 @@ button:hover {
     border-radius:5px;
 }
 
-/* ===== TABLE ===== */
 table {
     width:100%;
     border-collapse: collapse;

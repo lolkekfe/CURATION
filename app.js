@@ -77,14 +77,14 @@ function restoreSession() {
 
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level) return; 
+    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) return; 
     if(confirm("Удалить отчет?")) {
         db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReports));
     }
 }
 
 window.confirmReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level) return;
+    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) return;
     db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => loadReports(renderReports));
 }
 
@@ -463,17 +463,19 @@ function setupSidebar(){
     }
     
     if (rankElement && CURRENT_RANK) {
+        // Показываем "СОЗДАТЕЛЬ" если это Tihiy
         rankElement.textContent = CURRENT_RANK.name;
     }
     
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
-    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level) {
+    // Для СОЗДАТЕЛЯ показываем ВСЕ разделы
+    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
     }
     
-    if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
@@ -1370,3 +1372,4 @@ function renderSystem(){
         </div>
     `;
 }
+

@@ -1216,3 +1216,45 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+/* ===== СТИЛИ ДЛЯ ВЕБХУКОВ ===== */
+.template-btn {
+    background: rgba(40, 42, 36, 0.5);
+    border: 1px solid #4a4a3a;
+    color: #8f9779;
+    padding: 12px 15px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    border-radius: 2px;
+}
+
+.template-btn:hover {
+    background: rgba(140, 180, 60, 0.1);
+    border-color: #8cb43c;
+    color: #c0b070;
+    transform: translateY(-2px);
+}
+
+.template-btn i {
+    font-size: 1.5rem;
+    margin-bottom: 5px;
+}
+
+.template-btn span {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.message-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

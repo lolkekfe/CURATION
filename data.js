@@ -11,6 +11,11 @@ TASK QUEUE:
 - Control activity
 - Update protocols
 `,
+    reports: `
+REPORTS MODULE
+
+Выберите справа модуль "ОТЧЕТ МЛК"
+`,
     archive: `
 ARCHIVE:
 - Closed reports

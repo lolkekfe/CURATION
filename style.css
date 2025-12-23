@@ -1,4 +1,3 @@
-/* ===== BODY ===== */
 body {
     margin: 0;
     font-family: 'Courier New', monospace;
@@ -7,7 +6,6 @@ body {
     overflow: hidden;
 }
 
-/* ===== CENTER LOGIN SCREEN ===== */
 .center-screen {
     display: flex;
     flex-direction: column;
@@ -17,7 +15,6 @@ body {
     animation: fadeIn 1s ease-in;
 }
 
-/* ===== INPUT & TEXTAREA ===== */
 input, textarea {
     width: 100%;
     background: #111;
@@ -30,7 +27,6 @@ input, textarea {
     box-shadow: 0 0 5px #0f0;
 }
 
-/* ===== BUTTONS ===== */
 button {
     background: rgba(0,0,0,0.6);
     border: 1px solid #0f0;
@@ -49,14 +45,12 @@ button:hover {
     box-shadow: 0 0 15px #0f0;
 }
 
-/* ===== TERMINAL ===== */
 #terminal {
     display: none;
     flex-direction: row;
     height: 100vh;
 }
 
-/* ===== SIDEBAR ===== */
 #sidebar {
     width: 220px;
     border-right: 1px solid #0f0;
@@ -72,7 +66,6 @@ button:hover {
     text-align: left;
 }
 
-/* ===== CONTENT ===== */
 #content {
     flex: 1;
     padding: 20px;
@@ -81,7 +74,6 @@ button:hover {
     position: relative;
 }
 
-/* ===== REPORT CARD ===== */
 .report {
     border: 1px solid #0f0;
     padding: 12px;
@@ -107,7 +99,6 @@ button:hover {
 .status.confirmed { color: #0f0; }
 .status.deleted { color: #f00; }
 
-/* ===== ADD BUTTON ===== */
 #add-mlk-btn {
     font-size: 22px;
     font-weight: bold;
@@ -116,7 +107,6 @@ button:hover {
     box-shadow: 0 0 10px #0f0;
 }
 
-/* ===== TABLE ===== */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -130,28 +120,11 @@ th {
     background: #111;
 }
 
-/* ===== ANIMATIONS ===== */
 @keyframes fadeIn {
     from {opacity: 0;}
     to {opacity: 1;}
 }
 
-@keyframes blinkCursor {
-    0% {opacity: 1;}
-    50% {opacity: 0;}
-    100% {opacity: 1;}
-}
-
-/* ===== CURSOR EFFECT ===== */
-.cursor {
-    display: inline-block;
-    width: 8px;
-    background-color: #0f0;
-    margin-left:2px;
-    animation: blinkCursor 1s step-start infinite;
-}
-
-/* ===== SCROLLBAR ===== */
 #content::-webkit-scrollbar {
     width: 8px;
 }

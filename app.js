@@ -1,6 +1,6 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; 
-const HASH_CURATOR = "be32";  
+const HASH_ADMIN   = "10cda"; // EOD
+const HASH_CURATOR = "be32";  // 123
 let CURRENT_ROLE = null;
 
 function simpleHash(str){
@@ -40,7 +40,7 @@ function setupSidebar(){
     if(CURRENT_ROLE==="ADMIN"){
         const btnReports=document.createElement("button");
         btnReports.textContent="REPORTS";
-        btnReports.onclick=()=>renderReports(); // Исправлен прямой вызов
+        btnReports.onclick=()=>renderReports();
         sidebar.appendChild(btnReports);
 
         const btnAdmin=document.createElement("button");
@@ -52,15 +52,13 @@ function setupSidebar(){
 
 /* ===== LOAD REPORTS ===== */
 let reports=[];
+let reportsFirebase={};
 
 function loadReports(callback){
     db.ref('mlk_reports').once('value').then(snapshot=>{
         const data=snapshot.val()||{};
-        // Сохраняем ID ключа внутри каждого объекта
-        reports = Object.keys(data).map(key => ({
-            ...data[key],
-            id: key
-        }));
+        reportsFirebase=data;
+        reports=Object.values(data);
         if(callback) callback();
     });
 }
@@ -101,7 +99,6 @@ function renderMLKForm(){
         <textarea id="mlk-action" rows="4"></textarea><br><br>
         <button id="submit-mlk-btn">Отправить отчет</button>
     `;
-
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
 }
 
@@ -111,20 +108,13 @@ function addMLKReport(){
     const action = document.getElementById("mlk-action").value.trim();
     if(!tag||!action){ alert("Заполните все поля"); return; }
 
+    const newReportRef = db.ref('mlk_reports').push();
     const report = {tag, action, author: CURRENT_ROLE, time: new Date().toLocaleString(), confirmed: false, deleted: false};
 
-    db.ref('mlk_reports').push(report).then(()=>{
+    newReportRef.set(report).then(()=>{
         alert("Отчет сохранен");
-        loadReports(renderMLKScreen);
+        loadReports(renderMLKList);
     });
-}
-
-/* ===== TYPE EFFECT ===== */
-function typeText(element, text, index = 0, callback) {
-    if(index < text.length){
-        element.innerHTML += text.charAt(index);
-        setTimeout(()=>typeText(element,text,index+1,callback), 5);
-    } else if(callback) callback();
 }
 
 /* ===== MLK LIST ===== */
@@ -139,85 +129,16 @@ function renderMLKList(){
         return;
     }
 
-    filteredReports.forEach((r)=>{
+    filteredReports.forEach((r,index)=>{
+        const key = Object.keys(reportsFirebase)[index];
         let statusClass = "pending";
         if(r.deleted) statusClass="deleted";
         else if(r.confirmed) statusClass="confirmed";
 
         const reportDiv = document.createElement("div");
         reportDiv.className = "report";
-        
-        // Отдельный контейнер для текста, чтобы не затирать кнопки
-        const textContainer = document.createElement("div");
-        reportDiv.appendChild(textContainer);
         listDiv.appendChild(reportDiv);
 
-        const html = `
+        reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
-<strong>ACTION:</strong> ${r.action}<br>
-<strong>ROLE:</strong> ${r.author}<br>
-<strong>TIME:</strong> ${r.time}<br>
-<strong>STATUS:</strong> <span class="status ${statusClass}">${statusClass}</span><br>
-        `;
-        
-        typeText(textContainer, html, 0, () => {
-            if(CURRENT_ROLE==="ADMIN" && !r.deleted && !r.confirmed){
-                const actions = document.createElement("div");
-                actions.style.marginTop = "10px";
-                
-                const btnDel=document.createElement("button");
-                btnDel.textContent="Удалить"; btnDel.style.marginRight="5px";
-                btnDel.onclick=()=> deleteReport(r.id);
-
-                const btnConfirm=document.createElement("button");
-                btnConfirm.textContent="Подтвердить";
-                btnConfirm.onclick=()=> confirmReport(r.id);
-
-                actions.appendChild(btnDel);
-                actions.appendChild(btnConfirm);
-                reportDiv.appendChild(actions);
-            }
-        });
-    });
-}
-
-/* ===== REPORTS (ADMIN) ===== */
-function renderReports(){
-    const content = document.getElementById("content");
-    if(CURRENT_ROLE!=="ADMIN"){ content.textContent="ACCESS DENIED"; return; }
-    
-    let html=`<h3>MLK REPORTS</h3>`;
-    if(reports.length===0){ html+="<p>No reports</p>"; }
-    else{
-        html+=`<table>
-            <tr><th>DISCORD</th><th>ACTION</th><th>ROLE</th><th>TIME</th><th>STATUS</th><th>ACTIONS</th></tr>`;
-        reports.forEach(r=>{
-            let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
-            html+=`<tr>
-                <td>${r.tag}</td><td>${r.action}</td><td>${r.author}</td><td>${r.time}</td><td>${status}</td>
-                <td>${(!r.deleted&&!r.confirmed)?`
-                <button onclick="deleteReport('${r.id}')">Удалить</button>
-                <button onclick="confirmReport('${r.id}')">Подтвердить</button>`:""}</td>
-            </tr>`;
-        });
-        html+="</table>";
-    }
-    content.innerHTML=html;
-}
-
-/* ===== DELETE & CONFIRM ===== */
-window.deleteReport = function(key){ 
-    if(!confirm("Удалить этот отчет?")) return; 
-    db.ref('mlk_reports/'+key+'/deleted').set(true).then(()=>loadReports(() => {
-        if(document.querySelector('table')) renderReports(); else renderMLKList();
-    })); 
-}
-
-window.confirmReport = function(key){ 
-    db.ref('mlk_reports/'+key+'/confirmed').set(true).then(()=>loadReports(() => {
-        if(document.querySelector('table')) renderReports(); else renderMLKList();
-    })); 
-}
-
-/* ===== ADMIN PANEL ===== */
-function renderAdmin(){ document.getElementById("content").textContent="ADMIN PANEL ACTIVE"; }
+<strong>ACTION:</strong

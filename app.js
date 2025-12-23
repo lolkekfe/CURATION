@@ -25,7 +25,10 @@ function login() {
 function enterSystem() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("terminal").style.display = "flex";
-    openSection("overview");
+   if (CURRENT_ROLE === "CURATOR") {
+    openSection("mlk");
+} else {
+    openSection("reports");
 }
 
 function simpleHash(str) {
@@ -143,4 +146,5 @@ function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
+
 

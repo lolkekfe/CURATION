@@ -1,7 +1,7 @@
 /* ===== AUTH SYSTEM ===== */
 
-const HASH_ADMIN = "4b3e205";   // заменить на свой хэш
-const HASH_CURATOR = "4b3e205"; // заменить на свой хэш
+const HASH_ADMIN = "-36b962f7";   // заменить на свой хэш
+const HASH_CURATOR = "be32"; // заменить на свой хэш
 
 let CURRENT_ROLE = null;
 
@@ -133,3 +133,4 @@ function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
+

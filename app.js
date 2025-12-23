@@ -1,9 +1,25 @@
 /* ===== AUTH SYSTEM ===== */
 
-const HASH_ADMIN   = "10cda"; // пароль: EOD
-const HASH_CURATOR = "be32";  // пароль: 123
+const HASH_ADMIN   = "10cda"; // EOD
+const HASH_CURATOR = "be32";  // 123
 
 let CURRENT_ROLE = null;
+
+function login() {
+    const input = document.getElementById("password").value.trim();
+    const hash = simpleHash(input);
+
+    if (hash === HASH_ADMIN) {
+        CURRENT_ROLE = "ADMIN";
+        enterSystem();
+    } else if (hash === HASH_CURATOR) {
+        CURRENT_ROLE = "CURATOR";
+        enterSystem();
+    } else {
+        document.getElementById("login-error").textContent = "ACCESS DENIED";
+    }
+}
+
 
 /* ===== LOGIN ===== */
 
@@ -158,4 +174,5 @@ function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
+
 

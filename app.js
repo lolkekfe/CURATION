@@ -1,15 +1,13 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; // EOD
-const HASH_CURATOR = "be32";  // 123
-const HASH_SPECIAL = "ddecf0e2c"; // HASKIKGOADFSKL
 let CURRENT_ROLE = null;
 let CURRENT_USER = null;
 let reports = [];
 
 let users = [];
 let whitelist = [];
+let passwords = {}; // Храним пароли из БД
 
-// Специальные пользователи - ТОЛЬКО как админы с особым паролем
+// Специальные пользователи
 const SPECIAL_USERS = ["ADMIN", "Tihiy", "System"];
 
 // Глобальные функции для кнопок в таблице ADMIN
@@ -34,27 +32,82 @@ function simpleHash(str){
     return h.toString(16);
 }
 
-/* ===== ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ И ВАЙТЛИСТА ===== */
-function loadUsersAndWhitelist(callback) {
+/* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
+function loadData(callback) {
+    // Загружаем пользователей
     db.ref('mlk_users').once('value').then(snapshot => {
         const data = snapshot.val() || {};
         users = Object.keys(data).map(key => ({...data[key], id: key}));
         
+        // Загружаем вайтлист
         return db.ref('mlk_whitelist').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
         whitelist = Object.keys(data).map(key => ({...data[key], id: key}));
         
+        // Загружаем пароли
+        return db.ref('mlk_passwords').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        passwords = data || {};
+        
+        // Если пароли не установлены, создаем дефолтные
+        if (!passwords.admin || !passwords.curator || !passwords.special) {
+            return createDefaultPasswords().then(() => {
+                if (callback) callback();
+            });
+        }
+        
+        // Если вайтлист пустой, добавляем специальных пользователей
         if (whitelist.length === 0) {
-            addSpecialUsersToWhitelist().then(() => {
+            return addSpecialUsersToWhitelist().then(() => {
                 if (callback) callback();
             });
         } else {
             if (callback) callback();
         }
     }).catch(error => {
-        console.error("Ошибка загрузки пользователей:", error);
+        console.error("Ошибка загрузки данных:", error);
         if (callback) callback();
+    });
+}
+
+/* ===== СОЗДАНИЕ ДЕФОЛТНЫХ ПАРОЛЕЙ ===== */
+function createDefaultPasswords() {
+    const defaultPasswords = {
+        admin: "EOD",           // Пароль для обычных админов
+        curator: "123",         // Пароль для кураторов
+        special: "HASKIKGOADFSKL" // Специальный пароль для ADMIN, Tihiy, System
+    };
+    
+    return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
+        console.log("Созданы дефолтные пароли в БД");
+        passwords = defaultPasswords;
+    });
+}
+
+/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ ПАРОЛЕЙ ===== */
+function changePassword(type, newPassword) {
+    if (CURRENT_ROLE !== "ADMIN") {
+        alert("Только администратор может изменять пароли");
+        return;
+    }
+    
+    if (!newPassword || newPassword.trim() === "") {
+        alert("Введите новый пароль");
+        return;
+    }
+    
+    const updates = {};
+    updates[type] = newPassword.trim();
+    
+    return db.ref('mlk_passwords').update(updates).then(() => {
+        passwords[type] = newPassword.trim();
+        alert(`Пароль "${type}" успешно изменен`);
+        return true;
+    }).catch(error => {
+        alert("Ошибка изменения пароля: " + error.message);
+        return false;
     });
 }
 
@@ -70,14 +123,14 @@ function addSpecialUsersToWhitelist() {
                 addedDate: new Date().toLocaleString(),
                 isSpecial: true,
                 requiresSpecialPassword: true,
-                canOnlyLoginAsAdmin: true  // Флаг: только как админ
+                canOnlyLoginAsAdmin: true
             })
         );
     });
     
     return Promise.all(promises).then(() => {
         console.log("Добавлены специальные пользователи:", SPECIAL_USERS);
-        return loadUsersAndWhitelist();
+        return loadData(); // Перезагружаем данные
     });
 }
 
@@ -90,6 +143,11 @@ function login(){
     
     document.getElementById("login-error").textContent = "";
     
+    // Получаем хэши паролей из БД
+    const adminHash = simpleHash(passwords.admin || "EOD");
+    const curatorHash = simpleHash(passwords.curator || "123");
+    const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
+    
     // Проверяем, является ли пользователь специальным
     const isSpecialUser = SPECIAL_USERS.some(specialUser => 
         specialUser.toLowerCase() === username.toLowerCase()
@@ -98,15 +156,15 @@ function login(){
     // === СПЕЦИАЛЬНЫЕ ПОЛЬЗОВАТЕЛИ (ADMIN, Tihiy, System) ===
     if (isSpecialUser) {
         // Специальные пользователи могут войти ТОЛЬКО с специальным паролем как ADMIN
-        if (hash === HASH_SPECIAL) {
+        if (hash === specialHash) {
             CURRENT_ROLE = "ADMIN";
             CURRENT_USER = username;
             completeLogin();
         } else {
             // Если введен пароль куратора или обычного админа - ОТКАЗ
-            if (hash === HASH_CURATOR) {
+            if (hash === curatorHash) {
                 document.getElementById("login-error").textContent = "ЭТОТ ПОЛЬЗОВАТЕЛЬ НЕ МОЖЕТ ВОЙТИ КАК КУРАТОР";
-            } else if (hash === HASH_ADMIN) {
+            } else if (hash === adminHash) {
                 document.getElementById("login-error").textContent = "ДЛЯ ЭТОГО АККАУНТА ТРЕБУЕТСЯ СПЕЦИАЛЬНЫЙ ПАРОЛЬ";
             } else {
                 document.getElementById("login-error").textContent = "НЕВЕРНЫЙ ПАРОЛЬ ДЛЯ СПЕЦИАЛЬНОГО АККАУНТА";
@@ -117,7 +175,7 @@ function login(){
     // === ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ ===
     else {
         // Если введен пароль обычного администратора
-        if (hash === HASH_ADMIN) {
+        if (hash === adminHash) {
             // Проверяем вайтлист
             const isInWhitelist = whitelist.some(user => 
                 user.username.toLowerCase() === username.toLowerCase()
@@ -132,7 +190,7 @@ function login(){
             CURRENT_USER = username;
         }
         // Если введен пароль куратора
-        else if (hash === HASH_CURATOR) {
+        else if (hash === curatorHash) {
             if (!username) {
                 document.getElementById("login-error").textContent = "ВВЕДИТЕ НИКНЕЙМ";
                 return;
@@ -157,7 +215,7 @@ function login(){
                 };
                 
                 db.ref('mlk_users').push(newUser).then(() => {
-                    loadUsersAndWhitelist(() => {
+                    loadData(() => {
                         CURRENT_ROLE = "CURATOR";
                         CURRENT_USER = username;
                         completeLogin();
@@ -229,7 +287,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     document.getElementById("login-btn").onclick = login;
-    loadUsersAndWhitelist();
+    loadData();
 });
 
 /* ===== SIDEBAR ===== */
@@ -279,6 +337,11 @@ function setupSidebar(){
         btnUsers.textContent = "ПОЛЬЗОВАТЕЛИ";
         btnUsers.onclick = renderUsers;
         sidebar.appendChild(btnUsers);
+        
+        const btnPasswords = document.createElement("button");
+        btnPasswords.textContent = "ПАРОЛИ";
+        btnPasswords.onclick = renderPasswords;
+        sidebar.appendChild(btnPasswords);
     }
     
     const btnLogout = document.createElement("button");
@@ -452,6 +515,94 @@ function renderReports(){
     content.innerHTML=html;
 }
 
+/* ===== ADMIN PANEL - ПАРОЛИ ===== */
+function renderPasswords() {
+    const content = document.getElementById("content");
+    if (!content) return;
+    
+    content.innerHTML = `
+        <h3>УПРАВЛЕНИЕ ПАРОЛЯМИ</h3>
+        <p style="color: #aaa; margin-bottom: 20px;">
+            Здесь можно изменить пароли для входа в систему<br>
+            <span style="color: #ff0;">⚠️ Изменения вступят в силу немедленно</span>
+        </p>
+        
+        <div class="password-section" style="margin-bottom: 30px; padding: 20px; background: #111; border-radius: 5px; border: 1px solid #0f0;">
+            <h4>🔐 Пароль для администраторов:</h4>
+            <p style="color: #888;">Используется обычными администраторами из вайтлиста</p>
+            <div style="display: flex; align-items: center; margin-top: 10px;">
+                <input type="password" id="admin-password" value="${passwords.admin || ''}" style="flex: 1; max-width: 300px;">
+                <button onclick="updatePassword('admin')" style="margin-left: 10px;">Изменить</button>
+            </div>
+        </div>
+        
+        <div class="password-section" style="margin-bottom: 30px; padding: 20px; background: #111; border-radius: 5px; border: 1px solid #0f0;">
+            <h4>👥 Пароль для кураторов:</h4>
+            <p style="color: #888;">Используется обычными кураторами для входа</p>
+            <div style="display: flex; align-items: center; margin-top: 10px;">
+                <input type="password" id="curator-password" value="${passwords.curator || ''}" style="flex: 1; max-width: 300px;">
+                <button onclick="updatePassword('curator')" style="margin-left: 10px;">Изменить</button>
+            </div>
+        </div>
+        
+        <div class="password-section" style="padding: 20px; background: rgba(255, 255, 0, 0.1); border-radius: 5px; border: 1px solid #ff0;">
+            <h4 style="color: #ff0;">🔒 Специальный пароль:</h4>
+            <p style="color: #ff0;">Только для защищенных аккаунтов: ADMIN, Tihiy, System</p>
+            <div style="display: flex; align-items: center; margin-top: 10px;">
+                <input type="password" id="special-password" value="${passwords.special || ''}" style="flex: 1; max-width: 300px; border-color: #ff0;">
+                <button onclick="updatePassword('special')" style="margin-left: 10px; background: rgba(255, 255, 0, 0.2); border-color: #ff0;">Изменить</button>
+            </div>
+            <p style="color: #ff0; font-size: 12px; margin-top: 10px;">
+                ⚠️ Этот пароль используется только специальными пользователями и НЕ работает для обычных администраторов
+            </p>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: rgba(0, 255, 0, 0.1); border: 1px solid #0f0; border-radius: 5px;">
+            <h4>📋 Текущие пароли:</h4>
+            <p>• Администраторы: <strong>${passwords.admin || 'не установлен'}</strong></p>
+            <p>• Кураторы: <strong>${passwords.curator || 'не установлен'}</strong></p>
+            <p>• Защищенные аккаунты: <strong>${passwords.special || 'не установлен'}</strong></p>
+        </div>
+    `;
+}
+
+function updatePassword(type) {
+    const inputId = type + "-password";
+    const input = document.getElementById(inputId);
+    const newPassword = input ? input.value.trim() : "";
+    
+    if (!newPassword) {
+        alert("Введите новый пароль");
+        return;
+    }
+    
+    if (newPassword.length < 3) {
+        alert("Пароль должен содержать минимум 3 символа");
+        return;
+    }
+    
+    let confirmMessage = `Изменить пароль для ${getPasswordTypeName(type)}?\nНовый пароль: ${newPassword}`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    changePassword(type, newPassword).then(success => {
+        if (success) {
+            renderPasswords();
+        }
+    });
+}
+
+function getPasswordTypeName(type) {
+    switch(type) {
+        case 'admin': return 'администраторов';
+        case 'curator': return 'кураторов';
+        case 'special': return 'защищенных аккаунтов';
+        default: return type;
+    }
+}
+
 /* ===== ADMIN PANEL - ВАЙТЛИСТ ===== */
 function renderWhitelist() {
     const content = document.getElementById("content");
@@ -461,7 +612,8 @@ function renderWhitelist() {
         <h3>УПРАВЛЕНИЕ ВАЙТЛИСТОМ</h3>
         <p style="color: #aaa; margin-bottom: 20px;">
             Только пользователи из этого списка могут входить как администраторы<br>
-            <span style="color: #ff0;">🔒 Специальные пользователи: только со специальным паролем</span>
+            <span style="color: #ff0;">🔒 Специальные пользователи: только со специальным паролем (${passwords.special || 'не установлен'})</span><br>
+            <span style="color: #0f0;">👑 Обычные администраторы: пароль (${passwords.admin || 'не установлен'})</span>
         </p>
         <div style="margin-bottom: 20px; display: flex; align-items: center;">
             <input id="new-whitelist-user" placeholder="Введите никнейм для вайтлиста" style="flex: 1; max-width: 300px;">
@@ -499,8 +651,8 @@ function renderWhitelistTable() {
         
         cell1.textContent = user.username;
         cell2.innerHTML = user.isSpecial ? 
-            '<span style="color: #ff0;">🔒 Только спец. пароль</span>' : 
-            '<span style="color: #0f0;">Пароль: EOD</span>';
+            `<span style="color: #ff0;">🔒 Пароль: ${passwords.special || 'специальный'}</span>` : 
+            `<span style="color: #0f0;">Пароль: ${passwords.admin || 'EOD'}</span>`;
         cell3.textContent = user.addedBy || "система";
         cell4.textContent = user.addedDate || "неизвестно";
         
@@ -538,10 +690,10 @@ function addToWhitelist() {
         addedDate: new Date().toLocaleString(),
         isSpecial: false
     }).then(() => {
-        loadUsersAndWhitelist(() => {
+        loadData(() => {
             renderWhitelist();
             input.value = "";
-            alert("Пользователь добавлен в вайтлист (пароль: EOD)");
+            alert(`Пользователь добавлен в вайтлист\nПароль для входа: ${passwords.admin || 'EOD'}`);
         });
     }).catch(error => {
         alert("Ошибка: " + error.message);
@@ -561,7 +713,7 @@ function removeFromWhitelist(id) {
     if (!confirm(`Удалить пользователя "${userToRemove.username}" из вайтлиста?`)) return;
     
     db.ref('mlk_whitelist/' + id).remove().then(() => {
-        loadUsersAndWhitelist(() => {
+        loadData(() => {
             renderWhitelist();
             alert("Пользователь удален из вайтлиста");
         });
@@ -639,7 +791,7 @@ function removeUser(id) {
     if (!confirm(`Удалить пользователя "${userToRemove.username}"? Все его отчеты останутся в системе.`)) return;
     
     db.ref('mlk_users/' + id).remove().then(() => {
-        loadUsersAndWhitelist(() => {
+        loadData(() => {
             renderUsers();
             alert("Пользователь удален");
         });
@@ -672,9 +824,9 @@ function renderAdmin(){
         ${isSpecial ? `
         <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 0, 0.1); border: 1px solid #ff0; border-radius: 5px;">
             <h4 style="color: #ff0;">🔒 Защищенный аккаунт:</h4>
-            <p>• Может входить ТОЛЬКО с паролем: <strong>HASKIKGOADFSKL</strong></p>
-            <p>• Не может войти как куратор (пароль 123 не работает)</p>
-            <p>• Не может войти с обычным паролем админа (EOD не работает)</p>
+            <p>• Может входить ТОЛЬКО с паролем: <strong>${passwords.special || 'не установлен'}</strong></p>
+            <p>• Не может войти как куратор (пароль ${passwords.curator || '123'} не работает)</p>
+            <p>• Не может войти с обычным паролем админа (${passwords.admin || 'EOD'} не работает)</p>
             <p>• Не может быть удален из системы</p>
         </div>
         ` : ''}

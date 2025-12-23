@@ -127,4 +127,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderReports(){
-        const content = documen
+        const content = document.getElementById("content");
+        content.innerHTML = "<h3>ADMIN REPORTS</h3>";
+    }
+
+    function renderAdmin(){
+        const content = document.getElementById("content");
+        content.textContent = "ADMIN PANEL ACTIVE";
+    }
+
+});

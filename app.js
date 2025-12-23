@@ -44,11 +44,6 @@ let DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png"; // дефолт�
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
 const PROTECTED_USERS = ["Tihiy"];
 
-/* === СТРОКА 1 === */
-let webhooks = [];
-/* === СТРОКА 2 === */
-let DISCORD_WEBHOOK_URL = null;
-
 /* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ TIHIY ===== */
 const SPECIAL_ACCESS_USERS = {
     "TIHIY": {
@@ -2673,3 +2668,4 @@ function renderWebhookHistory() {
 }
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+

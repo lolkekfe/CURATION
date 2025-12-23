@@ -13,7 +13,7 @@ const RANKS = {
     ADMIN: {
         name: "АДМИНИСТРАТОР",
         level: 3,
-        access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system"]
+        access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "bans"]
     }
 };
 
@@ -21,7 +21,7 @@ const RANKS = {
 const CREATOR_RANK = {
     name: "СОЗДАТЕЛЬ",
     level: 999,
-    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything"]
+    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything", "bans"]
 };
 
 /* ===== СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ===== */
@@ -29,6 +29,7 @@ let CURRENT_ROLE = null;
 let CURRENT_USER = null;
 let CURRENT_RANK = null;
 let reports = [];
+let bans = [];
 
 let users = [];
 let whitelist = [];
@@ -126,6 +127,11 @@ function loadData(callback) {
         const data = snapshot.val() || {};
         passwords = data || {};
         
+        return db.ref('mlk_bans').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        bans = Object.keys(data).map(key => ({...data[key], id: key}));
+        
         if (!passwords.curator || !passwords.admin || !passwords.special) {
             return createDefaultPasswords().then(() => {
                 if (callback) callback();
@@ -205,7 +211,318 @@ function changePassword(type, newPassword) {
     });
 }
 
-/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА С ПРОВЕРКОЙ ДУБЛИКАТОВ ===== */
+/* ===== СИСТЕМА БАНОВ ===== */
+function checkIfBanned(username) {
+    const userBans = bans.filter(ban => 
+        ban.username.toLowerCase() === username.toLowerCase() && 
+        !ban.unbanned
+    );
+    
+    if (userBans.length > 0) {
+        const latestBan = userBans[userBans.length - 1];
+        return {
+            banned: true,
+            reason: latestBan.reason || "Причина не указана",
+            bannedBy: latestBan.bannedBy || "Неизвестно",
+            bannedDate: latestBan.bannedDate || "Неизвестно"
+        };
+    }
+    
+    return { banned: false };
+}
+
+function banUser(username, reason) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только старший куратор и выше может банить", "error");
+        return Promise.reject("Недостаточно прав");
+    }
+    
+    if (!username || !reason) {
+        showNotification("Введите имя пользователя и причину", "error");
+        return Promise.reject("Не указаны данные");
+    }
+    
+    // Нельзя забанить защищенных пользователей
+    if (PROTECTED_USERS.some(protectedUser => 
+        protectedUser.toLowerCase() === username.toLowerCase())) {
+        showNotification("Нельзя забанить защищенного пользователя", "error");
+        return Promise.reject("Защищенный пользователь");
+    }
+    
+    // Нельзя забанить самого себя
+    if (username.toLowerCase() === CURRENT_USER.toLowerCase()) {
+        showNotification("Нельзя забанить самого себя", "error");
+        return Promise.reject("Нельзя забанить себя");
+    }
+    
+    const banData = {
+        username: username,
+        reason: reason,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        unbanned: false,
+        unbannedBy: null,
+        unbannedDate: null
+    };
+    
+    return db.ref('mlk_bans').push(banData).then(() => {
+        loadData(() => {
+            showNotification(`Пользователь ${username} забанен`, "success");
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка при бане: " + error.message, "error");
+        return false;
+    });
+}
+
+function unbanUser(banId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только старший куратор и выше может разбанивать", "error");
+        return;
+    }
+    
+    const ban = bans.find(b => b.id === banId);
+    if (!ban) return;
+    
+    if (!confirm(`Разбанить пользователя ${ban.username}?`)) return;
+    
+    return db.ref('mlk_bans/' + banId).update({
+        unbanned: true,
+        unbannedBy: CURRENT_USER,
+        unbannedDate: new Date().toLocaleString()
+    }).then(() => {
+        loadData(() => {
+            showNotification(`Пользователь ${ban.username} разбанен`, "success");
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка при разбане: " + error.message, "error");
+        return false;
+    });
+}
+
+function renderBanInterface() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+        return;
+    }
+    
+    const activeBans = bans.filter(ban => !ban.unbanned);
+    
+    content.innerHTML = `
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-ban"></i> СИСТЕМА БАНОВ
+            </h2>
+            
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                УПРАВЛЕНИЕ БЛОКИРОВКАМИ ПОЛЬЗОВАТЕЛЕЙ<br>
+                <span style="color: #c0b070;">ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛИ НЕ МОГУТ ВОЙТИ В СИСТЕМУ</span>
+            </p>
+            
+            <div class="zone-card" style="margin-bottom: 30px; border-color: #b43c3c;">
+                <div class="card-icon" style="color: #b43c3c;"><i class="fas fa-user-slash"></i></div>
+                <h4 style="color: #b43c3c; margin-bottom: 15px;">ДОБАВИТЬ БАН</h4>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label class="form-label">ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+                        <input type="text" id="ban-username" class="form-input" 
+                               placeholder="ВВЕДИТЕ ПСЕВДОНИМ ДЛЯ БАНА">
+                    </div>
+                    <div>
+                        <label class="form-label">ПРИЧИНА БАНА</label>
+                        <textarea id="ban-reason" class="form-textarea" rows="4" 
+                                  placeholder="УКАЖИТЕ ПРИЧИНУ БЛОКИРОВКИ..."></textarea>
+                    </div>
+                    <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c;">
+                        <i class="fas fa-ban"></i> ЗАБАНИТЬ
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-list"></i> АКТИВНЫЕ БАНЫ
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${activeBans.length})</span>
+                </h4>
+                
+                ${activeBans.length === 0 ? `
+                    <div style="text-align: center; padding: 40px; color: rgba(180, 60, 60, 0.5); border: 1px dashed rgba(180, 60, 60, 0.3); border-radius: 2px;">
+                        <i class="fas fa-user-check" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h4>АКТИВНЫЕ БАНЫ ОТСУТСТВУЮТ</h4>
+                        <p>ВСЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП</p>
+                    </div>
+                ` : `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                <th>ПРИЧИНА</th>
+                                <th>ЗАБАНИЛ</th>
+                                <th>ДАТА БАНА</th>
+                                <th>ДЕЙСТВИЯ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bans-table-body">
+                        </tbody>
+                    </table>
+                `}
+            </div>
+            
+            <div>
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-history"></i> ИСТОРИЯ БАНОВ
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${bans.length})</span>
+                </h4>
+                
+                ${bans.length === 0 ? `
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                        <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h4>ИСТОРИЯ БАНОВ ПУСТА</h4>
+                        <p>БАНЫ ЕЩЕ НЕ ВЫДАВАЛИСЬ</p>
+                    </div>
+                ` : `
+                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #4a4a3a;">
+                        <table class="data-table">
+                            <thead style="position: sticky; top: 0;">
+                                <tr>
+                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                    <th>ПРИЧИНА</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДАТА</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bans-history-body">
+                            </tbody>
+                        </table>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+    
+    if (activeBans.length > 0) {
+        renderBansTable(activeBans);
+    }
+    
+    if (bans.length > 0) {
+        renderBansHistory();
+    }
+}
+
+function renderBansTable(activeBans) {
+    const tableBody = document.getElementById("bans-table-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    activeBans.forEach(ban => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="font-weight: 500; color: #b43c3c;">
+                <i class="fas fa-user-slash"></i>
+                ${ban.username}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>${ban.bannedBy || "Неизвестно"}</td>
+            <td>${ban.bannedDate || "Неизвестно"}</td>
+            <td>
+                <button onclick="unbanUser('${ban.id}')" class="action-btn confirm">
+                    <i class="fas fa-unlock"></i> РАЗБАНИТЬ
+                </button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function renderBansHistory() {
+    const tableBody = document.getElementById("bans-history-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    // Сортируем по дате (новые сверху)
+    const sortedBans = [...bans].sort((a, b) => 
+        new Date(b.bannedDate || 0) - new Date(a.bannedDate || 0)
+    );
+    
+    sortedBans.forEach(ban => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="font-weight: 500; color: ${ban.unbanned ? '#8cb43c' : '#b43c3c'}">
+                <i class="fas ${ban.unbanned ? 'fa-user-check' : 'fa-user-slash'}"></i>
+                ${ban.username}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>
+                <span class="report-status ${ban.unbanned ? 'status-confirmed' : 'status-deleted'}" 
+                      style="display: inline-flex; padding: 4px 10px;">
+                    <i class="fas ${ban.unbanned ? 'fa-unlock' : 'fa-lock'}"></i>
+                    ${ban.unbanned ? 'РАЗБАНЕН' : 'ЗАБАНЕН'}
+                </span>
+            </td>
+            <td>
+                ${ban.bannedDate || "Неизвестно"}
+                ${ban.unbannedDate ? `<br><small>Разбан: ${ban.unbannedDate}</small>` : ''}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function addBan() {
+    const usernameInput = document.getElementById("ban-username");
+    const reasonInput = document.getElementById("ban-reason");
+    
+    const username = usernameInput ? usernameInput.value.trim() : "";
+    const reason = reasonInput ? reasonInput.value.trim() : "";
+    
+    if (!username) {
+        showNotification("Введите имя пользователя", "error");
+        return;
+    }
+    
+    if (!reason) {
+        showNotification("Введите причину бана", "error");
+        return;
+    }
+    
+    // Проверяем существует ли пользователь
+    const userExists = users.some(user => 
+        user.username.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (!userExists) {
+        showNotification("Пользователь не найден в системе", "warning");
+        return;
+    }
+    
+    // Проверяем не забанен ли уже
+    const isAlreadyBanned = bans.some(ban => 
+        ban.username.toLowerCase() === username.toLowerCase() && 
+        !ban.unbanned
+    );
+    
+    if (isAlreadyBanned) {
+        showNotification("Пользователь уже забанен", "warning");
+        return;
+    }
+    
+    banUser(username, reason).then(success => {
+        if (success) {
+            if (usernameInput) usernameInput.value = "";
+            if (reasonInput) reasonInput.value = "";
+            renderBanInterface();
+        }
+    });
+}
+
+/* ===== УЛУЧШЕННАЯ ЛОГИКА ВХОДА С ПРОВЕРКОЙ БАНОВ ===== */
 function login(){
     const input = document.getElementById("password").value.trim();
     const usernameInput = document.getElementById("username");
@@ -217,6 +534,14 @@ function login(){
     
     if (!username) {
         showLoginError("ВВЕДИТЕ ПСЕВДОНИМ");
+        return;
+    }
+    
+    // Проверяем бан пользователя
+    const banCheck = checkIfBanned(username);
+    if (banCheck.banned) {
+        // Показываем экран бана вместо входа
+        showBannedScreen(banCheck);
         return;
     }
     
@@ -357,6 +682,101 @@ function login(){
     }
 }
 
+function showBannedScreen(banInfo) {
+    const loginScreen = document.getElementById("login-screen");
+    if (!loginScreen) return;
+    
+    loginScreen.innerHTML = `
+        <div class="zone-header">
+            <div class="geiger-counter">
+                <div class="geiger-dots">
+                    <span class="dot active" style="background: #b43c3c;"></span>
+                    <span class="dot active" style="background: #b43c3c;"></span>
+                    <span class="dot active" style="background: #b43c3c;"></span>
+                    <span class="dot active" style="background: #b43c3c;"></span>
+                    <span class="dot active" style="background: #b43c3c;"></span>
+                </div>
+                <div class="geiger-text" style="color: #b43c3c;">ДОСТУП ЗАБЛОКИРОВАН</div>
+            </div>
+            
+            <h1 class="zone-title">
+                <span class="title-part" style="color: #b43c3c;">ДОСТУП</span>
+                <span class="title-part" style="color: #b43c3c;">ЗАБЛОКИРОВАН</span>
+            </h1>
+            
+            <div class="login-warning" style="border-color: #b43c3c; color: #b43c3c;">
+                <i class="fas fa-ban"></i>
+                <span>ВХОД В СИСТЕМУ НЕВОЗМОЖЕН</span>
+            </div>
+        </div>
+        
+        <div class="login-terminal" style="max-width: 800px;">
+            <div class="terminal-screen" style="border-color: #b43c3c;">
+                <div class="screen-header" style="background: linear-gradient(to right, #3a1a1a, #4a2a2a); color: #b43c3c;">
+                    <span>СИСТЕМА БЛОКИРОВКИ</span>
+                    <span class="blink" style="color: #b43c3c;">█</span>
+                </div>
+                
+                <div class="screen-content" style="padding: 40px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <i class="fas fa-user-slash" style="font-size: 4rem; color: #b43c3c; margin-bottom: 20px;"></i>
+                        <h2 style="color: #b43c3c; font-family: 'Orbitron', sans-serif; margin-bottom: 10px;">
+                            ВЫ ЗАБАНЕНЫ
+                        </h2>
+                        <p style="color: #8f9779; font-size: 1.1rem;">
+                            ДОСТУП К СИСТЕМЕ ОТЧЕТОВ ЗОНЫ ЗАПРЕЩЕН
+                        </p>
+                    </div>
+                    
+                    <div style="background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; padding: 20px; margin-bottom: 30px;">
+                        <h4 style="color: #c0b070; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-exclamation-circle"></i> ПРИЧИНА БЛОКИРОВКИ
+                        </h4>
+                        <div style="color: #8f9779; font-size: 1.1rem; line-height: 1.6; padding: 10px;">
+                            "${banInfo.reason}"
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.9rem; color: #6a6a5a; margin-bottom: 5px;">ЗАБАНИЛ</div>
+                            <div style="color: #c0b070; font-weight: 500;">${banInfo.bannedBy}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.9rem; color: #6a6a5a; margin-bottom: 5px;">ДАТА БАНА</div>
+                            <div style="color: #c0b070; font-weight: 500;">${banInfo.bannedDate}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; color: #6a6a5a; font-size: 0.9rem; padding: 15px; border-top: 1px solid #4a4a3a;">
+                        <i class="fas fa-info-circle"></i>
+                        Для разблокировки обратитесь к старшему куратору
+                    </div>
+                </div>
+                
+                <div class="screen-footer" style="padding: 20px; border-top: 1px solid #4a4a3a; text-align: center;">
+                    <button onclick="location.reload()" class="access-button" style="border-color: #6a6a5a; color: #6a6a5a;">
+                        <i class="fas fa-redo"></i>
+                        <span>ОБНОВИТЬ СТРАНИЦУ</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="zone-footer">
+            <div class="footer-info">
+                <span>СТАТУС: БЛОКИРОВКА АКТИВНА</span>
+                <span class="sep">|</span>
+                <span>КОД: BAN-${Date.now().toString(16).slice(-6).toUpperCase()}</span>
+            </div>
+            <div class="footer-warning">
+                <i class="fas fa-skull-crossbones"></i>
+                <span>ПОПЫТКА ОБХОДА БЛОКИРОВКИ БУДЕТ ЗАФИКСИРОВАНА</span>
+            </div>
+        </div>
+    `;
+}
+
 function showLoginError(message) {
     const errorElement = document.getElementById("login-error");
     if (errorElement) {
@@ -475,13 +895,11 @@ function setupSidebar(){
     }
     
     if (rankElement && CURRENT_RANK) {
-        // Показываем "СОЗДАТЕЛЬ" если это Tihiy
         rankElement.textContent = CURRENT_RANK.name;
     }
     
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
-    // Для СОЗДАТЕЛЯ показываем ВСЕ разделы
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
@@ -491,6 +909,7 @@ function setupSidebar(){
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
+        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
     }
     
     const logoutBtn = document.getElementById('logout-btn');
@@ -1155,6 +1574,7 @@ function renderUsers() {
                                 <th>РАНГ</th>
                                 <th>РЕГИСТРАЦИЯ</th>
                                 <th>ПОСЛЕДНИЙ ВХОД</th>
+                                <th>СТАТУС</th>
                                 <th>ДЕЙСТВИЯ</th>
                             </tr>
                         </thead>
@@ -1183,6 +1603,10 @@ function renderUsersTable() {
             protectedUser.toLowerCase() === user.username.toLowerCase()
         );
         const isCurrentUser = user.username === CURRENT_USER;
+        const isBanned = bans.some(ban => 
+            ban.username.toLowerCase() === user.username.toLowerCase() && 
+            !ban.unbanned
+        );
         
         let rankBadge = '';
         if (user.role === RANKS.ADMIN.name) {
@@ -1194,33 +1618,107 @@ function renderUsersTable() {
         }
         
         row.innerHTML = `
-            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : '#8f9779'}">
+            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
                 <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
                 ${user.username}
                 ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
             </td>
             <td>${rankBadge}</td>
             <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
             <td>${user.lastLogin || "НИКОГДА"}</td>
             <td>
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
+                ${isBanned ? 
+                    '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
+                    '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-check"></i> АКТИВЕН</span>'
+                }
+            </td>
+            <td>
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
                     `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px;">
                         <i class="fas fa-star"></i> ПОВЫСИТЬ
                     </button>` : 
                     ''
                 }
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level ? 
-                    `<button onclick="removeUser('${user.id}')" class="action-btn delete">
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
+                    `<button onclick="removeUser('${user.id}')" class="action-btn delete" style="margin-right: 5px;">
                         <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>` : 
-                    `<span style="color: #8f9779; font-size: 0.85rem;">
-                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
-                    </span>`
+                    ''
                 }
+                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
+                    `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white;">
+                        <i class="fas fa-ban"></i> БАН
+                    </button>` : 
+                    ''
+                }
+                <span style="color: #8f9779; font-size: 0.85rem;">
+                    ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
+                </span>
             </td>
         `;
         
         tableBody.appendChild(row);
+    });
+}
+
+function showBanModal(username) {
+    const modalHTML = `
+        <div id="ban-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+            <div style="background: rgba(30, 32, 28, 0.95); border: 1px solid #b43c3c; padding: 30px; max-width: 500px; width: 90%;">
+                <h3 style="color: #b43c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-ban"></i> БАН ПОЛЬЗОВАТЕЛЯ
+                </h3>
+                
+                <div style="margin-bottom: 20px;">
+                    <div style="color: #8f9779; margin-bottom: 10px;">ПОЛЬЗОВАТЕЛЬ:</div>
+                    <div style="color: #c0b070; font-size: 1.2rem; font-weight: 500;">${username}</div>
+                </div>
+                
+                <div style="margin-bottom: 25px;">
+                    <label class="form-label">ПРИЧИНА БАНА</label>
+                    <textarea id="modal-ban-reason" class="form-textarea" rows="4" 
+                              placeholder="УКАЖИТЕ ПРИЧИНУ БЛОКИРОВКИ..." style="width: 100%;"></textarea>
+                </div>
+                
+                <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                    <button onclick="closeBanModal()" class="btn-secondary">
+                        <i class="fas fa-times"></i> ОТМЕНА
+                    </button>
+                    <button onclick="processBan('${username}')" class="btn-primary" style="border-color: #b43c3c;">
+                        <i class="fas fa-ban"></i> ЗАБАНИТЬ
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modalDiv = document.createElement('div');
+    modalDiv.innerHTML = modalHTML;
+    document.body.appendChild(modalDiv);
+}
+
+function closeBanModal() {
+    const modal = document.getElementById('ban-modal');
+    if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+    }
+}
+
+function processBan(username) {
+    const reasonInput = document.getElementById('modal-ban-reason');
+    const reason = reasonInput ? reasonInput.value.trim() : "";
+    
+    if (!reason) {
+        showNotification("Введите причину бана", "error");
+        return;
+    }
+    
+    banUser(username, reason).then(success => {
+        if (success) {
+            closeBanModal();
+            renderUsers();
+        }
     });
 }
 
@@ -1280,6 +1778,7 @@ function renderSystem(){
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
         <div class="form-container">
@@ -1315,6 +1814,11 @@ function renderSystem(){
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
                     <div class="card-value">${whitelist.length}</div>
                     <div class="card-label">В СПИСКЕ ДОСТУПА</div>
+                </div>
+                <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
+                    <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
+                    <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
+                    <div class="card-label">АКТИВНЫХ БАНОВ</div>
                 </div>
             </div>
             
@@ -1365,7 +1869,7 @@ function renderSystem(){
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                        <div>1.3.7</div>
+                        <div>1.4.0</div>
                     </div>
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
@@ -1384,5 +1888,3 @@ function renderSystem(){
         </div>
     `;
 }
-
-

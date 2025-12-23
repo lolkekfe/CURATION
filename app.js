@@ -1,7 +1,7 @@
 /* ===== AUTH SYSTEM ===== */
 
-const HASH_ADMIN   = "-2d1f59c9"; // ADMPSS
-const HASH_CURATOR = "be32";      // 123
+const HASH_ADMIN   = "10cda"; // пароль: EOD
+const HASH_CURATOR = "be32";  // пароль: 123
 
 let CURRENT_ROLE = null;
 
@@ -158,3 +158,4 @@ function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
+

@@ -199,4 +199,4 @@ function renderAdmin(){
     const content = document.getElementById("content");
     if (!content) return;
     content.textContent = "ADMIN PANEL ACTIVE";
-}
+} // <- ЗАКРЫВАЮЩАЯ СКОБКА ДОБАВЛЕНА ЗДЕСЬ

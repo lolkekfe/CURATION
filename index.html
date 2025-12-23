@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>CURATOR TERMINAL</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-screen" class="login">
+    <p>SECURE ACCESS REQUIRED</p>
+    <p>ENTER ACCESS KEY:</p>
+    <input type="password" id="password">
+    <button onclick="login()">CONFIRM</button>
+    <p id="login-error"></p>
+</div>
+
+<div id="terminal" class="terminal" style="display:none;">
+
+    <div class="header">
+        SECURE CURATOR TERMINAL
+    </div>
+
+    <div class="layout">
+        <div class="sidebar">
+            <div class="menu-item" onclick="openSection('overview')">OVERVIEW</div>
+            <div class="menu-item" onclick="openSection('tasks')">TASKS</div>
+            <div class="menu-item" onclick="openSection('reports')">REPORTS</div>
+            <div class="menu-item" onclick="openSection('admin')">ADMIN</div>
+            <div class="menu-item" onclick="openSection('archive')">ARCHIVE</div>
+        </div>
+
+        <div class="content" id="content">
+            <pre>SELECT MODULE FROM LEFT PANEL</pre>
+        </div>
+    </div>
+
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

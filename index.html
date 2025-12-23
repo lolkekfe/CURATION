@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>SECURE CURATOR TERMINAL</title>
     <link rel="stylesheet" href="style.css">
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
@@ -21,12 +22,7 @@
 
 <!-- TERMINAL -->
 <div id="terminal">
-    <div id="sidebar">
-        <button onclick="openSection('mlk')">ОТЧЕТ МЛК</button>
-        <button onclick="openSection('reports')">REPORTS</button>
-        <button onclick="openSection('admin')">ADMIN</button>
-    </div>
-
+    <div id="sidebar"></div>
     <div id="content"></div>
 </div>
 
@@ -43,7 +39,6 @@ const firebaseConfig = {
   measurementId: "G-X0N5JT0K8D"
 };
 
-// Initialize Firebase
 const app = firebase.initializeApp(firebaseConfig);
 const analytics = firebase.analytics(app);
 const db = firebase.database();

@@ -178,4 +178,3 @@ function confirmReport(key) {
 function renderAdmin() {
     document.getElementById("content").textContent = "ADMIN PANEL ACTIVE";
 }
-

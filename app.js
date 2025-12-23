@@ -1,6 +1,7 @@
 /* ===== AUTH SYSTEM ===== */
 const HASH_ADMIN   = "10cda"; // EOD
 const HASH_CURATOR = "be32";  // 123
+const HASH_SPECIAL = "ddecf0e2c"; // HASKIKGOADFSKL - специальный пароль для ADMIN (System) и "Tihiy"
 let CURRENT_ROLE = null;
 let CURRENT_USER = null;
 let reports = []; // Делаем reports глобальным
@@ -8,6 +9,9 @@ let reports = []; // Делаем reports глобальным
 // База данных для пользователей и вайтлиста
 let users = [];
 let whitelist = [];
+
+// Специальные пользователи с особыми паролями
+const SPECIAL_USERS = ["ADMIN", "Tihiy", "System"]; // Пользователи с особым паролем
 
 // Глобальные функции для кнопок в таблице ADMIN
 window.deleteReport = function(id) {
@@ -44,9 +48,9 @@ function loadUsersAndWhitelist(callback) {
         const data = snapshot.val() || {};
         whitelist = Object.keys(data).map(key => ({...data[key], id: key}));
         
-        // Если вайтлист пустой, добавляем первого администратора по умолчанию
+        // Если вайтлист пустой, добавляем специальных пользователей
         if (whitelist.length === 0) {
-            addDefaultAdminToWhitelist().then(() => {
+            addSpecialUsersToWhitelist().then(() => {
                 if (callback) callback();
             });
         } else {
@@ -58,18 +62,24 @@ function loadUsersAndWhitelist(callback) {
     });
 }
 
-/* ===== ДОБАВЛЕНИЕ ПЕРВОГО АДМИНА ПО УМОЛЧАНИЮ ===== */
-function addDefaultAdminToWhitelist() {
-    // Здесь укажите ник администратора по умолчанию
-    const DEFAULT_ADMIN_USERNAME = "Tihiy"; // <--- ВПИШИТЕ СЮДА НИК АДМИНА
+/* ===== ДОБАВЛЕНИЕ СПЕЦИАЛЬНЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
+function addSpecialUsersToWhitelist() {
+    const promises = [];
     
-    return db.ref('mlk_whitelist').push({
-        username: DEFAULT_ADMIN_USERNAME,
-        addedBy: "SYSTEM",
-        addedDate: new Date().toLocaleString(),
-        isDefault: true
-    }).then(() => {
-        console.log("Добавлен администратор по умолчанию:", DEFAULT_ADMIN_USERNAME);
+    SPECIAL_USERS.forEach(username => {
+        promises.push(
+            db.ref('mlk_whitelist').push({
+                username: username,
+                addedBy: "SYSTEM",
+                addedDate: new Date().toLocaleString(),
+                isSpecial: true,
+                requiresSpecialPassword: true
+            })
+        );
+    });
+    
+    return Promise.all(promises).then(() => {
+        console.log("Добавлены специальные пользователи:", SPECIAL_USERS);
         return loadUsersAndWhitelist(); // Перезагружаем данные
     });
 }
@@ -84,8 +94,13 @@ function login(){
     // Очищаем предыдущие ошибки
     document.getElementById("login-error").textContent = "";
     
-    // Если введен пароль администратора
-    if(hash === HASH_ADMIN) {
+    // Проверяем, является ли пользователь специальным
+    const isSpecialUser = SPECIAL_USERS.some(specialUser => 
+        specialUser.toLowerCase() === username.toLowerCase()
+    );
+    
+    // Если введен специальный пароль для специальных пользователей
+    if (hash === HASH_SPECIAL && isSpecialUser) {
         // Проверяем вайтлист для админа
         const isInWhitelist = whitelist.some(user => 
             user.username.toLowerCase() === username.toLowerCase()
@@ -99,11 +114,43 @@ function login(){
         CURRENT_ROLE = "ADMIN";
         CURRENT_USER = username;
     }
+    // Если введен обычный пароль администратора
+    else if(hash === HASH_ADMIN) {
+        // Проверяем вайтлист для админа
+        const isInWhitelist = whitelist.some(user => 
+            user.username.toLowerCase() === username.toLowerCase()
+        );
+        
+        if (!isInWhitelist) {
+            document.getElementById("login-error").textContent = "НЕТУ В ВАЙТЛИСТЕ";
+            return;
+        }
+        
+        // Проверяем, не является ли это специальным пользователем
+        const whitelistUser = whitelist.find(user => 
+            user.username.toLowerCase() === username.toLowerCase()
+        );
+        
+        // Если это специальный пользователь, требуем специальный пароль
+        if (whitelistUser && whitelistUser.isSpecial) {
+            document.getElementById("login-error").textContent = "ТРЕБУЕТСЯ СПЕЦИАЛЬНЫЙ ПАРОЛЬ";
+            return;
+        }
+        
+        CURRENT_ROLE = "ADMIN";
+        CURRENT_USER = username;
+    }
     // Если введен пароль куратора
     else if(hash === HASH_CURATOR) {
         // Если username пустой - просим ввести
         if (!username) {
             document.getElementById("login-error").textContent = "ВВЕДИТЕ НИКНЕЙМ";
+            return;
+        }
+        
+        // Проверяем, не пытается ли куратор войти под именем специального пользователя
+        if (isSpecialUser) {
+            document.getElementById("login-error").textContent = "ЭТОТ ПОЛЬЗОВАТЕЛЬ ТРЕБУЕТ СПЕЦИАЛЬНОГО ПАРОЛЯ";
             return;
         }
         
@@ -180,6 +227,15 @@ document.addEventListener('DOMContentLoaded', function() {
             loginBtn.parentNode.insertBefore(usernameInput, loginBtn);
         }
         
+        // Добавляем подсказку о специальных пользователях
+        const hint = document.createElement("div");
+        hint.style.fontSize = "12px";
+        hint.style.color = "#888";
+        hint.style.marginBottom = "10px";
+        hint.style.textAlign = "center";
+        hint.innerHTML = "Специальные пользователи: ADMIN, Tihiy, System";
+        usernameInput.parentNode.insertBefore(hint, usernameInput);
+        
         // Добавляем обработчик нажатия Enter
         usernameInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') login();
@@ -205,9 +261,16 @@ function setupSidebar(){
     // Добавляем отображение текущего пользователя
     const userInfo = document.createElement("div");
     userInfo.className = "user-info";
+    
+    // Проверяем, является ли пользователь специальным
+    const isSpecial = SPECIAL_USERS.some(specialUser => 
+        specialUser.toLowerCase() === CURRENT_USER.toLowerCase()
+    );
+    
     userInfo.innerHTML = `
         <strong>Пользователь:</strong> ${CURRENT_USER}<br>
-        <strong>Роль:</strong> ${CURRENT_ROLE}
+        <strong>Роль:</strong> ${CURRENT_ROLE}<br>
+        ${isSpecial ? '<strong style="color: #ff0;">🔒 Специальный аккаунт</strong>' : ''}
     `;
     sidebar.appendChild(userInfo);
 
@@ -419,7 +482,10 @@ function renderWhitelist() {
     
     content.innerHTML = `
         <h3>УПРАВЛЕНИЕ ВАЙТЛИСТОМ</h3>
-        <p style="color: #aaa; margin-bottom: 20px;">Только пользователи из этого списка могут входить как администраторы</p>
+        <p style="color: #aaa; margin-bottom: 20px;">
+            Только пользователи из этого списка могут входить как администраторы<br>
+            <span style="color: #ff0;">🔒 Специальные пользователи требуют отдельный пароль</span>
+        </p>
         <div style="margin-bottom: 20px; display: flex; align-items: center;">
             <input id="new-whitelist-user" placeholder="Введите никнейм для вайтлиста" style="flex: 1; max-width: 300px;">
             <button onclick="addToWhitelist()" style="margin-left: 10px;">Добавить</button>
@@ -428,7 +494,7 @@ function renderWhitelist() {
             <h4>Текущий вайтлист:</h4>
             ${whitelist.length === 0 ? '<p style="color: #888;">Вайтлист пуст</p>' : ''}
             <table id="whitelist-table" style="width: 100%; margin-top: 10px; display: ${whitelist.length === 0 ? 'none' : 'table'}">
-                <tr><th>Никнейм</th><th>Добавил</th><th>Дата добавления</th><th>Действия</th></tr>
+                <tr><th>Никнейм</th><th>Тип</th><th>Добавил</th><th>Дата добавления</th><th>Действия</th></tr>
             </table>
         </div>
     `;
@@ -453,16 +519,20 @@ function renderWhitelistTable() {
         const cell2 = row.insertCell(1);
         const cell3 = row.insertCell(2);
         const cell4 = row.insertCell(3);
+        const cell5 = row.insertCell(4);
         
         cell1.textContent = user.username;
-        cell2.textContent = user.addedBy || "система";
-        cell3.textContent = user.addedDate || "неизвестно";
+        cell2.innerHTML = user.isSpecial ? 
+            '<span style="color: #ff0;">🔒 Специальный</span>' : 
+            '<span style="color: #0f0;">Обычный</span>';
+        cell3.textContent = user.addedBy || "система";
+        cell4.textContent = user.addedDate || "неизвестно";
         
-        // Не позволяем удалять администратора по умолчанию
-        if (user.isDefault) {
-            cell4.innerHTML = `<span style="color: #0f0; font-size: 12px;">(админ по умолчанию)</span>`;
+        // Не позволяем удалять специальных пользователей
+        if (user.isSpecial) {
+            cell5.innerHTML = `<span style="color: #888; font-size: 12px;">(защищен системой)</span>`;
         } else {
-            cell4.innerHTML = `<button onclick="removeFromWhitelist('${user.id}')" style="background: #300; border-color: #f44;">Удалить</button>`;
+            cell5.innerHTML = `<button onclick="removeFromWhitelist('${user.id}')" style="background: #300; border-color: #f44;">Удалить</button>`;
         }
     });
 }
@@ -476,6 +546,13 @@ function addToWhitelist() {
         return;
     }
     
+    // Проверяем, не пытаются ли добавить специального пользователя
+    if (SPECIAL_USERS.some(specialUser => 
+        specialUser.toLowerCase() === username.toLowerCase())) {
+        alert("Этот пользователь уже добавлен системой");
+        return;
+    }
+    
     // Проверяем, нет ли уже такого пользователя в вайтлисте
     if (whitelist.some(user => user.username.toLowerCase() === username.toLowerCase())) {
         alert("Пользователь уже в вайтлисте");
@@ -485,7 +562,8 @@ function addToWhitelist() {
     db.ref('mlk_whitelist').push({
         username: username,
         addedBy: CURRENT_USER,
-        addedDate: new Date().toLocaleString()
+        addedDate: new Date().toLocaleString(),
+        isSpecial: false
     }).then(() => {
         loadUsersAndWhitelist(() => {
             renderWhitelist();
@@ -502,9 +580,9 @@ function removeFromWhitelist(id) {
     
     if (!userToRemove) return;
     
-    // Не позволяем удалять администратора по умолчанию
-    if (userToRemove.isDefault) {
-        alert("Нельзя удалить администратора по умолчанию");
+    // Не позволяем удалять специальных пользователей
+    if (userToRemove.isSpecial) {
+        alert("Нельзя удалить специального пользователя");
         return;
     }
     
@@ -557,13 +635,20 @@ function renderUsersTable() {
         const cell3 = row.insertCell(2);
         const cell4 = row.insertCell(3);
         
-        cell1.textContent = user.username;
+        // Проверяем, является ли пользователь специальным
+        const isSpecial = SPECIAL_USERS.some(specialUser => 
+            specialUser.toLowerCase() === user.username.toLowerCase()
+        );
+        
+        cell1.innerHTML = user.username + (isSpecial ? ' <span style="color: #ff0; font-size: 12px;">🔒</span>' : '');
         cell2.textContent = user.role;
         cell3.textContent = user.registrationDate;
         
-        // Не показываем кнопку удаления для самого себя
-        if (user.username !== CURRENT_USER) {
+        // Не показываем кнопку удаления для самого себя и специальных пользователей
+        if (user.username !== CURRENT_USER && !isSpecial) {
             cell4.innerHTML = `<button onclick="removeUser('${user.id}')" style="background: #300; border-color: #f44;">Удалить</button>`;
+        } else if (isSpecial) {
+            cell4.innerHTML = `<span style="color: #888; font-size: 12px;">(защищен)</span>`;
         }
     });
 }
@@ -572,6 +657,16 @@ function removeUser(id) {
     const userToRemove = users.find(user => user.id === id);
     
     if (!userToRemove) return;
+    
+    // Проверяем, не является ли это специальным пользователем
+    const isSpecial = SPECIAL_USERS.some(specialUser => 
+        specialUser.toLowerCase() === userToRemove.username.toLowerCase()
+    );
+    
+    if (isSpecial) {
+        alert("Нельзя удалить специального пользователя");
+        return;
+    }
     
     if (!confirm(`Удалить пользователя "${userToRemove.username}"? Все его отчеты останутся в системе.`)) return;
     
@@ -588,19 +683,32 @@ function removeUser(id) {
 function renderAdmin(){
     const content = document.getElementById("content");
     if (!content) return;
+    
+    // Проверяем, является ли текущий пользователь специальным
+    const isSpecial = SPECIAL_USERS.some(specialUser => 
+        specialUser.toLowerCase() === CURRENT_USER.toLowerCase()
+    );
+    
     content.innerHTML = `
-        <h3>ADMIN PANEL</h3>
-        <p>Добро пожаловать, ${CURRENT_USER}!</p>
+        <h3>ADMIN PANEL ${isSpecial ? '🔒' : ''}</h3>
+        <p>Добро пожаловать, ${CURRENT_USER}${isSpecial ? ' (Специальный аккаунт)' : ''}!</p>
         <p>Выберите раздел в боковой панели для управления системой.</p>
         <div class="stats-panel">
             <h4>Статистика системы:</h4>
             <p>📊 Всего отчетов: <strong>${reports.length}</strong></p>
             <p>👥 Зарегистрированных пользователей: <strong>${users.length}</strong></p>
             <p>👑 Пользователей в вайтлисте: <strong>${whitelist.length}</strong></p>
+            <p>🔒 Специальных пользователей: <strong>${SPECIAL_USERS.length}</strong></p>
             <p>✅ Подтвержденных отчетов: <strong>${reports.filter(r => r.confirmed).length}</strong></p>
             <p>⏳ Отчетов на рассмотрении: <strong>${reports.filter(r => !r.confirmed && !r.deleted).length}</strong></p>
         </div>
+        ${isSpecial ? `
+        <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 0, 0.1); border: 1px solid #ff0; border-radius: 5px;">
+            <h4 style="color: #ff0;">🔒 Информация о специальном аккаунте:</h4>
+            <p>• Ваш аккаунт защищен специальным паролем</p>
+            <p>• Вы не можете быть удалены из системы</p>
+            <p>• Используйте пароль: <strong>HASKIKGOADFSKL</strong></p>
+        </div>
+        ` : ''}
     `;
-
 }
-

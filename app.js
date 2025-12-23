@@ -1,6 +1,6 @@
 /* ===== AUTH SYSTEM ===== */
-const HASH_ADMIN   = "10cda"; 
-const HASH_CURATOR = "be32";  
+const HASH_ADMIN   = "10cda"; // EOD
+const HASH_CURATOR = "be32";  // 123
 let CURRENT_ROLE = null;
 
 function simpleHash(str){
@@ -23,6 +23,7 @@ function login(){
     document.getElementById("terminal").style.display="flex";
     setupSidebar();
     
+    // После логина перенаправляем на нужный раздел сразу
     if (CURRENT_ROLE === "ADMIN") {
         loadReports(renderReports);
     } else {
@@ -32,11 +33,12 @@ function login(){
 
 document.getElementById("login-btn").onclick = login;
 
-/* ===== SIDEBAR ===== */
+/* ===== SIDEBAR (ИЗМЕНЕНО) ===== */
 function setupSidebar(){
     const sidebar=document.getElementById("sidebar");
     sidebar.innerHTML="";
 
+    // Кнопка ОТЧЕТ МЛК видна ТОЛЬКО КУРАТОРУ
     if(CURRENT_ROLE==="CURATOR"){
         const btnMLK=document.createElement("button");
         btnMLK.textContent="ОТЧЕТ МЛК";
@@ -44,6 +46,7 @@ function setupSidebar(){
         sidebar.appendChild(btnMLK);
     }
 
+    // Кнопки REPORTS и ADMIN видны ТОЛЬКО АДМИНУ
     if(CURRENT_ROLE==="ADMIN"){
         const btnReports=document.createElement("button");
         btnReports.textContent="REPORTS";
@@ -65,7 +68,7 @@ function loadReports(callback){
         const data=snapshot.val()||{};
         reports = Object.keys(data).map(key => ({
             ...data[key],
-            id: key 
+            id: key // Сохраняем ID внутри объекта
         }));
         if(callback) callback();
     });
@@ -76,6 +79,7 @@ function renderMLKScreen(){
     const content = document.getElementById("content");
     content.innerHTML = "";
 
+    // Кнопка "+" видна только Куратору
     if(CURRENT_ROLE === "CURATOR") {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
@@ -91,8 +95,7 @@ function renderMLKScreen(){
         content.appendChild(btnContainer);
     }
 
-    const listDiv = document.createElement("div");
-    listDiv.id = "mlk-list";
+    const listDiv = document.getElementById("mlk-list");
     content.appendChild(listDiv);
 
     renderMLKList();
@@ -126,15 +129,7 @@ function addMLKReport(){
     });
 }
 
-/* ===== TYPE EFFECT (Можно удалить, так как больше не используется для отчетов) ===== */
-function typeText(element, text, index = 0, callback) {
-    if(index < text.length){
-        element.innerHTML += text.charAt(index);
-        setTimeout(()=>typeText(element,text,index+1,callback), 5);
-    } else if(callback) callback();
-}
-
-/* ===== MLK LIST SCREEN (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ HTML) ===== */
+/* ===== MLK LIST SCREEN (КУРАТОР) (ИСПРАВЛЕНО ОТОБРАЖЕНИЕ HTML) ===== */
 function renderMLKList(){
     const listDiv = document.getElementById("mlk-list");
     listDiv.innerHTML = "";
@@ -155,7 +150,7 @@ function renderMLKList(){
         reportDiv.className = "report";
         listDiv.appendChild(reportDiv);
 
-        // ИСПРАВЛЕНИЕ: Используем innerHTML напрямую, без typeText
+        // Используем innerHTML напрямую
         reportDiv.innerHTML = `
 <strong>DISCORD:</strong> ${r.tag}<br>
 <strong>ACTION:</strong> ${r.action}<br>

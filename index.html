@@ -2,42 +2,30 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>CURATOR TERMINAL</title>
+    <title>SECURE CURATOR TERMINAL</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div id="login-screen" class="login">
-    <p>SECURE ACCESS REQUIRED</p>
-    <p>ENTER ACCESS KEY:</p>
-    <input type="password" id="password">
-    <button onclick="login()">CONFIRM</button>
-    <p id="login-error"></p>
+<!-- LOGIN -->
+<div id="login-screen">
+    <h1>SECURE CURATOR TERMINAL</h1>
+    <input type="password" id="password" placeholder="ACCESS KEY">
+    <button onclick="login()">ENTER</button>
+    <div id="login-error"></div>
 </div>
 
-<div id="terminal" class="terminal" style="display:none;">
-
-    <div class="header">
-        SECURE CURATOR TERMINAL
+<!-- TERMINAL -->
+<div id="terminal">
+    <div id="sidebar">
+        <button onclick="openSection('mlk')">ОТЧЕТ МЛК</button>
+        <button onclick="openSection('reports')">REPORTS</button>
+        <button onclick="openSection('admin')">ADMIN</button>
     </div>
 
-    <div class="layout">
-        <div class="sidebar">
-            <div class="menu-item" onclick="openSection('overview')">OVERVIEW</div>
-            <div class="menu-item" onclick="openSection('tasks')">TASKS</div>
-            <div class="menu-item" onclick="openSection('reports')">REPORTS</div>
-            <div class="menu-item" onclick="openSection('admin')">ADMIN</div>
-            <div class="menu-item" onclick="openSection('archive')">ARCHIVE</div>
-        </div>
-
-        <div class="content" id="content">
-            <pre>SELECT MODULE FROM LEFT PANEL</pre>
-        </div>
-    </div>
-
+    <div id="content"></div>
 </div>
 
-<script src="data.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

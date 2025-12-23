@@ -1,7 +1,7 @@
 /* ===== AUTH SYSTEM ===== */
 
-const HASH_ADMIN   = "-2d1f59c9"; // пароль: ADMPSS
-const HASH_CURATOR = "be32";      // пароль: 123
+const HASH_ADMIN   = "-2d1f59c9"; // ADMPSS
+const HASH_CURATOR = "be32";      // 123
 
 let CURRENT_ROLE = null;
 
@@ -25,10 +25,12 @@ function login() {
 function enterSystem() {
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("terminal").style.display = "flex";
-   if (CURRENT_ROLE === "CURATOR") {
-    openSection("mlk");
-} else {
-    openSection("reports");
+
+    if (CURRENT_ROLE === "CURATOR") {
+        openSection("mlk");
+    } else {
+        openSection("reports");
+    }
 }
 
 function simpleHash(str) {
@@ -53,11 +55,11 @@ function saveReports() {
 function openSection(name) {
 
     if (name === "mlk") {
-        return renderMLK(); // доступно куратору и админу
+        return renderMLK();
     }
 
     if (name === "reports") {
-        return renderReports(); // ТОЛЬКО АДМИН
+        return renderReports();
     }
 
     if (name === "admin") {
@@ -69,26 +71,23 @@ function openSection(name) {
         return renderAdmin();
     }
 
-    document.getElementById("content").textContent =
-        sections[name] || "MODULE NOT FOUND";
+    document.getElementById("content").textContent = "MODULE NOT FOUND";
 }
 
-/* ===== MLK FORM (CURATOR + ADMIN) ===== */
+/* ===== MLK REPORT (CURATOR + ADMIN) ===== */
 
 function renderMLK() {
-    let html = `
+    document.getElementById("content").innerHTML = `
         <h3>ОТЧЕТ МЛК</h3>
 
         <label>Discord тег игрока:</label><br>
-        <input type="text" id="mlk-tag"><br><br>
+        <input id="mlk-tag"><br><br>
 
         <label>Кратко что сделал:</label><br>
         <textarea id="mlk-action" rows="4"></textarea><br><br>
 
         <button onclick="addMLKReport()">Отправить отчет</button>
     `;
-
-    document.getElementById("content").innerHTML = html;
 }
 
 function addMLKReport() {
@@ -108,43 +107,54 @@ function addMLKReport() {
     });
 
     saveReports();
-
     alert("Отчет сохранен");
 
     document.getElementById("mlk-tag").value = "";
     document.getElementById("mlk-action").value = "";
 }
 
-/* ===== REPORT LIST (ADMIN ONLY) ===== */
+/* ===== REPORTS (ADMIN ONLY) ===== */
 
-function openSection(name) {
-
-    if (name === "mlk") {
-        return renderMLK(); // КУРАТОР МОЖЕТ
+function renderReports() {
+    if (CURRENT_ROLE !== "ADMIN") {
+        document.getElementById("content").textContent =
+            "REPORT LIST AVAILABLE FOR ADMIN ONLY";
+        return;
     }
 
-    if (name === "reports") {
-        return renderReports(); // ТОЛЬКО АДМИН
+    let html = `<h3>MLK REPORTS</h3>`;
+
+    if (reports.length === 0) {
+        html += `<p>No reports</p>`;
+    } else {
+        html += `
+        <table>
+            <tr>
+                <th>DISCORD</th>
+                <th>ACTION</th>
+                <th>ROLE</th>
+                <th>TIME</th>
+            </tr>`;
+
+        reports.forEach(r => {
+            html += `
+            <tr>
+                <td>${r.tag}</td>
+                <td>${r.action}</td>
+                <td>${r.author}</td>
+                <td>${r.time}</td>
+            </tr>`;
+        });
+
+        html += `</table>`;
     }
 
-    if (name === "admin") {
-        if (CURRENT_ROLE !== "ADMIN") {
-            document.getElementById("content").textContent =
-                "ACCESS RESTRICTED";
-            return;
-        }
-        return renderAdmin();
-    }
-
-    document.getElementById("content").textContent =
-        "MODULE NOT FOUND";
+    document.getElementById("content").innerHTML = html;
 }
 
-/* ===== ADMIN PANEL ===== */
+/* ===== ADMIN ===== */
 
 function renderAdmin() {
     document.getElementById("content").textContent =
         "ADMIN PANEL ACTIVE";
 }
-
-

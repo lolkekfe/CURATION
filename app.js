@@ -2656,11 +2656,13 @@ window.renderSystem = function() {
     const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
-    content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
-            </h2>
+   content.innerHTML = `
+    <div class="form-container" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+        <div class="system-stats-container">
+            <!-- СИСТЕМА -->
+        </div>
+    </div>
+`;
             
             <div class="zone-card" style="margin-bottom: 30px;">
                 <div class="card-icon"><i class="fas fa-user-shield"></i></div>
@@ -2771,7 +2773,6 @@ window.renderSystem = function() {
     `;
 }
 
-/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 /* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 window.renderIPStats = function() {
     const content = document.getElementById("content-body");
@@ -3770,6 +3771,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

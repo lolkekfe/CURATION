@@ -3071,4 +3071,208 @@
     <!-- Ваши скрипты -->
     <script src="firebase.js"></script>
     <script>
-   
+        // Временный скрипт для демонстрации (замените на ваш app.js)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обновление времени
+            function updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                const timeElement = document.getElementById('current-time');
+                if (timeElement) {
+                    timeElement.textContent = timeString;
+                }
+            }
+            
+            setInterval(updateTime, 1000);
+            updateTime();
+            
+            // Демо-логика входа
+            const loginBtn = document.getElementById('login-btn');
+            const loginScreen = document.getElementById('login-screen');
+            const terminal = document.getElementById('terminal');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginError = document.getElementById('login-error');
+            
+            function showNotification(message, type = "info") {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => notification.classList.add('show'), 10);
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+                    }, 300);
+                }, 5000);
+            }
+            
+            loginBtn.addEventListener('click', function() {
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value.trim();
+                
+                if (!username) {
+                    loginError.textContent = 'ВВЕДИТЕ ПСЕВДОНИМ';
+                    loginError.classList.add('show');
+                    return;
+                }
+                
+                if (!password) {
+                    loginError.textContent = 'ВВЕДИТЕ КОД ДОСТУПА';
+                    loginError.classList.add('show');
+                    return;
+                }
+                
+                // Демо-авторизация
+                const demoUsers = {
+                    'admin': { password: 'EOD', rank: 'АДМИНИСТРАТОР' },
+                    'curator': { password: '123', rank: 'КУРАТОР' },
+                    'Tihiy': { password: 'HASKIKGOADFSKL', rank: 'СОЗДАТЕЛЬ' }
+                };
+                
+                const userKey = Object.keys(demoUsers).find(key => 
+                    key.toLowerCase() === username.toLowerCase()
+                );
+                
+                if (userKey && demoUsers[userKey].password === password) {
+                    // Успешный вход
+                    document.getElementById('current-username').textContent = userKey.toUpperCase();
+                    document.getElementById('current-rank').textContent = demoUsers[userKey].rank;
+                    document.getElementById('current-static-id').textContent = 
+                        `${userKey.slice(0,3).toUpperCase()}-${Date.now().toString(36).slice(-4).toUpperCase()}-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
+                    
+                    // Скрыть экран входа, показать интерфейс
+                    loginScreen.style.display = 'none';
+                    terminal.style.display = 'flex';
+                    
+                    // Показать уведомление
+                    showNotification(`ДОСТУП РАЗРЕШЕН. ДОБРО ПОЖАЛОВАТЬ, ${userKey.toUpperCase()}`, 'success');
+                    
+                    // Обновить контент
+                    document.getElementById('content-title').textContent = 'ПАНЕЛЬ УПРАВЛЕНИЯ';
+                    document.getElementById('system-prompt').textContent = `СЕССИЯ АКТИВНА. ПОЛЬЗОВАТЕЛЬ: ${userKey.toUpperCase()}`;
+                    
+                    // Очистить поля
+                    usernameInput.value = '';
+                    passwordInput.value = '';
+                    loginError.classList.remove('show');
+                } else {
+                    loginError.textContent = 'ОШИБКА АУТЕНТИФИКАЦИИ';
+                    loginError.classList.add('show');
+                }
+            });
+            
+            // Вход по Enter
+            passwordInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    loginBtn.click();
+                }
+            });
+            
+            usernameInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    passwordInput.focus();
+                }
+            });
+            
+            // Выход из системы
+            document.getElementById('logout-btn').addEventListener('click', function() {
+                terminal.style.display = 'none';
+                loginScreen.style.display = 'flex';
+                showNotification('СЕССИЯ ЗАВЕРШЕНА', 'info');
+            });
+            
+            // Демо-навигация
+            const navMenu = document.getElementById('nav-menu');
+            const navItems = [
+                { icon: 'fa-file-alt', text: 'ОТЧЕТЫ МЛК' },
+                { icon: 'fa-list', text: 'ВСЕ ОТЧЕТЫ' },
+                { icon: 'fa-user-friends', text: 'ПОЛЬЗОВАТЕЛИ' },
+                { icon: 'fa-users', text: 'СПИСОК ДОСТУПА' },
+                { icon: 'fa-key', text: 'КОДЫ ДОСТУПА' },
+                { icon: 'fa-cogs', text: 'СИСТЕМА' },
+                { icon: 'fa-ban', text: 'БАНЫ' },
+                { icon: 'fa-broadcast-tower', text: 'DISCORD ВЕБХУКИ' }
+            ];
+            
+            navItems.forEach((item, index) => {
+                const button = document.createElement('button');
+                button.className = 'nav-button';
+                button.innerHTML = `
+                    <i class="fas ${item.icon}"></i>
+                    <span>${item.text}</span>
+                `;
+                button.addEventListener('click', function() {
+                    // Удалить активный класс у всех кнопок
+                    document.querySelectorAll('.nav-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    // Добавить активный класс текущей кнопке
+                    this.classList.add('active');
+                    
+                    // Обновить заголовок
+                    document.getElementById('content-title').textContent = item.text;
+                    
+                    // Показать демо-контент
+                    const contentBody = document.getElementById('content-body');
+                    contentBody.innerHTML = `
+                        <div class="form-container">
+                            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                                <i class="fas ${item.icon}"></i> ${item.text}
+                            </h2>
+                            
+                            <div class="zone-card">
+                                <div class="card-icon"><i class="fas ${item.icon}"></i></div>
+                                <div class="card-value">ДЕМО</div>
+                                <div class="card-label">${item.text}</div>
+                                <p style="color: #8f9779; margin-top: 15px; font-size: 0.9rem;">
+                                    Это демонстрационный интерфейс для раздела "${item.text}".<br>
+                                    В реальной системе здесь будет функционал управления.
+                                </p>
+                            </div>
+                            
+                            <div class="dashboard-grid">
+                                <div class="zone-card">
+                                    <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+                                    <div class="card-value">24</div>
+                                    <div class="card-label">СТАТИСТИКА</div>
+                                </div>
+                                <div class="zone-card">
+                                    <div class="card-icon"><i class="fas fa-clock"></i></div>
+                                    <div class="card-value">07:45</div>
+                                    <div class="card-label">ВРЕМЯ</div>
+                                </div>
+                                <div class="zone-card">
+                                    <div class="card-icon"><i class="fas fa-server"></i></div>
+                                    <div class="card-value">100%</div>
+                                    <div class="card-label">ОТКАЗОУСТ.</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Обновить системное сообщение
+                    document.getElementById('system-prompt').textContent = `ЗАГРУЖЕН РАЗДЕЛ: ${item.text}`;
+                });
+                navMenu.appendChild(button);
+            });
+            
+            // Активировать первый элемент навигации
+            if (navMenu.firstChild) {
+                navMenu.firstChild.click();
+            }
+        });
+    </script>
+</body>
+</html>

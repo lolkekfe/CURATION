@@ -2656,13 +2656,25 @@ window.renderSystem = function() {
     const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
-   content.innerHTML = `
-    <div class="form-container" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
-        <div class="system-stats-container">
-            <!-- СИСТЕМА -->
+    content.innerHTML = `
+        <div class="form-container" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
+            <div class="system-stats-container">
+                <!-- Весь контент теперь внутри этого контейнера -->
+                <div class="zone-card" style="margin-bottom: 30px;">
+                    <!-- Карточка оператора -->
+                </div>
+                
+                <h3 style="color: #c0b070; margin-bottom: 20px;">
+                    СТАТИСТИКА СИСТЕМЫ
+                </h3>
+                
+                <div class="dashboard-grid">
+                    <!-- Карточки статистики -->
+                </div>
+            </div>
         </div>
-    </div>
-`;
+    `;
+}
             
             <div class="zone-card" style="margin-bottom: 30px;">
                 <div class="card-icon"><i class="fas fa-user-shield"></i></div>
@@ -3771,6 +3783,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

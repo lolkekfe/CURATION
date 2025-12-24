@@ -3,24 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ЗОНА | Система отчетов</title>
+    <title>КУРАЦИЯ EOD | Система управления</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Фон Зоны -->
+    <!-- Фон системы -->
     <div class="zone-bg"></div>
     <div class="corruption-overlay"></div>
     <div class="scan-lines"></div>
-    <div class="data-noise"></div>
     
     <!-- Экран входа -->
     <div id="login-screen" class="login-container">
         <div class="zone-header">
             <div class="system-status">
                 <div class="status-indicator active"></div>
-                <span class="status-text">СИСТЕМА ДОСТУПА ОНЛАЙН</span>
+                <span class="status-text">СИСТЕМА КУРАЦИИ ОНЛАЙН</span>
                 <div class="frequency-meter">
                     <div class="frequency-bar"></div>
                     <div class="frequency-bar"></div>
@@ -31,16 +30,15 @@
             </div>
             
             <h1 class="zone-title">
-                <span class="title-part">ПРОТОКОЛ</span>
-                <span class="title-part">НАБЛЮДЕНИЯ</span>
-                <span class="title-part">ЗОНЫ</span>
+                <span class="title-part">КУРАЦИЯ</span>
+                <span class="title-part">EOD</span>
             </h1>
             
             <div class="security-level">
                 <div class="security-bar">
                     <div class="security-progress"></div>
                 </div>
-                <span class="security-text">УРОВЕНЬ БЕЗОПАСНОСТИ: [██████░░░░] 64%</span>
+                <span class="security-text">УРОВЕНЬ ДОСТУПА: 64%</span>
             </div>
         </div>
         
@@ -54,25 +52,25 @@
                 <div class="terminal-screen">
                     <div class="screen-header">
                         <div class="header-glow"></div>
-                        <span>ИНИЦИАЛИЗАЦИЯ ДОСТУПА</span>
+                        <span>АУТЕНТИФИКАЦИЯ</span>
                         <span class="blink">_</span>
                     </div>
                     
                     <div class="screen-content">
                         <div class="access-line">
                             <div class="line-number">[001]</div>
-                            <span class="prompt">> ВВЕДИТЕ ПСЕВДОНИМ СТАЛКЕРА:</span>
+                            <span class="prompt">> ИДЕНТИФИКАТОР:</span>
                             <div class="input-wrapper">
-                                <input type="text" id="username" placeholder="[...]" autocomplete="off" spellcheck="false">
+                                <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off" spellcheck="false">
                                 <div class="input-underline"></div>
                             </div>
                         </div>
                         
                         <div class="access-line">
                             <div class="line-number">[002]</div>
-                            <span class="prompt">> ВВЕДИТЕ КРИПТО-КОД ДОСТУПА:</span>
+                            <span class="prompt">> КОД ДОСТУПА:</span>
                             <div class="input-wrapper">
-                                <input type="password" id="password" placeholder="[...]" autocomplete="off" spellcheck="false">
+                                <input type="password" id="password" placeholder="ВВЕДИТЕ КОД" autocomplete="off" spellcheck="false">
                                 <div class="input-underline"></div>
                                 <div class="encryption-indicator">
                                     <i class="fas fa-lock"></i>
@@ -83,16 +81,8 @@
                         
                         <div class="system-log">
                             <div class="log-entry">
-                                <span class="log-time">[23:45:12]</span>
-                                <span class="log-message">>> СИСТЕМА: Загрузка модуля аутентификации...</span>
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">[23:45:14]</span>
-                                <span class="log-message">>> СИСТЕМА: Проверка базы данных пользователей...</span>
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">[23:45:15]</span>
-                                <span class="log-message">>> СИСТЕМА: Готов к идентификации. Ожидание ввода...</span>
+                                <span class="log-time">[...]</span>
+                                <span class="log-message">>> СИСТЕМА: Ожидание аутентификации...</span>
                             </div>
                         </div>
                     </div>
@@ -101,22 +91,22 @@
                         <div class="footer-grid">
                             <div class="grid-cell">
                                 <span class="cell-label">СТАТУС:</span>
-                                <span class="cell-value standby">ОЖИДАНИЕ</span>
+                                <span class="cell-value standby">ГОТОВ</span>
                             </div>
                             <div class="grid-cell">
-                                <span class="cell-label">ПОПЫТКА:</span>
+                                <span class="cell-label">СЕССИЯ:</span>
                                 <span class="cell-value">#001</span>
                             </div>
                             <div class="grid-cell">
-                                <span class="cell-label">IP:</span>
-                                <span class="cell-value">192.168.XX.XXX</span>
+                                <span class="cell-label">ВЕРСИЯ:</span>
+                                <span class="cell-value">2.7.4</span>
                             </div>
                         </div>
                         
                         <button id="login-btn" class="access-button">
                             <div class="button-inner">
                                 <i class="fas fa-terminal"></i>
-                                <span>ИНИЦИИРОВАТЬ ПОДКЛЮЧЕНИЕ</span>
+                                <span>ПОДКЛЮЧИТЬСЯ</span>
                                 <div class="button-pulse"></div>
                             </div>
                         </button>
@@ -131,30 +121,18 @@
         </div>
         
         <div class="zone-footer">
-            <div class="footer-matrix">
-                <div class="matrix-column">
-                    <span class="matrix-code">001011010101</span>
-                    <span class="matrix-code">110100101010</span>
-                    <span class="matrix-code">010101010110</span>
-                </div>
-                <div class="footer-info">
-                    <span>СИСТЕМНЫЙ ИНТЕРФЕЙС v2.7.4</span>
-                    <span class="sep">|</span>
-                    <span>БД: ОПЕРАТИВНА [███████░░░]</span>
-                    <span class="sep">|</span>
-                    <span>ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ: <span id="sync-time">--:--:--</span></span>
-                </div>
-                <div class="matrix-column">
-                    <span class="matrix-code">101010010101</span>
-                    <span class="matrix-code">010101101001</span>
-                    <span class="matrix-code">101001010101</span>
-                </div>
+            <div class="footer-info">
+                <span>КУРАЦИЯ EOD v2.7.4</span>
+                <span class="sep">|</span>
+                <span>БАЗА: ОПЕРАТИВНА</span>
+                <span class="sep">|</span>
+                <span>ВРЕМЯ: <span id="sync-time">--:--:--</span></span>
             </div>
         </div>
     </div>
 
     <!-- Основной интерфейс -->
-    <div id="terminal" class="zone-interface">
+    <div id="terminal" class="zone-interface" style="display: none;">
         <!-- Боковая панель -->
         <div id="sidebar" class="zone-sidebar">
             <div class="sidebar-header">
@@ -168,13 +146,13 @@
                                 <span class="cursor blink">█</span>
                             </div>
                             <div class="display-line">
-                                <span class="output">> IDENTITY: <span id="current-username" class="highlight">NULL</span></span>
+                                <span class="output">> ID: <span id="current-username" class="highlight">NULL</span></span>
                             </div>
                             <div class="display-line">
-                                <span class="output">> CLEARANCE: <span id="current-rank" class="highlight">PENDING</span></span>
+                                <span class="output">> РАНГ: <span id="current-rank" class="highlight">PENDING</span></span>
                             </div>
                             <div class="display-line">
-                                <span class="output">> SESSION_ID: <span id="current-static-id" class="highlight">XXXX-XXXX-XXXX</span></span>
+                                <span class="output">> SID: <span id="current-static-id" class="highlight">XXXX-XXXX-XXXX</span></span>
                             </div>
                         </div>
                     </div>
@@ -186,7 +164,7 @@
                     <div class="header-icon">
                         <i class="fas fa-sitemap"></i>
                     </div>
-                    <span>СИСТЕМНЫЕ МОДУЛИ</span>
+                    <span>МОДУЛИ</span>
                     <div class="header-status">
                         <div class="status-led active"></div>
                         <span>ОНЛАЙН</span>
@@ -195,62 +173,20 @@
                 
                 <div class="module-grid">
                     <nav class="nav-menu" id="nav-menu">
-                        <!-- Навигация будет добавлена через JS -->
+                        <!-- Навигация через JS -->
                     </nav>
-                    
-                    <div class="module-status">
-                        <div class="status-item">
-                            <span class="status-label">ПАМЯТЬ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 78%"></div>
-                            </div>
-                            <span class="status-value">78%</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">ЦПУ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 45%"></div>
-                            </div>
-                            <span class="status-value">45%</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">СЕТЬ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 92%"></div>
-                            </div>
-                            <span class="status-value">92%</span>
-                        </div>
-                    </div>
                 </div>
             </div>
             
             <div class="session-panel">
                 <div class="panel-header">
                     <i class="fas fa-history"></i>
-                    <span>АКТИВНАЯ СЕССИЯ</span>
-                </div>
-                <div class="session-info">
-                    <div class="info-item">
-                        <span class="info-label">НАЧАЛО:</span>
-                        <span class="info-value" id="session-start">--:--:--</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ДЛИТЕЛЬНОСТЬ:</span>
-                        <span class="info-value" id="session-duration">00:00:00</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ОПЕРАЦИЙ:</span>
-                        <span class="info-value" id="session-ops">0</span>
-                    </div>
+                    <span>СЕССИЯ</span>
                 </div>
                 <button id="logout-btn" class="session-button">
                     <div class="button-core">
                         <i class="fas fa-power-off"></i>
-                        <span>ЗАВЕРШИТЬ СЕССИЮ</span>
-                    </div>
-                    <div class="button-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>ВСЕ ДАННЫЕ БУДУТ СОХРАНЕНЫ</span>
+                        <span>ВЫЙТИ</span>
                     </div>
                 </button>
             </div>
@@ -278,7 +214,7 @@
                                 <i class="fas fa-database"></i>
                             </div>
                             <div class="stat-info">
-                                <span class="stat-label">ОБРАБОТАНО</span>
+                                <span class="stat-label">ОТЧЕТЫ</span>
                                 <span class="stat-value" id="processed-data">0</span>
                             </div>
                         </div>
@@ -287,7 +223,7 @@
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="stat-info">
-                                <span class="stat-label">АКТИВНЫХ</span>
+                                <span class="stat-label">ПОЛЬЗОВАТЕЛИ</span>
                                 <span class="stat-value" id="active-users">0</span>
                             </div>
                         </div>
@@ -296,8 +232,8 @@
                                 <i class="fas fa-shield-alt"></i>
                             </div>
                             <div class="stat-info">
-                                <span class="stat-label">УГРОЗ</span>
-                                <span class="stat-value" id="threat-level">0</span>
+                                <span class="stat-label">СТАТУС</span>
+                                <span class="stat-value" id="threat-level">OK</span>
                             </div>
                         </div>
                     </div>
@@ -306,7 +242,7 @@
                 <div class="header-meta">
                     <div class="meta-grid">
                         <div class="meta-item">
-                            <span class="meta-label">ВРЕМЯ СИСТЕМЫ:</span>
+                            <span class="meta-label">ВРЕМЯ:</span>
                             <span class="meta-value" id="current-time">00:00:00</span>
                         </div>
                         <div class="meta-item">
@@ -314,26 +250,19 @@
                             <span class="meta-value" id="current-date">--/--/----</span>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">ВЕРСИЯ ЯДРА:</span>
-                            <span class="meta-value">v2.7.4</span>
+                            <span class="meta-label">ВЕРСИЯ:</span>
+                            <span class="meta-value">2.7.4</span>
                         </div>
                         <div class="meta-item">
                             <span class="meta-label">СТАТУС:</span>
-                            <span class="meta-value operational">ОПЕРАЦИОНЕН</span>
+                            <span class="meta-value operational">НОРМА</span>
                         </div>
-                    </div>
-                    <div class="system-health">
-                        <div class="health-bar">
-                            <div class="health-fill"></div>
-                            <div class="health-marker"></div>
-                        </div>
-                        <span class="health-text">ИНТЕГРИТЕТ СИСТЕМЫ: <span id="system-integrity">100%</span></span>
                     </div>
                 </div>
             </div>
             
             <div class="content-body" id="content-body">
-                <!-- Контент будет загружаться здесь -->
+                <!-- Контент через JS -->
                 <div class="system-init">
                     <div class="init-loader">
                         <div class="loader-core"></div>
@@ -342,9 +271,9 @@
                         <div class="loader-ring delay-2"></div>
                     </div>
                     <div class="init-text">
-                        <span class="init-line">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</span>
-                        <span class="init-line">ЗАГРУЗКА МОДУЛЕЙ...</span>
-                        <span class="init-line blink">ГОТОВ К ПРИЕМУ КОМАНД</span>
+                        <span class="init-line">ИНИЦИАЛИЗАЦИЯ...</span>
+                        <span class="init-line">ЗАГРУЗКА ДАННЫХ...</span>
+                        <span class="init-line blink">ГОТОВ</span>
                     </div>
                 </div>
             </div>
@@ -354,7 +283,7 @@
                     <div class="transmission-log">
                         <div class="log-line">
                             <span class="log-time">[<span id="log-time">00:00:00</span>]</span>
-                            <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА. СИСТЕМА ГОТОВА.</span></span>
+                            <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ОЖИДАНИЕ КОМАНД</span></span>
                         </div>
                     </div>
                 </div>
@@ -363,12 +292,7 @@
                     <div class="command-prompt">
                         <span class="prompt-symbol">></span>
                         <div class="prompt-input">
-                            <span class="input-cursor blink">█</span>
-                            <span class="input-text">ВВЕДИТЕ КОМАНДУ...</span>
-                        </div>
-                        <div class="prompt-hint">
-                            <i class="fas fa-info-circle"></i>
-                            <span>ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ ДЛЯ ДОСТУПА К МОДУЛЯМ</span>
+                            <span class="input-text">ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ</span>
                         </div>
                     </div>
                 </div>
@@ -381,5 +305,37 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="firebase.js"></script>
     <script src="app.js"></script>
+    
+    <!-- Инициализация времени -->
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            const dateString = now.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            const syncElement = document.getElementById('sync-time');
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            const logTimeElement = document.getElementById('log-time');
+            
+            if (syncElement) syncElement.textContent = timeString;
+            if (timeElement) timeElement.textContent = timeString;
+            if (dateElement) dateElement.textContent = dateString;
+            if (logTimeElement) logTimeElement.textContent = timeString;
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
 </body>
 </html>

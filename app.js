@@ -41,6 +41,238 @@ let DISCORD_WEBHOOK_URL = null;
 let DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
 let DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png"; // дефолтная аватарка
 
+/* ===== ДОПОЛНИТЕЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ БЕЗОПАСНОСТИ ===== */
+const MAX_ATTEMPTS = 3; // Максимальное количество попыток входа
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
+let loginAttempts = {}; // Хранение попыток входа по IP
+
+/* ===== УЛУЧШЕННОЕ ХЕШИРОВАНИЕ С СОЛЬЮ ===== */
+function generateSalt() {
+    const array = new Uint8Array(16);
+    window.crypto.getRandomValues(array);
+    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateStrongPassword() {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?";
+    let password = "";
+    for (let i = 0; i < 12; i++) {
+        const randomIndex = Math.floor(Math.random() * charset.length);
+        password += charset[randomIndex];
+    }
+    return password;
+}
+
+/* ===== ПРОВЕРКА И ПОЛУЧЕНИЕ IP АДРЕСА ===== */
+async function getUserIP() {
+    try {
+        // Используем сервис для получения IP
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        console.error("Ошибка получения IP:", error);
+        // Резервный метод через WebRTC (только для локальной сети)
+        return new Promise((resolve) => {
+            const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
+            pc.createDataChannel("");
+            pc.createOffer().then(offer => pc.setLocalDescription(offer)).catch(() => resolve("unknown"));
+            pc.onicecandidate = (ice) => {
+                if (!ice.candidate) return;
+                const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+                const match = ipRegex.exec(ice.candidate.candidate);
+                if (match) {
+                    resolve(match[1]);
+                    pc.close();
+                }
+            };
+            setTimeout(() => resolve("unknown"), 1000);
+        });
+    }
+}
+
+/* ===== ПРОВЕРКА НА МНОГОКРАТНУЮ РЕГИСТРАЦИЮ С ОДНОГО IP ===== */
+async function checkIPLimit(username) {
+    try {
+        const userIP = await getUserIP();
+        if (userIP === "unknown") return { allowed: true, ip: userIP };
+        
+        // Проверяем, есть ли уже пользователь с таким IP
+        const ipSnapshot = await db.ref('mlk_ip_tracking').once('value');
+        const ipData = ipSnapshot.val() || {};
+        
+        for (const key in ipData) {
+            if (ipData[key].ip === userIP && ipData[key].username !== username) {
+                return {
+                    allowed: false,
+                    ip: userIP,
+                    message: `С IP-адреса ${userIP} уже зарегистрирован пользователь ${ipData[key].username}`
+                };
+            }
+        }
+        
+        return { allowed: true, ip: userIP };
+    } catch (error) {
+        console.error("Ошибка проверки IP:", error);
+        return { allowed: true, ip: "error" };
+    }
+}
+
+/* ===== ЗАПИСЬ IP АДРЕСА ПРИ РЕГИСТРАЦИИ ===== */
+async function registerIP(username, staticId) {
+    try {
+        const userIP = await getUserIP();
+        if (userIP === "unknown" || userIP === "error") return;
+        
+        const ipRecord = {
+            ip: userIP,
+            username: username,
+            staticId: staticId,
+            registrationDate: new Date().toLocaleString(),
+            lastActive: new Date().toLocaleString()
+        };
+        
+        await db.ref('mlk_ip_tracking').push(ipRecord);
+        
+        // Также обновляем запись пользователя
+        const usersSnapshot = await db.ref('mlk_users').once('value');
+        const usersData = usersSnapshot.val() || {};
+        
+        for (const userId in usersData) {
+            if (usersData[userId].username === username) {
+                await db.ref(`mlk_users/${userId}`).update({
+                    registrationIP: userIP,
+                    lastIP: userIP
+                });
+                break;
+            }
+        }
+    } catch (error) {
+        console.error("Ошибка записи IP:", error);
+    }
+}
+
+/* ===== ОБНОВЛЕНИЕ АКТИВНОСТИ ПО IP ===== */
+async function updateIPActivity(username) {
+    try {
+        const userIP = await getUserIP();
+        if (userIP === "unknown" || userIP === "error") return;
+        
+        const ipSnapshot = await db.ref('mlk_ip_tracking').once('value');
+        const ipData = ipSnapshot.val() || {};
+        
+        for (const key in ipData) {
+            if (ipData[key].username === username) {
+                await db.ref(`mlk_ip_tracking/${key}`).update({
+                    lastIP: userIP,
+                    lastActive: new Date().toLocaleString(),
+                    lastLogin: new Date().toLocaleString()
+                });
+                break;
+            }
+        }
+    } catch (error) {
+        console.error("Ошибка обновления IP:", error);
+    }
+}
+
+/* ===== МОНИТОРИНГ ПОПЫТОК ВХОДА ===== */
+function trackLoginAttempt(ip, success = false) {
+    const now = Date.now();
+    
+    if (!loginAttempts[ip]) {
+        loginAttempts[ip] = {
+            attempts: 0,
+            firstAttempt: now,
+            lastAttempt: now,
+            lockedUntil: 0
+        };
+    }
+    
+    if (success) {
+        loginAttempts[ip].attempts = 0;
+        loginAttempts[ip].lockedUntil = 0;
+    } else {
+        loginAttempts[ip].attempts++;
+        loginAttempts[ip].lastAttempt = now;
+        
+        if (loginAttempts[ip].attempts >= MAX_ATTEMPTS) {
+            loginAttempts[ip].lockedUntil = now + LOCKOUT_TIME;
+            showNotification(`Слишком много попыток входа. IP заблокирован на 15 минут`, "error");
+        }
+    }
+    
+    // Очистка старых записей (старше 24 часов)
+    for (const ipKey in loginAttempts) {
+        if (now - loginAttempts[ipKey].lastAttempt > 24 * 60 * 60 * 1000) {
+            delete loginAttempts[ipKey];
+        }
+    }
+}
+
+function isIPLocked(ip) {
+    if (!loginAttempts[ip]) return false;
+    
+    const now = Date.now();
+    if (loginAttempts[ip].lockedUntil > now) {
+        const minutesLeft = Math.ceil((loginAttempts[ip].lockedUntil - now) / 60000);
+        return `IP временно заблокирован. Попробуйте через ${minutesLeft} минут`;
+    }
+    
+    return false;
+}
+
+/* ===== ВАЛИДАЦИЯ ПОЛЬЗОВАТЕЛЬСКОГО ВВОДА ===== */
+function validateUsername(username) {
+    // Проверка длины
+    if (username.length < 3 || username.length > 20) {
+        return { valid: false, message: "Имя пользователя должно быть от 3 до 20 символов" };
+    }
+    
+    // Проверка символов (только буквы, цифры, подчеркивание)
+    const usernameRegex = /^[a-zA-Zа-яА-Я0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+        return { valid: false, message: "Имя пользователя может содержать только буквы, цифры и подчеркивание" };
+    }
+    
+    // Запрещенные имена
+    const forbiddenNames = ['admin', 'root', 'system', 'administrator', 'модератор', 'куратор'];
+    if (forbiddenNames.includes(username.toLowerCase())) {
+        return { valid: false, message: "Это имя пользователя запрещено" };
+    }
+    
+    return { valid: true, message: "" };
+}
+
+function validatePassword(password) {
+    // Проверка длины
+    if (password.length < 6) {
+        return { valid: false, message: "Пароль должен содержать минимум 6 символов" };
+    }
+    
+    // Проверка сложности (опционально)
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+        return { 
+            valid: false, 
+            message: "Пароль должен содержать заглавные и строчные буквы, а также цифры" 
+        };
+    }
+    
+    return { valid: true, message: "" };
+}
+
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
 const PROTECTED_USERS = ["Tihiy"];
 
@@ -151,6 +383,22 @@ function simpleHash(str){
     return h.toString(16);
 }
 
+/* ===== ПРОВЕРКА ПАРОЛЯ С ШИФРОВАНИЕМ ===== */
+async function verifyPassword(inputPassword, storedPassword) {
+    // Поддержка старого формата (обычный текст)
+    if (typeof storedPassword === 'string') {
+        return inputPassword === storedPassword;
+    }
+    
+    // Новый формат (объект с хешем и солью)
+    if (storedPassword && storedPassword.hash && storedPassword.salt) {
+        const inputHash = await hashPassword(inputPassword, storedPassword.salt);
+        return inputHash === storedPassword.hash;
+    }
+    
+    return false;
+}
+
 /* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
 function loadData(callback) {
     db.ref('mlk_users').once('value').then(snapshot => {
@@ -198,7 +446,11 @@ function loadData(callback) {
         const data = snapshot.val() || {};
         webhooks = Object.keys(data).map(key => ({...data[key], id: key}));
         webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        
+
+        console.log("Система безопасности инициализирована");
+
+if (callback) callback();
+ 
         if (whitelist.length === 0) {
             return addProtectedUsersToWhitelist().then(() => {
                 if (callback) callback();
@@ -214,36 +466,67 @@ function loadData(callback) {
 }
 
 /* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
-function createOrUpdatePasswords() {
+async function createOrUpdatePasswords() {
     const defaultPasswords = {
-        curator: "123",
-        senior: "SENIOR123",
-        admin: "EOD",
-        special: "HASKIKGOADFSKL"
+        curator: "Curator123!",
+        senior: "SeniorCurator456!",
+        admin: "AdminSecure789!",
+        special: "CreatorMasterPass!@#"
     };
     
-    return db.ref('mlk_passwords').once('value').then(snapshot => {
+    return db.ref('mlk_passwords').once('value').then(async snapshot => {
         const existingPasswords = snapshot.val() || {};
-        const updatedPasswords = {
-            ...defaultPasswords,
-            ...existingPasswords
-        };
+        const updatedPasswords = { ...defaultPasswords, ...existingPasswords };
         
-        if (!updatedPasswords.senior) {
-            updatedPasswords.senior = defaultPasswords.senior;
+        // Шифруем пароли при первом сохранении
+        const shouldEncrypt = !existingPasswords.encrypted;
+        
+        if (shouldEncrypt) {
+            const encryptedPasswords = {};
+            for (const [key, value] of Object.entries(updatedPasswords)) {
+                if (key !== 'encrypted') {
+                    const salt = generateSalt();
+                    const hash = await hashPassword(value, salt);
+                    encryptedPasswords[key] = {
+                        hash: hash,
+                        salt: salt,
+                        created: new Date().toLocaleString()
+                    };
+                }
+            }
+            encryptedPasswords.encrypted = true;
+            
+            return db.ref('mlk_passwords').set(encryptedPasswords).then(() => {
+                console.log("Пароли зашифрованы и сохранены в базе данных");
+                passwords = encryptedPasswords;
+                return encryptedPasswords;
+            });
         }
         
         return db.ref('mlk_passwords').set(updatedPasswords).then(() => {
-            console.log("Пароли созданы/обновлены в базе данных");
             passwords = updatedPasswords;
             return updatedPasswords;
         });
-    }).catch(error => {
+    }).catch(async error => {
         console.error("Ошибка при создании паролей:", error);
-        return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
-            console.log("Созданы новые пароли в базе данных");
-            passwords = defaultPasswords;
-            return defaultPasswords;
+        
+        // Создаем новые зашифрованные пароли
+        const encryptedPasswords = {};
+        for (const [key, value] of Object.entries(defaultPasswords)) {
+            const salt = generateSalt();
+            const hash = await hashPassword(value, salt);
+            encryptedPasswords[key] = {
+                hash: hash,
+                salt: salt,
+                created: new Date().toLocaleString()
+            };
+        }
+        encryptedPasswords.encrypted = true;
+        
+        return db.ref('mlk_passwords').set(encryptedPasswords).then(() => {
+            console.log("Созданы новые зашифрованные пароли");
+            passwords = encryptedPasswords;
+            return encryptedPasswords;
         });
     });
 }
@@ -720,76 +1003,125 @@ window.demoteToCuratorByStaticId = function(staticId) {
 }
 
 /* ===== ЛОГИКА ВХОДА ===== */
-window.login = function() {
-    const input = document.getElementById("password").value.trim();
-    const usernameInput = document.getElementById("username");
-    const username = usernameInput ? usernameInput.value.trim() : "";
-    
+window.login = async function() {
+    const usernameInput = document.getElementById("username").value.trim();
+    const passwordInput = document.getElementById("password").value.trim();
     const errorElement = document.getElementById("login-error");
+    
     if (errorElement) errorElement.textContent = "";
     
-    if (!username) {
-        showLoginError("ВВЕДИТЕ ПСЕВДОНИМ");
+    // Валидация имени пользователя
+    const usernameValidation = validateUsername(usernameInput);
+    if (!usernameValidation.valid) {
+        showLoginError(usernameValidation.message);
         return;
     }
     
-    const banCheck = checkIfBanned(username);
+    // Валидация пароля
+    const passwordValidation = validatePassword(passwordInput);
+    if (!passwordValidation.valid) {
+        showLoginError(passwordValidation.message);
+        return;
+    }
+    
+    // Проверка IP блокировки
+    try {
+        const userIP = await getUserIP();
+        if (userIP !== "unknown") {
+            const ipLockStatus = isIPLocked(userIP);
+            if (ipLockStatus) {
+                showLoginError(ipLockStatus);
+                return;
+            }
+        }
+    } catch (error) {
+        console.error("Ошибка проверки IP блокировки:", error);
+    }
+    
+    // Проверка на бан
+    const banCheck = checkIfBanned(usernameInput);
     if (banCheck.banned) {
         showBannedScreen(banCheck);
         return;
     }
     
+    // Проверка ограничения по IP для новых пользователей
+    const existingUser = users.find(user => 
+        user.username.toLowerCase() === usernameInput.toLowerCase()
+    );
+    
+    if (!existingUser) {
+        const ipCheck = await checkIPLimit(usernameInput);
+        if (!ipCheck.allowed) {
+            showLoginError(ipCheck.message);
+            return;
+        }
+    }
+    
     // Загружаем пароли из БД
-    db.ref('mlk_passwords').once('value').then(snapshot => {
+    db.ref('mlk_passwords').once('value').then(async snapshot => {
         const passwords = snapshot.val() || {};
-        
-        const curatorHash = simpleHash(passwords.curator || "123");
-        const seniorHash = simpleHash(passwords.senior || "SENIOR123");
-        const adminHash = simpleHash(passwords.admin || "EOD");
-        const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
-        
-        const existingUser = users.find(user => 
-            user.username.toLowerCase() === username.toLowerCase()
-        );
         
         /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
         const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
-            protectedUser.toLowerCase() === username.toLowerCase()
+            protectedUser.toLowerCase() === usernameInput.toLowerCase()
         );
 
         if (isProtectedUser) {
-            if (input === passwords.special) {
+            const isSpecialValid = await verifyPassword(passwordInput, passwords.special);
+            if (isSpecialValid) {
                 if (!existingUser) {
-                    const staticId = generateStaticId(username);
+                    const ipCheck = await checkIPLimit(usernameInput);
+                    if (!ipCheck.allowed) {
+                        showLoginError(ipCheck.message);
+                        return;
+                    }
+                    
+                    const staticId = generateStaticId(usernameInput);
                     const newUser = {
-                        username: username,
+                        username: usernameInput,
                         staticId: staticId,
                         role: CREATOR_RANK.name,
                         rank: CREATOR_RANK.level,
                         registrationDate: new Date().toLocaleString(),
-                        lastLogin: new Date().toLocaleString()
+                        lastLogin: new Date().toLocaleString(),
+                        registrationIP: ipCheck.ip
                     };
                     
-                    db.ref('mlk_users').push(newUser).then(() => {
-                        loadData(() => {
-                            CURRENT_ROLE = CREATOR_RANK.name;
-                            CURRENT_USER = username;
-                            CURRENT_RANK = CREATOR_RANK;
-                            CURRENT_STATIC_ID = staticId;
-                            completeLogin();
-                        });
+                    await db.ref('mlk_users').push(newUser);
+                    await registerIP(usernameInput, staticId);
+                    
+                    loadData(() => {
+                        CURRENT_ROLE = CREATOR_RANK.name;
+                        CURRENT_USER = usernameInput;
+                        CURRENT_RANK = CREATOR_RANK;
+                        CURRENT_STATIC_ID = staticId;
+                        
+                        // Сбрасываем счетчик попыток
+                        const userIP = await getUserIP();
+                        trackLoginAttempt(userIP, true);
+                        
+                        completeLogin();
                     });
                 } else {
-                    db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                    await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                    await updateIPActivity(usernameInput);
                     
                     CURRENT_ROLE = CREATOR_RANK.name;
-                    CURRENT_USER = username;
+                    CURRENT_USER = usernameInput;
                     CURRENT_RANK = CREATOR_RANK;
-                    CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(username);
+                    CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(usernameInput);
+                    
+                    // Сбрасываем счетчик попыток
+                    const userIP = await getUserIP();
+                    trackLoginAttempt(userIP, true);
+                    
                     completeLogin();
                 }
                 return;
             } else {
+                const userIP = await getUserIP();
+                trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
             }
@@ -798,57 +1130,83 @@ window.login = function() {
         /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
         if (!existingUser) {
             let userRank = RANKS.CURATOR;
+            let isValidPassword = false;
             
-            // Проверяем пароль старшего куратора
-            if (simpleHash(input) === seniorHash) {
+            // Проверяем пароли в порядке убывания привилегий
+            const adminValid = await verifyPassword(passwordInput, passwords.admin);
+            const seniorValid = await verifyPassword(passwordInput, passwords.senior);
+            const curatorValid = await verifyPassword(passwordInput, passwords.curator);
+            
+            if (adminValid) {
                 const isInWhitelist = whitelist.some(user => 
-                    user.username.toLowerCase() === username.toLowerCase()
+                    user.username.toLowerCase() === usernameInput.toLowerCase()
                 );
                 
                 if (!isInWhitelist) {
-                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
-                    return;
-                }
-                userRank = RANKS.SENIOR_CURATOR;
-            }
-            // Проверяем пароль администратора
-            else if (simpleHash(input) === adminHash) {
-                const isInWhitelist = whitelist.some(user => 
-                    user.username.toLowerCase() === username.toLowerCase()
-                );
-                
-                if (!isInWhitelist) {
+                    const userIP = await getUserIP();
+                    trackLoginAttempt(userIP, false);
                     showLoginError("ДОСТУП ЗАПРЕЩЕН");
                     return;
                 }
                 userRank = RANKS.ADMIN;
-            } 
-            // Проверяем пароль куратора
-            else if (simpleHash(input) === curatorHash) {
+                isValidPassword = true;
+            } else if (seniorValid) {
+                const isInWhitelist = whitelist.some(user => 
+                    user.username.toLowerCase() === usernameInput.toLowerCase()
+                );
+                
+                if (!isInWhitelist) {
+                    const userIP = await getUserIP();
+                    trackLoginAttempt(userIP, false);
+                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
+                    return;
+                }
+                userRank = RANKS.SENIOR_CURATOR;
+                isValidPassword = true;
+            } else if (curatorValid) {
                 userRank = RANKS.CURATOR;
-            } else {
+                isValidPassword = true;
+            }
+            
+            if (!isValidPassword) {
+                const userIP = await getUserIP();
+                trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
             }
             
-            const staticId = generateStaticId(username);
+            // Проверка IP лимита
+            const ipCheck = await checkIPLimit(usernameInput);
+            if (!ipCheck.allowed) {
+                showLoginError(ipCheck.message);
+                return;
+            }
+            
+            const staticId = generateStaticId(usernameInput);
             const newUser = {
-                username: username,
+                username: usernameInput,
                 staticId: staticId,
                 role: userRank.name,
                 rank: userRank.level,
                 registrationDate: new Date().toLocaleString(),
-                lastLogin: new Date().toLocaleString()
+                lastLogin: new Date().toLocaleString(),
+                registrationIP: ipCheck.ip
             };
             
-            db.ref('mlk_users').push(newUser).then(() => {
-                loadData(() => {
-                    CURRENT_ROLE = userRank.name;
-                    CURRENT_USER = username;
-                    CURRENT_RANK = userRank;
-                    CURRENT_STATIC_ID = staticId;
-                    completeLogin();
-                });
+            await db.ref('mlk_users').push(newUser);
+            await registerIP(usernameInput, staticId);
+            
+            loadData(() => {
+                CURRENT_ROLE = userRank.name;
+                CURRENT_USER = usernameInput;
+                CURRENT_RANK = userRank;
+                CURRENT_STATIC_ID = staticId;
+                
+                // Сбрасываем счетчик попыток
+                const userIP = await getUserIP();
+                trackLoginAttempt(userIP, true);
+                
+                completeLogin();
             });
             return;
         }
@@ -867,28 +1225,34 @@ window.login = function() {
                 userRank = RANKS.CURATOR;
             }
             
-            const inputHash = simpleHash(input);
-            
             // Проверяем пароль в зависимости от ранга
-            if (userRank.level >= RANKS.ADMIN.level && inputHash === adminHash) {
-                isValidPassword = true;
-            } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && inputHash === seniorHash) {
-                isValidPassword = true;
-            } else if (inputHash === curatorHash) {
-                isValidPassword = true;
+            if (userRank.level >= RANKS.ADMIN.level) {
+                isValidPassword = await verifyPassword(passwordInput, passwords.admin);
+            } else if (userRank.level >= RANKS.SENIOR_CURATOR.level) {
+                isValidPassword = await verifyPassword(passwordInput, passwords.senior);
+            } else {
+                isValidPassword = await verifyPassword(passwordInput, passwords.curator);
             }
             
             if (!isValidPassword) {
+                const userIP = await getUserIP();
+                trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
             }
             
-            db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+            await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+            await updateIPActivity(usernameInput);
             
             CURRENT_ROLE = userRank.name;
-            CURRENT_USER = username;
+            CURRENT_USER = usernameInput;
             CURRENT_RANK = userRank;
             CURRENT_STATIC_ID = existingUser.staticId;
+            
+            // Сбрасываем счетчик попыток
+            const userIP = await getUserIP();
+            trackLoginAttempt(userIP, true);
+            
             completeLogin();
         }
     }).catch(error => {
@@ -896,7 +1260,7 @@ window.login = function() {
         showLoginError("ОШИБКА СИСТЕМЫ");
     });
 }
-
+    
 /* ===== ЭКРАН БАНА ===== */
 function showBannedScreen(banInfo) {
     const loginScreen = document.getElementById("login-screen");
@@ -1139,11 +1503,18 @@ function setupSidebar() {
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
-        addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
+            if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+            addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
+            addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
+            addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
+            addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
+            addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats); // НОВАЯ КНОПКА
+            addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
+        }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -2212,6 +2583,145 @@ window.renderSystem = function() {
     `;
 }
 
+/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
+window.renderIPStats = function() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+        return;
+    }
+    
+    db.ref('mlk_ip_tracking').once('value').then(snapshot => {
+        const ipData = snapshot.val() || {};
+        const ipList = Object.keys(ipData).map(key => ({ ...ipData[key], id: key }));
+        
+        content.innerHTML = `
+            <div class="form-container">
+                <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                    <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
+                </h2>
+                
+                <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                    СИСТЕМА ОТСЛЕЖИВАНИЯ IP АДРЕСОВ ПОЛЬЗОВАТЕЛЕЙ<br>
+                    <span style="color: #c0b070;">ВСЕГО УНИКАЛЬНЫХ IP: ${ipList.length}</span>
+                </p>
+                
+                <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
+                    <div class="card-icon" style="color: #5865F2;"><i class="fas fa-shield-alt"></i></div>
+                    <h4 style="color: #5865F2; margin-bottom: 15px;">БЕЗОПАСНОСТЬ СИСТЕМЫ</h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; color: #c0b070; font-weight: bold;">${ipList.length}</div>
+                            <div style="font-size: 0.9rem; color: #8f9779;">УНИКАЛЬНЫХ IP</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; color: #8cb43c; font-weight: bold;">${users.length}</div>
+                            <div style="font-size: 0.9rem; color: #8f9779;">АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; color: #b43c3c; font-weight: bold;">${Object.keys(loginAttempts).filter(ip => loginAttempts[ip].lockedUntil > Date.now()).length}</div>
+                            <div style="font-size: 0.9rem; color: #8f9779;">ЗАБЛОКИРОВАННЫХ IP</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="clearOldIPRecords()" class="btn-secondary">
+                            <i class="fas fa-trash"></i> ОЧИСТИТЬ СТАРЫЕ ЗАПИСИ
+                        </button>
+                        <button onclick="exportIPData()" class="btn-primary">
+                            <i class="fas fa-download"></i> ЭКСПОРТ ДАННЫХ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="zone-card">
+                    <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-list"></i> ИСТОРИЯ IP АДРЕСОВ
+                        <span style="font-size: 0.9rem; color: #8f9779;">(${ipList.length})</span>
+                    </h4>
+                    
+                    ${ipList.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                            <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                            <h4>ДАННЫХ НЕТ</h4>
+                            <p>IP АДРЕСА ЕЩЕ НЕ ЗАРЕГИСТРИРОВАНЫ</p>
+                        </div>
+                    ` : `
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>IP АДРЕС</th>
+                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                    <th>STATIC ID</th>
+                                    <th>РЕГИСТРАЦИЯ</th>
+                                    <th>ПОСЛЕДНЯЯ АКТИВНОСТЬ</th>
+                                    <th>ПОСЛЕДНИЙ IP</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ip-table-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            </div>
+        `;
+        
+        if (ipList.length > 0) {
+            renderIPTable(ipList);
+        }
+    });
+}
+
+function renderIPTable(ipList) {
+    const tableBody = document.getElementById("ip-table-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    ipList.forEach(record => {
+        const row = document.createElement('tr');
+        const isCurrentUser = record.username === CURRENT_USER;
+        const isSuspicious = ipList.filter(r => r.ip === record.ip).length > 1;
+        
+        row.innerHTML = `
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isSuspicious ? '#b43c3c' : '#8f9779'}">
+                <i class="fas fa-${isSuspicious ? 'exclamation-triangle' : 'desktop'}"></i>
+                ${record.ip}
+                ${isSuspicious ? ' <span style="color: #b43c3c; font-size: 0.7rem;">(ПОДОЗРИТЕЛЬНО)</span>' : ''}
+            </td>
+            <td style="font-weight: 500; color: ${isCurrentUser ? '#8cb43c' : '#c0b070'}">
+                ${record.username}
+                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${record.staticId || "—"}
+            </td>
+            <td>${record.registrationDate || "—"}</td>
+            <td>${record.lastActive || "—"}</td>
+            <td>${record.lastIP || record.ip || "—"}</td>
+            <td>
+                <div style="display: flex; gap: 5px;">
+                    ${isSuspicious ? `
+                        <button onclick="investigateIP('${record.ip}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem;">
+                            <i class="fas fa-search"></i> ПРОВЕРИТЬ
+                        </button>
+                    ` : ''}
+                    ${!isCurrentUser ? `
+                        <button onclick="banIP('${record.ip}')" class="action-btn delete" style="font-size: 0.8rem;">
+                            <i class="fas fa-ban"></i> БАН IP
+                        </button>
+                    ` : ''}
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
 /* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
 function renderWebhookManager() {
     const content = document.getElementById("content-body");
@@ -2809,6 +3319,146 @@ function renderWebhookHistory() {
         
         historyDiv.appendChild(div);
     });
+/* ===== ВАЛИДАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ ===== */
+document.addEventListener('DOMContentLoaded', function() {
+    // Добавляем валидацию в реальном времени
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            const validation = validateUsername(this.value);
+            updateInputValidation(this, validation);
+        });
+        
+        usernameInput.addEventListener('blur', function() {
+            if (this.value.trim()) {
+                const validation = validateUsername(this.value);
+                updateInputValidation(this, validation);
+            }
+        });
+    }
+    
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const validation = validatePassword(this.value);
+            updateInputValidation(this, validation);
+        });
+    }
+});
+
+function updateInputValidation(input, validation) {
+    const wrapper = input.closest('.input-wrapper');
+    if (!wrapper) return;
+    
+    // Удаляем старые сообщения
+    const oldError = wrapper.querySelector('.validation-error');
+    const oldSuccess = wrapper.querySelector('.validation-success');
+    if (oldError) oldError.remove();
+    if (oldSuccess) oldSuccess.remove();
+    
+    // Обновляем стиль инпута
+    input.classList.remove('input-valid', 'input-invalid');
+    
+    if (input.value.trim() === '') {
+        return;
+    }
+    
+    if (validation.valid) {
+        input.classList.add('input-valid');
+        const success = document.createElement('div');
+        success.className = 'validation-success';
+        success.innerHTML = `<i class="fas fa-check-circle"></i> ${validation.message || 'OK'}`;
+        wrapper.appendChild(success);
+    } else {
+        input.classList.add('input-invalid');
+        const error = document.createElement('div');
+        error.className = 'validation-error';
+        error.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${validation.message}`;
+        wrapper.appendChild(error);
+    }
+/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С IP МОНИТОРИНГОМ ===== */
+window.investigateIP = function(ip) {
+    db.ref('mlk_ip_tracking').once('value').then(snapshot => {
+        const ipData = snapshot.val() || {};
+        const usersOnIP = [];
+        
+        for (const key in ipData) {
+            if (ipData[key].ip === ip) {
+                usersOnIP.push(ipData[key]);
+            }
+        }
+        
+        alert(`IP ${ip} используется ${usersOnIP.length} пользователями:\n\n` +
+              usersOnIP.map(u => `• ${u.username} (${u.staticId})`).join('\n'));
+    });
 }
 
-/* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+window.banIP = function(ip) {
+    if (!confirm(`Заблокировать IP адрес ${ip}?\nВсе пользователи с этого IP не смогут зайти в систему.`)) {
+        return;
+    }
+    
+    const banData = {
+        ip: ip,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        reason: "Блокировка IP по решению администратора"
+    };
+    
+    db.ref('mlk_ip_bans').push(banData).then(() => {
+        showNotification(`IP адрес ${ip} заблокирован`, "success");
+        
+        // Блокируем все текущие попытки с этого IP
+        loginAttempts[ip] = {
+            attempts: MAX_ATTEMPTS,
+            lockedUntil: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 дней
+            lastAttempt: Date.now()
+        };
+    });
+}
+
+window.clearOldIPRecords = function() {
+    if (!confirm("Удалить записи IP старше 30 дней?")) return;
+    
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    db.ref('mlk_ip_tracking').once('value').then(snapshot => {
+        const ipData = snapshot.val() || {};
+        const updates = {};
+        
+        for (const key in ipData) {
+            const recordDate = new Date(ipData[key].registrationDate);
+            if (recordDate < thirtyDaysAgo) {
+                updates[key] = null;
+            }
+        }
+        
+        db.ref('mlk_ip_tracking').update(updates).then(() => {
+            showNotification(`Удалено ${Object.keys(updates).length} старых записей IP`, "success");
+            renderIPStats();
+        });
+    });
+}
+
+window.exportIPData = function() {
+    db.ref('mlk_ip_tracking').once('value').then(snapshot => {
+        const ipData = snapshot.val() || {};
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + "IP Address,Username,Static ID,Registration Date,Last Active,Last IP\n"
+            + Object.values(ipData).map(r => 
+                `"${r.ip}","${r.username}","${r.staticId}","${r.registrationDate}","${r.lastActive}","${r.lastIP || r.ip}"`
+            ).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `ip_data_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification("Данные IP экспортированы в CSV", "success");
+    });
+}

@@ -1478,17 +1478,10 @@ function setupSidebar() {
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
-        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
-        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
-        addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
-    }
-    
-    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
-        addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats); // НОВАЯ КНОПКА
+        addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
@@ -3441,4 +3434,5 @@ window.exportIPData = function() {
         
         showNotification("Данные IP экспортированы в CSV", "success");
     });
+
 }

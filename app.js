@@ -2659,125 +2659,109 @@ window.renderSystem = function() {
     content.innerHTML = `
         <div class="form-container" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
             <div class="system-stats-container">
-                <!-- Весь контент теперь внутри этого контейнера -->
                 <div class="zone-card" style="margin-bottom: 30px;">
-                    <!-- Карточка оператора -->
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${CURRENT_USER}</div>
+                    <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
+                    <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
+                        РАНГ: ${CURRENT_RANK.name}<br>
+                        STATIC ID: <span style="font-family: 'Courier New', monospace;">${CURRENT_STATIC_ID}</span>
+                    </div>
                 </div>
                 
-                <h3 style="color: #c0b070; margin-bottom: 20px;">
-                    СТАТИСТИКА СИСТЕМЫ
+                <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                    <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
+                </h3>
+                
+                <div class="dashboard-grid" style="margin-bottom: 30px;">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-database"></i></div>
+                        <div class="card-value">${reports.length}</div>
+                        <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-users"></i></div>
+                        <div class="card-value">${users.length}</div>
+                        <div class="card-label">СТАЛКЕРОВ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="card-value">${whitelist.length}</div>
+                        <div class="card-label">В СПИСКЕ ДОСТУПА</div>
+                    </div>
+                    <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
+                        <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
+                        <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
+                        <div class="card-label">АКТИВНЫХ БАНОВ</div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid" style="margin-bottom: 30px;">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-clock"></i></div>
+                        <div class="card-value">${pendingReports}</div>
+                        <div class="card-label">НА РАССМОТРЕНИИ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-check"></i></div>
+                        <div class="card-value">${confirmedReports}</div>
+                        <div class="card-label">ПОДТВЕРЖДЕНО</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-trash"></i></div>
+                        <div class="card-value">${deletedReports}</div>
+                        <div class="card-label">УДАЛЕНО</div>
+                    </div>
+                </div>
+                
+                <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                    <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
                 </h3>
                 
                 <div class="dashboard-grid">
-                    <!-- Карточки статистики -->
-                </div>
-            </div>
-        </div>
-    `;
-}
-            
-            <div class="zone-card" style="margin-bottom: 30px;">
-                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                <div class="card-value">${CURRENT_USER}</div>
-                <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
-                <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
-                    РАНГ: ${CURRENT_RANK.name}<br>
-                    STATIC ID: <span style="font-family: 'Courier New', monospace;">${CURRENT_STATIC_ID}</span>
-                </div>
-            </div>
-            
-            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
-            </h3>
-            
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-database"></i></div>
-                    <div class="card-value">${reports.length}</div>
-                    <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-users"></i></div>
-                    <div class="card-value">${users.length}</div>
-                    <div class="card-label">СТАЛКЕРОВ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${whitelist.length}</div>
-                    <div class="card-label">В СПИСКЕ ДОСТУПА</div>
-                </div>
-                <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
-                    <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
-                    <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
-                    <div class="card-label">АКТИВНЫХ БАНОВ</div>
-                </div>
-            </div>
-            
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-clock"></i></div>
-                    <div class="card-value">${pendingReports}</div>
-                    <div class="card-label">НА РАССМОТРЕНИИ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-check"></i></div>
-                    <div class="card-value">${confirmedReports}</div>
-                    <div class="card-label">ПОДТВЕРЖДЕНО</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-trash"></i></div>
-                    <div class="card-value">${deletedReports}</div>
-                    <div class="card-label">УДАЛЕНО</div>
-                </div>
-            </div>
-            
-            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
-            </h3>
-            
-            <div class="dashboard-grid">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${adminUsers}</div>
-                    <div class="card-label">АДМИНИСТРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-star"></i></div>
-                    <div class="card-value">${seniorCurators}</div>
-                    <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user"></i></div>
-                    <div class="card-value">${curators}</div>
-                    <div class="card-label">КУРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
-                    <div class="card-value">${juniorCurators}</div>
-                    <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
-                </div>
-            </div>
-            
-            <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
-                <h4 style="color: #c0b070; margin-bottom: 15px;">
-                    <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
-                </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                        <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="card-value">${adminUsers}</div>
+                        <div class="card-label">АДМИНИСТРАТОРЫ</div>
                     </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
-                        <div>ОПЕРАТИВНАЯ</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-star"></i></div>
+                        <div class="card-value">${seniorCurators}</div>
+                        <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
                     </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
-                        <div>${new Date().toLocaleDateString('ru-RU')}</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user"></i></div>
+                        <div class="card-value">${curators}</div>
+                        <div class="card-label">КУРАТОРЫ</div>
                     </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
-                        <div style="color: #8cb43c;">АКТИВЕН</div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                        <div class="card-value">${juniorCurators}</div>
+                        <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
+                    <h4 style="color: #c0b070; margin-bottom: 15px;">
+                        <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
+                    </h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
+                        <div>
+                            <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
+                            <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
+                            <div>ОПЕРАТИВНАЯ</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
+                            <div>${new Date().toLocaleDateString('ru-RU')}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
+                            <div style="color: #8cb43c;">АКТИВЕН</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3783,6 +3767,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

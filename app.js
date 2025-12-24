@@ -13,7 +13,7 @@ const RANKS = {
     ADMIN: {
         name: "АДМИНИСТРАТОР",
         level: 3,
-        access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "bans"]
+        access: ["mlk_reports", "all_reports", "whitelist", "users", "system", "bans"]
     }
 };
 
@@ -2693,5 +2693,6 @@ function renderWebhookHistory() {
         historyDiv.appendChild(div);
     });
 }
+
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */

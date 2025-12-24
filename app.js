@@ -3440,4 +3440,7 @@ window.exportIPData = function() {
         showNotification("Данные IP экспортированы в CSV", "success");
     });
 }
-// КОНЕЦ ФАЙЛА - НИЧЕГО НЕ ДОБАВЛЯЙТЕ ПОСЛЕ ЭТОГО
+
+// ===== КОНЕЦ ФУНКЦИЙ =====
+
+}); // <-- ЭТА СКОБКА ЗАКРЫВАЕТ document.addEventListener('DOMContentLoaded', function()

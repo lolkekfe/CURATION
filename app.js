@@ -273,32 +273,6 @@ function validatePassword(password) {
     return { valid: true, message: "" };
 }
 
-/* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
-const PROTECTED_USERS = ["Tihiy"];
-
-/* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
-function checkSpecialAccess(username, password) {
-    return new Promise((resolve) => {
-        db.ref('mlk_passwords').once('value').then(snapshot => {
-            const passwords = snapshot.val() || {};
-            const specialPassword = passwords.special;
-            
-            // Проверяем, является ли пользователь защищенным
-            const isProtected = PROTECTED_USERS.some(protectedUser => 
-                protectedUser.toLowerCase() === username.toLowerCase()
-            );
-            
-            if (isProtected && password === specialPassword) {
-                resolve({ access: true, rank: CREATOR_RANK });
-            } else {
-                resolve({ access: false });
-            }
-        }).catch(() => {
-            resolve({ access: false });
-        });
-    });
-}
-
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
     const timestamp = Date.now().toString(36);
@@ -589,115 +563,81 @@ function changePassword(type, newPassword) {
 
 /* ===== СИСТЕМА БАНОВ ===== */
 function checkIfBanned(username) {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) return { banned: false };
+    // Проверяем, передан ли username
+    if (!username || username.trim() === '') {
+        return { banned: false };
+    }
     
-    const activeBan = bans.find(ban => 
-        (ban.username.toLowerCase() === username.toLowerCase() || 
-         ban.staticId === user.staticId) && 
-        !ban.unbanned
-    );
+    // Приводим к нижнему регистру для сравнения
+    const usernameLower = username.toLowerCase().trim();
+    
+    // Ищем пользователя (используем trim для сравнения)
+    const user = users.find(u => {
+        if (!u || !u.username) return false;
+        return u.username.toLowerCase().trim() === usernameLower;
+    });
+    
+    if (!user) {
+        // Пользователь не найден - не забанен
+        return { banned: false };
+    }
+    
+    // Ищем активный бан
+    const activeBan = bans.find(ban => {
+        if (!ban) return false;
+        
+        // Проверяем по username (с учетом регистра)
+        const banUsername = ban.username ? ban.username.toLowerCase().trim() : '';
+        const banUsernameMatch = banUsername === usernameLower;
+        
+        // Проверяем по staticId
+        const staticIdMatch = ban.staticId && user.staticId && ban.staticId === user.staticId;
+        
+        return (banUsernameMatch || staticIdMatch) && !ban.unbanned;
+    });
     
     return activeBan ? { banned: true, ...activeBan } : { banned: false };
 }
 
-function banUser(username, reason) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав для бана", "error");
-        return Promise.resolve(false);
-    }
-    
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) {
-        showNotification("Пользователь не найден", "error");
-        return Promise.resolve(false);
-    }
-    
-    const banData = {
-        username: username,
-        staticId: user.staticId,
-        reason: reason,
-        bannedBy: CURRENT_USER,
-        bannedDate: new Date().toLocaleString(),
-        unbanned: false
-    };
-    
-    return db.ref('mlk_bans').push(banData).then(() => {
-        showNotification(`Пользователь ${username} забанен`, "success");
-        loadData(() => {
-            if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
-                renderBanInterface();
-            }
-        });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка бана: " + error.message, "error");
-        return false;
-    });
-}
+/* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
+const PROTECTED_USERS = ["Tihiy"];
 
-function banByStaticId(staticId, reason) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав для бана", "error");
-        return Promise.resolve(false);
-    }
-    
-    const user = users.find(u => u.staticId === staticId);
-    const username = user ? user.username : "Неизвестный пользователь";
-    
-    const banData = {
-        username: username,
-        staticId: staticId,
-        reason: reason,
-        bannedBy: CURRENT_USER,
-        bannedDate: new Date().toLocaleString(),
-        unbanned: false
-    };
-    
-    return db.ref('mlk_bans').push(banData).then(() => {
-        showNotification(`Пользователь (${staticId}) забанен`, "success");
-        loadData(() => {
-            if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
-                renderBanInterface();
+/* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
+function checkSpecialAccess(username, password) {
+    return new Promise((resolve) => {
+        // Проверяем, передан ли username
+        if (!username || !password) {
+            resolve({ access: false });
+            return;
+        }
+        
+        const usernameLower = username.toLowerCase().trim();
+        
+        db.ref('mlk_passwords').once('value').then(snapshot => {
+            const passwords = snapshot.val() || {};
+            const specialPassword = passwords.special;
+            
+            if (!specialPassword) {
+                resolve({ access: false });
+                return;
             }
-        });
-        return true;
-    }).catch(error => {
-        showNotification("Ошибка бана: " + error.message, "error");
-        return false;
-    });
-}
-
-function unbanByStaticId(staticId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав для разбана", "error");
-        return;
-    }
-    
-    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
-    if (!ban) {
-        showNotification("Активный бан не найден", "error");
-        return;
-    }
-    
-    if (confirm(`Снять бан с пользователя ${ban.username}?`)) {
-        db.ref('mlk_bans/' + ban.id).update({
-            unbanned: true,
-            unbannedBy: CURRENT_USER,
-            unbannedDate: new Date().toLocaleString()
-        }).then(() => {
-            showNotification(`Бан с ${ban.username} снят`, "success");
-            loadData(() => {
-                if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
-                    renderBanInterface();
-                }
+            
+            // Проверяем, является ли пользователь защищенным
+            const isProtected = PROTECTED_USERS.some(protectedUser => {
+                if (!protectedUser) return false;
+                return protectedUser.toLowerCase().trim() === usernameLower;
             });
-        }).catch(error => {
-            showNotification("Ошибка снятия бана: " + error.message, "error");
+            
+            if (isProtected && password === specialPassword) {
+                resolve({ access: true, rank: CREATOR_RANK });
+            } else {
+                resolve({ access: false });
+            }
+        }).catch(() => {
+            resolve({ access: false });
         });
-    }
+    });
 }
-
 /* ===== ИНТЕРФЕЙС УПРАВЛЕНИЯ БАНАМИ ===== */
 window.renderBanInterface = function() {
     const content = document.getElementById("content-body");
@@ -3436,3 +3376,4 @@ window.exportIPData = function() {
     });
 
 }
+

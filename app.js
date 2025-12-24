@@ -51,6 +51,72 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
+/* ===== ИСПРАВЛЕННЫЙ CSS ДЛЯ КАРТОЧЕК ===== */
+const fixCSS = `
+    .zone-card {
+        border-radius: 4px !important;
+        border: 1px solid #4a4a3a;
+        padding: 15px;
+        background: rgba(30, 32, 28, 0.7);
+        margin-bottom: 20px;
+        position: relative;
+        overflow: visible;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #4a4a3a;
+        background: rgba(30, 32, 28, 0.9);
+    }
+    
+    .data-table th {
+        background: linear-gradient(to right, #2a2c28, #3a3c38);
+        color: #c0b070;
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 2px solid #4a4a3a;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .data-table td {
+        padding: 10px 15px;
+        border-bottom: 1px solid #4a4a3a;
+        color: #8f9779;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+    
+    .data-table tr:hover {
+        background: rgba(40, 42, 36, 0.5);
+    }
+    
+    .form-container {
+        background: rgba(30, 32, 28, 0.95);
+        border: 1px solid #4a4a3a;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+`;
+
+// Добавьте CSS в документ
+if (!document.getElementById('fix-styles')) {
+    const style = document.createElement('style');
+    style.id = 'fix-styles';
+    style.textContent = fixCSS;
+    document.head.appendChild(style);
+}
+
 /* ===== УЛУЧШЕННОЕ ХЕШИРОВАНИЕ С СОЛЬЮ ===== */
 function generateSalt() {
     const array = new Uint8Array(16);
@@ -1100,19 +1166,28 @@ window.login = async function() {
         // Проверка IP блокировки
         const userIP = await getUserIP();
         if (userIP !== "unknown") {
+            // Проверка локальной блокировки
             const ipLockStatus = isIPLocked(userIP);
             if (ipLockStatus) {
                 showLoginError(ipLockStatus);
                 return;
             }
+            
+            // Проверка IP бана в базе данных
+            const ipBanCheck = await checkIPBan(userIP);
+            if (ipBanCheck.banned) {
+                showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`);
+                return;
+            }
         }
         
-        // Проверка на бан
+        // Проверка на бан пользователя
         const banCheck = checkIfBanned(usernameInput);
         if (banCheck.banned) {
             showBannedScreen(banCheck);
             return;
         }
+        
         
         // Проверка ограничения по IP для новых пользователей
         const existingUser = users.find(user => 
@@ -1840,8 +1915,7 @@ function renderMLKList() {
         listDiv.appendChild(card);
     });
 }
-
-/* ===== СТРАНИЦА ВСЕХ ОТЧЕТОВ ===== */
+/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС ВСЕХ ОТЧЕТОВ ===== */
 function renderReports() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -1856,25 +1930,26 @@ function renderReports() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     let html = `
-        <div style="margin-bottom: 30px; padding: 20px;">
-            <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
-            </h2>
-            <p style="color: rgba(192, 176, 112, 0.7);">ОБЩЕЕ КОЛИЧЕСТВО: ${reports.length}</p>
-        </div>
+        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+            <div style="margin-bottom: 30px;">
+                <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
+                    <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
+                </h2>
+                <p style="color: rgba(192, 176, 112, 0.7);">ОБЩЕЕ КОЛИЧЕСТВО: ${reports.length}</p>
+            </div>
     `;
     
     if (reports.length === 0) {
         html += `
-            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
+            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
                 <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px;"></i>
                 <h3>БАЗА ДАННЫХ ПУСТА</h3>
                 <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
             </div>
-        `;
+        </div>`;
     } else {
         html += `
-            <div class="dashboard-grid" style="margin-bottom: 30px; padding: 0 20px;">
+            <div class="dashboard-grid" style="margin-bottom: 30px;">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-clock"></i></div>
                     <div class="card-value">${pendingReports}</div>
@@ -1892,21 +1967,27 @@ function renderReports() {
                 </div>
             </div>
             
-            <div style="padding: 0 20px;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ИДЕНТИФИКАТОР</th>
-                            <th>НАРУШЕНИЕ</th>
-                            <th>АВТОР</th>
-                            <th>STATIC ID</th>
-                            <th>ВРЕМЯ</th>
-                            <th>СТАТУС</th>
-                            <th>ДЕЙСТВИЯ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-list"></i> ВСЕ ОТЧЕТЫ
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${reports.length})</span>
+                </h4>
+                
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="overflow-x: auto; flex: 1;">
+                        <table class="data-table" style="min-width: 100%;">
+                            <thead style="position: sticky; top: 0; background: #1e201c;">
+                                <tr>
+                                    <th style="min-width: 120px;">ИДЕНТИФИКАТОР</th>
+                                    <th style="min-width: 200px;">НАРУШЕНИЕ</th>
+                                    <th style="min-width: 100px;">АВТОР</th>
+                                    <th style="min-width: 120px;">STATIC ID</th>
+                                    <th style="min-width: 120px;">ВРЕМЯ</th>
+                                    <th style="min-width: 100px;">СТАТУС</th>
+                                    <th style="min-width: 120px;">ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
         
         reports.forEach(r => {
             let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
@@ -1915,10 +1996,10 @@ function renderReports() {
             
             const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
                 `<div class="table-actions">
-                    <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
+                    <button onclick="confirmReport('${r.id}')" class="action-btn confirm" style="font-size: 0.85rem; padding: 3px 8px;">
                         <i class="fas fa-check"></i>
                     </button>
-                    <button onclick="deleteReport('${r.id}')" class="action-btn delete">
+                    <button onclick="deleteReport('${r.id}')" class="action-btn delete" style="font-size: 0.85rem; padding: 3px 8px;">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>` :
@@ -1926,25 +2007,24 @@ function renderReports() {
             
             html += `<tr>
                 <td><i class="fas fa-user-tag"></i> ${r.tag || '—'}</td>
-                <td>${r.action || '—'}</td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${r.action || '—'}</td>
                 <td><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</td>
-                <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                <td style="font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8f9779;">
                     ${r.authorStaticId || '—'}
                 </td>
                 <td><i class="far fa-clock"></i> ${r.time || '—'}</td>
-                <td><span class="report-status ${statusClass}" style="display: inline-flex; padding: 4px 10px;">
+                <td><span class="report-status ${statusClass}" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
                     <i class="fas ${statusIcon}"></i> ${status}
                 </span></td>
                 <td>${actionsHtml}</td>
             </tr>`;
         });
         
-        html += "</tbody></table></div>";
+        html += `</tbody></table></div></div></div>`;
     }
     
     content.innerHTML = html;
 }
-
 /* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
@@ -2074,13 +2154,13 @@ window.updatePassword = function(type) {
     });
 }
 
-/* ===== СТРАНИЦА СПИСКА ДОСТУПА ===== */
+/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС СПИСКА ДОСТУПА ===== */
 window.renderWhitelist = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
@@ -2089,45 +2169,48 @@ window.renderWhitelist = function() {
                 ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ
             </p>
             
-            <div class="zone-card" style="margin-bottom: 30px;">
+            <div class="zone-card" style="margin-bottom: 30px; padding: 20px;">
                 <div class="card-icon"><i class="fas fa-user-plus"></i></div>
                 <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="text" id="new-whitelist-user" class="form-input" 
-                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ">
+                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
                     <button onclick="addToWhitelist()" class="btn-primary">
                         <i class="fas fa-plus"></i> ДОБАВИТЬ
                     </button>
                 </div>
             </div>
             
-            <div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
                 <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-list"></i> ТЕКУЩИЙ СПИСОК
                     <span style="font-size: 0.9rem; color: #8f9779;">(${whitelist.length})</span>
                 </h4>
                 
                 ${whitelist.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
                         <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
                         <h4>СПИСОК ПУСТ</h4>
                         <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
                     </div>
                 ` : `
-                    <div style="max-height: 500px; overflow-y: auto;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ПСЕВДОНИМ</th>
-                                    <th>STATIC ID</th>
-                                    <th>ДОБАВИЛ</th>
-                                    <th>ДАТА ДОБАВЛЕНИЯ</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="whitelist-table-body">
-                            </tbody>
-                        </table>
+                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="overflow-x: auto; flex: 1;">
+                            <table class="data-table" style="min-width: 100%;">
+                                <thead style="position: sticky; top: 0; background: #1e201c;">
+                                    <tr>
+                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
+                                        <th style="min-width: 120px;">STATIC ID</th>
+                                        <th style="min-width: 120px;">ДОБАВИЛ</th>
+                                        <th style="min-width: 150px;">ДАТА ДОБАВЛЕНИЯ</th>
+                                        <th style="min-width: 100px;">СТАТУС</th>
+                                        <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="whitelist-table-body">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `}
             </div>
@@ -2156,15 +2239,22 @@ function renderWhitelistTable() {
                 <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
                 ${user.username}
             </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+            <td style="font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8f9779;">
                 ${user.staticId || "—"}
             </td>
             <td>${user.addedBy || "СИСТЕМА"}</td>
             <td>${user.addedDate || "НЕИЗВЕСТНО"}</td>
             <td>
+                <span class="report-status ${isProtected ? 'status-confirmed' : 'status-pending'}" 
+                      style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
+                    <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
+                    ${isProtected ? 'ЗАЩИЩЕННЫЙ' : 'ОБЫЧНЫЙ'}
+                </span>
+            </td>
+            <td>
                 ${isProtected ? 
-                    `<span style="color: #8f9779; font-size: 0.85rem;">ЗАЩИЩЕН</span>` : 
-                    `<button onclick="removeFromWhitelist('${user.id}')" class="action-btn delete">
+                    `<span style="color: #8f9779; font-size: 0.85rem;">НЕЛЬЗЯ УДАЛИТЬ</span>` : 
+                    `<button onclick="removeFromWhitelist('${user.id}')" class="action-btn delete" style="font-size: 0.85rem; padding: 3px 8px;">
                         <i class="fas fa-trash"></i> УДАЛИТЬ
                     </button>`
                 }
@@ -2236,13 +2326,12 @@ window.removeFromWhitelist = function(id) {
     });
 }
 
-/* ===== СТРАНИЦА ПОЛЬЗОВАТЕЛЕЙ ===== */
 window.renderUsers = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ СТАЛКЕРЫ
             </h2>
@@ -2252,7 +2341,7 @@ window.renderUsers = function() {
             </p>
             
             <div style="margin-bottom: 30px;">
-                <div class="dashboard-grid">
+                <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
                     <div class="zone-card">
                         <div class="card-icon"><i class="fas fa-users"></i></div>
                         <div class="card-value">${users.length}</div>
@@ -2281,35 +2370,37 @@ window.renderUsers = function() {
                 </div>
             </div>
             
-            <div>
+            <div style="flex: 1; display: flex; flex-direction: column;">
                 <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-list"></i> СПИСОК СТАЛКЕРОВ
                     <span style="font-size: 0.9rem; color: #8f9779;">(${users.length})</span>
                 </h4>
                 
                 ${users.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
                         <i class="fas fa-user-friends" style="font-size: 3rem; margin-bottom: 15px;"></i>
                         <h4>НЕТ ПОЛЬЗОВАТЕЛЕЙ</h4>
                         <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
                     </div>
                 ` : `
-                    <div style="max-height: 600px; overflow-y: auto;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ПСЕВДОНИМ</th>
-                                    <th>STATIC ID</th>
-                                    <th>РАНГ</th>
-                                    <th>РЕГИСТРАЦИЯ</th>
-                                    <th>ПОСЛЕДНИЙ ВХОД</th>
-                                    <th>СТАТУС</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body">
-                            </tbody>
-                        </table>
+                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="overflow-x: auto; flex: 1;">
+                            <table class="data-table" style="min-width: 100%; height: 100%;">
+                                <thead style="position: sticky; top: 0; background: #1e201c;">
+                                    <tr>
+                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
+                                        <th style="min-width: 120px;">STATIC ID</th>
+                                        <th style="min-width: 120px;">РАНГ</th>
+                                        <th style="min-width: 120px;">РЕГИСТРАЦИЯ</th>
+                                        <th style="min-width: 120px;">ПОСЛЕДНИЙ ВХОД</th>
+                                        <th style="min-width: 100px;">СТАТУС</th>
+                                        <th style="min-width: 200px;">ДЕЙСТВИЯ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-table-body">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `}
             </div>
@@ -2340,78 +2431,155 @@ function renderUsersTable() {
         
         let rankBadge = '';
         if (user.role === RANKS.ADMIN.name) {
-            rankBadge = '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-user-shield"></i> АДМИНИСТРАТОР</span>';
+            rankBadge = '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-user-shield"></i> АДМИНИСТРАТОР</span>';
         } else if (user.role === RANKS.SENIOR_CURATOR.name) {
-            rankBadge = '<span class="report-status status-pending" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-star"></i> СТАРШИЙ КУРАТОР</span>';
+            rankBadge = '<span class="report-status status-pending" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-star"></i> СТАРШИЙ КУРАТОР</span>';
         } else if (user.role === RANKS.CURATOR.name) {
-            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(140, 180, 60, 0.1); color: #8cb43c; border: 1px solid rgba(140, 180, 60, 0.3);"><i class="fas fa-user"></i> КУРАТОР</span>';
+            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(140, 180, 60, 0.1); color: #8cb43c; border: 1px solid rgba(140, 180, 60, 0.3); font-size: 0.8rem;"><i class="fas fa-user"></i> КУРАТОР</span>';
         } else {
-            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(100, 100, 100, 0.1); color: #8f9779; border: 1px solid rgba(100, 100, 100, 0.3);"><i class="fas fa-user-graduate"></i> МЛАДШИЙ КУРАТОР</span>';
+            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(100, 100, 100, 0.1); color: #8f9779; border: 1px solid rgba(100, 100, 100, 0.3); font-size: 0.8rem;"><i class="fas fa-user-graduate"></i> МЛАДШИЙ КУРАТОР</span>';
         }
+        
+        const registrationDate = user.registrationDate || "НЕИЗВЕСТНО";
+        const lastLogin = user.lastLogin || "НИКОГДА";
         
         row.innerHTML = `
             <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
                 <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : user.role === RANKS.CURATOR.name ? 'fa-user' : 'fa-user-graduate'}"></i>
                 ${user.username}
-                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
-                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
+                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.7rem;">(ВЫ)</span>' : ''}
+                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.7rem;">(ЗАБАНЕН)</span>' : ''}
             </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+            <td style="font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8f9779;">
                 ${user.staticId || "N/A"}
             </td>
             <td>${rankBadge}</td>
-            <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
-            <td>${user.lastLogin || "НИКОГДА"}</td>
+            <td style="font-size: 0.85rem;">${registrationDate}</td>
+            <td style="font-size: 0.85rem;">${lastLogin}</td>
             <td>
                 ${isBanned ? 
-                    '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
-                    '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-check"></i> АКТИВЕН</span>'
+                    '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
+                    '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-check"></i> АКТИВЕН</span>'
                 }
             </td>
             <td>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 200px;">
                     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                         ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
-                            `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.8rem; padding: 3px 8px;">
+                            `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.75rem; padding: 3px 6px;">
                                 <i class="fas fa-user-shield"></i> АДМ
                             </button>` : 
                             ''
                         }
                         ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                            `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.8rem; padding: 3px 8px;">
+                            `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.75rem; padding: 3px 6px;">
                                 <i class="fas fa-star"></i> СТ.КУР
                             </button>` : 
                             ''
                         }
                         ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                            `<button onclick="promoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                            `<button onclick="promoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.75rem; padding: 3px 6px;">
                                 <i class="fas fa-user"></i> КУР
                             </button>` : 
                             ''
                         }
                         ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.JUNIOR_CURATOR.name ? 
-                            `<button onclick="demoteToJuniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8f9779; border-color: #8f9779; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                            `<button onclick="demoteToJuniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8f9779; border-color: #8f9779; color: white; font-size: 0.75rem; padding: 3px 6px;">
                                 <i class="fas fa-user-graduate"></i> МЛ.КУР
                             </button>` : 
                             ''
                         }
                         ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                            `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                            `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.75rem; padding: 3px 6px;">
                                 <i class="fas fa-ban"></i> БАН
                             </button>` : 
                             ''
                         }
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
+                            `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.75rem; padding: 3px 6px;">
+                                <i class="fas fa-unlock"></i> РАЗБАН
+                            </button>` : 
+                            ''
+                        }
+                    </div>
+                    
+                    <div style="font-size: 0.7rem; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : '#8f9779'};">
+                        ${isProtected ? '🔒 ЗАЩИЩЕННЫЙ ПОЛЬЗОВАТЕЛЬ' : isCurrentUser ? '👤 ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ' : ''}
                     </div>
                 </div>
-                
-                <span style="color: #8f9779; font-size: 0.85rem;">
-                    ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
-                </span>
             </td>
         `;
         
         tableBody.appendChild(row);
     });
+}
+
+/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС СПИСКА ДОСТУПА ===== */
+window.renderWhitelist = function() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    content.innerHTML = `
+        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+            <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-users"></i> СПИСОК ДОСТУПА
+            </h2>
+            
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ
+            </p>
+            
+            <div class="zone-card" style="margin-bottom: 30px; padding: 20px;">
+                <div class="card-icon"><i class="fas fa-user-plus"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="new-whitelist-user" class="form-input" 
+                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
+                    <button onclick="addToWhitelist()" class="btn-primary">
+                        <i class="fas fa-plus"></i> ДОБАВИТЬ
+                    </button>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column;">
+                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-list"></i> ТЕКУЩИЙ СПИСОК
+                    <span style="font-size: 0.9rem; color: #8f9779;">(${whitelist.length})</span>
+                </h4>
+                
+                ${whitelist.length === 0 ? `
+                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                        <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                        <h4>СПИСОК ПУСТ</h4>
+                        <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
+                    </div>
+                ` : `
+                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                        <div style="overflow-x: auto; flex: 1;">
+                            <table class="data-table" style="min-width: 100%;">
+                                <thead style="position: sticky; top: 0; background: #1e201c;">
+                                    <tr>
+                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
+                                        <th style="min-width: 120px;">STATIC ID</th>
+                                        <th style="min-width: 120px;">ДОБАВИЛ</th>
+                                        <th style="min-width: 150px;">ДАТА ДОБАВЛЕНИЯ</th>
+                                        <th style="min-width: 100px;">СТАТУС</th>
+                                        <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="whitelist-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+    
+    if (whitelist.length > 0) {
+        renderWhitelistTable();
+    }
 }
 
 window.showBanModal = function(username) {
@@ -2604,6 +2772,7 @@ window.renderSystem = function() {
 }
 
 /* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
+/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 window.renderIPStats = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -2617,86 +2786,96 @@ window.renderIPStats = function() {
         const ipData = snapshot.val() || {};
         const ipList = Object.keys(ipData).map(key => ({ ...ipData[key], id: key }));
         
-        content.innerHTML = `
-            <div class="form-container">
-                <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                    <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
-                </h2>
-                
-                <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                    СИСТЕМА ОТСЛЕЖИВАНИЯ IP АДРЕСОВ ПОЛЬЗОВАТЕЛЕЙ<br>
-                    <span style="color: #c0b070;">ВСЕГО УНИКАЛЬНЫХ IP: ${ipList.length}</span>
-                </p>
-                
-                <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
-                    <div class="card-icon" style="color: #5865F2;"><i class="fas fa-shield-alt"></i></div>
-                    <h4 style="color: #5865F2; margin-bottom: 15px;">БЕЗОПАСНОСТЬ СИСТЕМЫ</h4>
+        // Загружаем IP баны для точного подсчета
+        db.ref('mlk_ip_bans').once('value').then(ipBansSnapshot => {
+            const ipBansData = ipBansSnapshot.val() || {};
+            const ipBansList = Object.keys(ipBansData).map(key => ({ ...ipBansData[key], id: key }));
+            const activeIPBans = ipBansList.filter(ban => !ban.unbanned);
+            
+            content.innerHTML = `
+                <div class="form-container" style="padding: 20px;">
+                    <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                        <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
+                    </h2>
                     
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; color: #c0b070; font-weight: bold;">${ipList.length}</div>
-                            <div style="font-size: 0.9rem; color: #8f9779;">УНИКАЛЬНЫХ IP</div>
+                    <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                        СИСТЕМА ОТСЛЕЖИВАНИЯ IP АДРЕСОВ ПОЛЬЗОВАТЕЛЕЙ<br>
+                        <span style="color: #c0b070;">ВСЕГО УНИКАЛЬНЫХ IP: ${ipList.length}</span>
+                    </p>
+                    
+                    <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
+                        <div class="card-icon" style="color: #5865F2;"><i class="fas fa-shield-alt"></i></div>
+                        <h4 style="color: #5865F2; margin-bottom: 15px;">БЕЗОПАСНОСТЬ СИСТЕМЫ</h4>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; color: #c0b070; font-weight: bold;">${ipList.length}</div>
+                                <div style="font-size: 0.9rem; color: #8f9779;">УНИКАЛЬНЫХ IP</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; color: #8cb43c; font-weight: bold;">${users.length}</div>
+                                <div style="font-size: 0.9rem; color: #8f9779;">АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2rem; color: #b43c3c; font-weight: bold;">${activeIPBans.length}</div>
+                                <div style="font-size: 0.9rem; color: #8f9779;">ЗАБЛОКИРОВАННЫХ IP</div>
+                            </div>
                         </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; color: #8cb43c; font-weight: bold;">${users.length}</div>
-                            <div style="font-size: 0.9rem; color: #8f9779;">АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; color: #b43c3c; font-weight: bold;">${Object.keys(loginAttempts).filter(ip => loginAttempts[ip].lockedUntil > Date.now()).length}</div>
-                            <div style="font-size: 0.9rem; color: #8f9779;">ЗАБЛОКИРОВАННЫХ IP</div>
+                        
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button onclick="clearOldIPRecords()" class="btn-secondary">
+                                <i class="fas fa-trash"></i> ОЧИСТИТЬ СТАРЫЕ ЗАПИСИ
+                            </button>
+                            <button onclick="exportIPData()" class="btn-primary">
+                                <i class="fas fa-download"></i> ЭКСПОРТ ДАННЫХ
+                            </button>
                         </div>
                     </div>
                     
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button onclick="clearOldIPRecords()" class="btn-secondary">
-                            <i class="fas fa-trash"></i> ОЧИСТИТЬ СТАРЫЕ ЗАПИСИ
-                        </button>
-                        <button onclick="exportIPData()" class="btn-primary">
-                            <i class="fas fa-download"></i> ЭКСПОРТ ДАННЫХ
-                        </button>
+                    <div class="zone-card" style="padding: 20px;">
+                        <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-list"></i> ИСТОРИЯ IP АДРЕСОВ
+                            <span style="font-size: 0.9rem; color: #8f9779;">(${ipList.length})</span>
+                        </h4>
+                        
+                        ${ipList.length === 0 ? `
+                            <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                                <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                                <h4>ДАННЫХ НЕТ</h4>
+                                <p>IP АДРЕСА ЕЩЕ НЕ ЗАРЕГИСТРИРОВАНЫ</p>
+                            </div>
+                        ` : `
+                            <div style="overflow-x: auto;">
+                                <table class="data-table" style="min-width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>IP АДРЕС</th>
+                                            <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                            <th>STATIC ID</th>
+                                            <th>РЕГИСТРАЦИЯ</th>
+                                            <th>ПОСЛЕДНЯЯ АКТИВНОСТЬ</th>
+                                            <th>ПОСЛЕДНИЙ IP</th>
+                                            <th>СТАТУС</th>
+                                            <th>ДЕЙСТВИЯ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ip-table-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
                     </div>
                 </div>
-                
-                <div class="zone-card">
-                    <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-list"></i> ИСТОРИЯ IP АДРЕСОВ
-                        <span style="font-size: 0.9rem; color: #8f9779;">(${ipList.length})</span>
-                    </h4>
-                    
-                    ${ipList.length === 0 ? `
-                        <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
-                            <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                            <h4>ДАННЫХ НЕТ</h4>
-                            <p>IP АДРЕСА ЕЩЕ НЕ ЗАРЕГИСТРИРОВАНЫ</p>
-                        </div>
-                    ` : `
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>IP АДРЕС</th>
-                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                    <th>STATIC ID</th>
-                                    <th>РЕГИСТРАЦИЯ</th>
-                                    <th>ПОСЛЕДНЯЯ АКТИВНОСТЬ</th>
-                                    <th>ПОСЛЕДНИЙ IP</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ip-table-body">
-                            </tbody>
-                        </table>
-                    `}
-                </div>
-            </div>
-        `;
-        
-        if (ipList.length > 0) {
-            renderIPTable(ipList);
-        }
+            `;
+            
+            if (ipList.length > 0) {
+                renderIPTable(ipList, ipBansList);
+            }
+        });
     });
 }
 
-function renderIPTable(ipList) {
+function renderIPTable(ipList, ipBansList) {
     const tableBody = document.getElementById("ip-table-body");
     if (!tableBody) return;
     
@@ -2706,16 +2885,18 @@ function renderIPTable(ipList) {
         const row = document.createElement('tr');
         const isCurrentUser = record.username === CURRENT_USER;
         const isSuspicious = ipList.filter(r => r.ip === record.ip).length > 1;
+        const isIPBanned = ipBansList.some(ban => ban.ip === record.ip && !ban.unbanned);
         
         row.innerHTML = `
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isSuspicious ? '#b43c3c' : '#8f9779'}">
-                <i class="fas fa-${isSuspicious ? 'exclamation-triangle' : 'desktop'}"></i>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isIPBanned ? '#b43c3c' : isSuspicious ? '#b43c3c' : '#8f9779'}">
+                <i class="fas fa-${isIPBanned ? 'ban' : isSuspicious ? 'exclamation-triangle' : 'desktop'}"></i>
                 ${record.ip}
                 ${isSuspicious ? ' <span style="color: #b43c3c; font-size: 0.7rem;">(ПОДОЗРИТЕЛЬНО)</span>' : ''}
             </td>
-            <td style="font-weight: 500; color: ${isCurrentUser ? '#8cb43c' : '#c0b070'}">
+            <td style="font-weight: 500; color: ${isCurrentUser ? '#8cb43c' : isIPBanned ? '#b43c3c' : '#c0b070'}">
                 ${record.username}
                 ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+                ${isIPBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(IP ЗАБАНЕН)</span>' : ''}
             </td>
             <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
                 ${record.staticId || "—"}
@@ -2724,15 +2905,27 @@ function renderIPTable(ipList) {
             <td>${record.lastActive || "—"}</td>
             <td>${record.lastIP || record.ip || "—"}</td>
             <td>
-                <div style="display: flex; gap: 5px;">
+                <span class="report-status ${isIPBanned ? 'status-deleted' : 'status-confirmed'}" 
+                      style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
+                    <i class="fas ${isIPBanned ? 'fa-ban' : 'fa-check'}"></i>
+                    ${isIPBanned ? 'IP ЗАБАНЕН' : 'АКТИВЕН'}
+                </span>
+            </td>
+            <td>
+                <div style="display: flex; gap: 5px; flex-wrap: nowrap;">
                     ${isSuspicious ? `
-                        <button onclick="investigateIP('${record.ip}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem;">
+                        <button onclick="investigateIP('${record.ip}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; white-space: nowrap;">
                             <i class="fas fa-search"></i> ПРОВЕРИТЬ
                         </button>
                     ` : ''}
-                    ${!isCurrentUser ? `
-                        <button onclick="banIP('${record.ip}')" class="action-btn delete" style="font-size: 0.8rem;">
+                    ${!isCurrentUser && !isIPBanned ? `
+                        <button onclick="banIP('${record.ip}')" class="action-btn delete" style="font-size: 0.8rem; white-space: nowrap;">
                             <i class="fas fa-ban"></i> БАН IP
+                        </button>
+                    ` : ''}
+                    ${isIPBanned ? `
+                        <button onclick="unbanIP('${record.ip}')" class="action-btn confirm" style="font-size: 0.8rem; white-space: nowrap;">
+                            <i class="fas fa-unlock"></i> РАЗБАН IP
                         </button>
                     ` : ''}
                 </div>
@@ -2741,7 +2934,97 @@ function renderIPTable(ipList) {
         tableBody.appendChild(row);
     });
 }
+/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С IP БАНАМИ ===== */
+window.banIP = async function(ip) {
+    if (!confirm(`Заблокировать IP адрес ${ip}?\nВсе пользователи с этого IP не смогут зайти в систему.`)) {
+        return;
+    }
+    
+    const banData = {
+        ip: ip,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        reason: "Блокировка IP по решению администратора",
+        unbanned: false
+    };
+    
+    db.ref('mlk_ip_bans').push(banData).then(() => {
+        showNotification(`IP адрес ${ip} заблокирован`, "success");
+        
+        // Блокируем все текущие попытки с этого IP
+        loginAttempts[ip] = {
+            attempts: MAX_ATTEMPTS,
+            lockedUntil: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 дней
+            lastAttempt: Date.now()
+        };
+        
+        // Перезагружаем интерфейс
+        renderIPStats();
+    }).catch(error => {
+        showNotification("Ошибка блокировки IP: " + error.message, "error");
+    });
+}
 
+window.unbanIP = async function(ip) {
+    db.ref('mlk_ip_bans').once('value').then(snapshot => {
+        const ipBansData = snapshot.val() || {};
+        let activeBanKey = null;
+        
+        for (const key in ipBansData) {
+            if (ipBansData[key].ip === ip && !ipBansData[key].unbanned) {
+                activeBanKey = key;
+                break;
+            }
+        }
+        
+        if (!activeBanKey) {
+            showNotification("Активный бан для этого IP не найден", "error");
+            return;
+        }
+        
+        if (!confirm(`Разблокировать IP адрес ${ip}?`)) return;
+        
+        db.ref('mlk_ip_bans/' + activeBanKey).update({
+            unbanned: true,
+            unbannedBy: CURRENT_USER,
+            unbannedDate: new Date().toLocaleString(),
+            unbannedReason: "Разблокировка администратором"
+        }).then(() => {
+            showNotification(`IP адрес ${ip} разблокирован`, "success");
+            // Удаляем из локального кеша блокировок
+            if (loginAttempts[ip]) {
+                delete loginAttempts[ip];
+            }
+            renderIPStats();
+        }).catch(error => {
+            showNotification("Ошибка разблокировки IP: " + error.message, "error");
+        });
+    });
+}
+/* ===== ФУНКЦИЯ ДЛЯ ПРОВЕРКИ IP БАНОВ ПРИ ВХОДЕ ===== */
+async function checkIPBan(ip) {
+    try {
+        const ipBansSnapshot = await db.ref('mlk_ip_bans').once('value');
+        const ipBansData = ipBansSnapshot.val() || {};
+        
+        for (const key in ipBansData) {
+            const ban = ipBansData[key];
+            if (ban.ip === ip && !ban.unbanned) {
+                return {
+                    banned: true,
+                    reason: ban.reason,
+                    bannedBy: ban.bannedBy,
+                    bannedDate: ban.bannedDate
+                };
+            }
+        }
+        
+        return { banned: false };
+    } catch (error) {
+        console.error("Ошибка проверки IP бана:", error);
+        return { banned: false };
+    }
+}
 /* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
 function renderWebhookManager() {
     const content = document.getElementById("content-body");
@@ -3487,6 +3770,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

@@ -3440,6 +3440,4 @@ window.exportIPData = function() {
         showNotification("Данные IP экспортированы в CSV", "success");
     });
 }
-
-// ЗАКРЫВАЕМ document.addEventListener('DOMContentLoaded', function() {
-}); // <-- ЭТА СКОБКА ЗАКРЫВАЕТ ВСЕ НАЧАВШИЕСЯ В НАЧАЛЕ ФАЙЛА БЛОКИ
+// КОНЕЦ ФАЙЛА - НИЧЕГО НЕ ДОБАВЛЯЙТЕ ПОСЛЕ ЭТОГО

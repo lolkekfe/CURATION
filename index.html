@@ -3270,9 +3270,10 @@
             
             // Активировать первый элемент навигации
             if (navMenu.firstChild) {
-                navMenu.firstChild.click();
+navMenu.querySelector('button, a, [onclick]').click(); // более конкретно;
             }
         });
     </script>
 </body>
 </html>
+

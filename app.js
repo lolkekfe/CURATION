@@ -1046,14 +1046,6 @@ window.login = async function() {
             user.username.toLowerCase() === usernameInput.toLowerCase()
         );
         
-        if (!existingUser) {
-            const ipCheck = await checkIPLimit(usernameInput);
-            if (!ipCheck.allowed) {
-                showLoginError(ipCheck.message);
-                return;
-            }
-        }
-        
         // Загружаем пароли из БД
         const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
         const passwords = passwordsSnapshot.val() || {};
@@ -1087,16 +1079,18 @@ window.login = async function() {
                     await db.ref('mlk_users').push(newUser);
                     await registerIP(usernameInput, staticId);
                     
+                    // Загружаем обновленные данные
+                    await new Promise(resolve => loadData(resolve));
+                    
+                    CURRENT_ROLE = CREATOR_RANK.name;
+                    CURRENT_USER = usernameInput;
+                    CURRENT_RANK = CREATOR_RANK;
+                    CURRENT_STATIC_ID = staticId;
+                    
                     // Сбрасываем счетчик попыток
                     trackLoginAttempt(userIP, true);
                     
-                    loadData(() => {
-                        CURRENT_ROLE = CREATOR_RANK.name;
-                        CURRENT_USER = usernameInput;
-                        CURRENT_RANK = CREATOR_RANK;
-                        CURRENT_STATIC_ID = staticId;
-                        completeLogin();
-                    });
+                    completeLogin();
                 } else {
                     await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
                     await updateIPActivity(usernameInput);
@@ -1123,7 +1117,7 @@ window.login = async function() {
             let userRank = RANKS.CURATOR;
             let isValidPassword = false;
             
-            // Проверяем пароли в порядке убывания привилегий
+            // Проверяем пароли
             const adminValid = await verifyPassword(passwordInput, passwords.admin);
             const seniorValid = await verifyPassword(passwordInput, passwords.senior);
             const curatorValid = await verifyPassword(passwordInput, passwords.curator);
@@ -1184,15 +1178,16 @@ window.login = async function() {
             await db.ref('mlk_users').push(newUser);
             await registerIP(usernameInput, staticId);
             
-            loadData(() => {
-                CURRENT_ROLE = userRank.name;
-                CURRENT_USER = usernameInput;
-                CURRENT_RANK = userRank;
-                CURRENT_STATIC_ID = staticId;
-                
-                trackLoginAttempt(userIP, true);
-                completeLogin();
-            });
+            // Загружаем обновленные данные
+            await new Promise(resolve => loadData(resolve));
+            
+            CURRENT_ROLE = userRank.name;
+            CURRENT_USER = usernameInput;
+            CURRENT_RANK = userRank;
+            CURRENT_STATIC_ID = staticId;
+            
+            trackLoginAttempt(userIP, true);
+            completeLogin();
             return;
         }
         
@@ -1210,7 +1205,7 @@ window.login = async function() {
                 userRank = RANKS.CURATOR;
             }
             
-            // Проверяем пароль в зависимости от ранга
+            // Проверяем пароль
             if (userRank.level >= RANKS.ADMIN.level) {
                 isValidPassword = await verifyPassword(passwordInput, passwords.admin);
             } else if (userRank.level >= RANKS.SENIOR_CURATOR.level) {
@@ -3443,3 +3438,4 @@ window.exportIPData = function() {
         showNotification("Данные IP экспортированы в CSV", "success");
     });
 }
+

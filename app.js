@@ -1,19 +1,24 @@
 /* ===== СИСТЕМА РАНГОВ ЗОНЫ ===== */
 const RANKS = {
-    CURATOR: {
-        name: "КУРАТОР",
+    JUNIOR_CURATOR: {
+        name: "МЛАДШИЙ КУРАТОР",
         level: 1,
         access: ["mlk_reports"]
     },
-    SENIOR_CURATOR: {
-        name: "СТАРШИЙ КУРАТОР", 
+    CURATOR: {
+        name: "КУРАТОР", 
         level: 2,
+        access: ["mlk_reports"]
+    },
+    SENIOR_CURATOR: {
+        name: "СТАРШИЙ КУРАТОР",
+        level: 3,
         access: ["mlk_reports", "all_reports", "users"]
     },
     ADMIN: {
         name: "АДМИНИСТРАТОР",
-        level: 3,
-        access: ["mlk_reports", "all_reports", "whitelist", "users", "system", "bans"]
+        level: 4,
+        access: ["mlk_reports", "all_reports", "whitelist", "users", "system", "bans", "ip_monitoring", "webhooks"]
     }
 };
 
@@ -21,7 +26,7 @@ const RANKS = {
 const CREATOR_RANK = {
     name: "СОЗДАТЕЛЬ",
     level: 999,
-    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything", "bans"]
+    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything", "bans", "ip_monitoring", "webhooks"]
 };
 
 /* ===== СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ===== */
@@ -284,6 +289,7 @@ function validatePassword(password) {
     
     return { valid: true, message: "" };
 }
+
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
     const timestamp = Date.now().toString(36);
@@ -334,7 +340,7 @@ function restoreSession() {
 
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
         showNotification("Недостаточно прав", "error");
         return;
     }
@@ -345,7 +351,7 @@ window.deleteReport = function(id) {
 }
 
 window.confirmReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
         showNotification("Недостаточно прав", "error");
         return;
     }
@@ -388,72 +394,6 @@ async function verifyPassword(inputPassword, storedPassword) {
 function loadData(callback) {
     db.ref('mlk_users').once('value').then(snapshot => {
         const data = snapshot.val() || {};
-        users = Object.keys(data).map(key => ({...data[key], id: key}));
-        
-        return db.ref('mlk_whitelist').once('value');
-    }).then(snapshot => {
-        const data = snapshot.val() || {};
-        whitelist = Object.keys(data).map(key => ({...data[key], id: key}));
-        
-        return db.ref('mlk_passwords').once('value');
-    }).then(snapshot => {
-        const data = snapshot.val() || {};
-        passwords = data || {};
-        
-        // Проверяем наличие всех необходимых паролей
-        if (!passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
-            console.log("Не все пароли найдены, создаем недостающие...");
-            return createOrUpdatePasswords().then(() => {
-                return db.ref('mlk_passwords').once('value'); // Перезагружаем пароли
-            }).then(snapshot => {
-                passwords = snapshot.val() || {};
-                return db.ref('mlk_bans').once('value');
-            });
-        }
-        
-        return db.ref('mlk_bans').once('value');
-    }).then(snapshot => {
-        const data = snapshot.val() || {};
-        bans = Object.keys(data).map(key => ({...data[key], id: key}));
-        
-        // Загружаем вебхуки
-        return db.ref('mlk_settings/webhook_url').once('value');
-    }).then(snapshot => {
-        DISCORD_WEBHOOK_URL = snapshot.val() || null;
-        return db.ref('mlk_settings/webhook_name').once('value');
-    }).then(snapshot => {
-        DISCORD_WEBHOOK_NAME = snapshot.val() || "Система отчетов Зоны";
-        return db.ref('mlk_settings/webhook_avatar').once('value');
-    }).then(snapshot => {
-        DISCORD_WEBHOOK_AVATAR = snapshot.val() || "https://i.imgur.com/6B7zHqj.png";
-        return db.ref('mlk_webhooks').once('value');
-    }).then(snapshot => {
-        const data = snapshot.val() || {};
-        webhooks = Object.keys(data).map(key => ({...data[key], id: key}));
-        webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-        console.log("Система безопасности инициализирована");
-
-        if (whitelist.length === 0) {
-            return addProtectedUsersToWhitelist().then(() => {
-                if (callback) callback();
-            });
-        } else {
-            if (callback) callback();
-        }
-    }).catch(error => {
-        console.error("Ошибка загрузки данных:", error);
-        showNotification("Ошибка загрузки данных", "error");
-        if (callback) callback();
-    });
-}
-
-/* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
-/* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
-function loadData(callback) {
-    db.ref('mlk_users').once('value').then(snapshot => {
-        const data = snapshot.val() || {};
-        // Безопасно преобразуем данные пользователей
         users = Object.keys(data).map(key => {
             const userData = data[key] || {};
             return {
@@ -469,7 +409,6 @@ function loadData(callback) {
         return db.ref('mlk_whitelist').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
-        // Безопасно преобразуем данные белого списка
         whitelist = Object.keys(data).map(key => {
             const wlData = data[key] || {};
             return {
@@ -487,7 +426,7 @@ function loadData(callback) {
         passwords = data || {};
         
         // Проверяем наличие всех необходимых паролей
-        if (!passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
+        if (!passwords.junior || !passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
             console.log("Не все пароли найдены, создаем недостающие...");
             return createOrUpdatePasswords().then(() => {
                 return db.ref('mlk_passwords').once('value'); // Перезагружаем пароли
@@ -500,7 +439,6 @@ function loadData(callback) {
         return db.ref('mlk_bans').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
-        // Безопасно преобразуем данные банов
         bans = Object.keys(data).map(key => {
             const banData = data[key] || {};
             return {
@@ -543,6 +481,19 @@ function loadData(callback) {
         showNotification("Ошибка загрузки данных", "error");
         if (callback) callback();
     });
+}
+
+/* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
+function createOrUpdatePasswords() {
+    const defaultPasswords = {
+        junior: "junior123",
+        curator: "curator123",
+        senior: "senior123",
+        admin: "admin123",
+        special: "special123"
+    };
+    
+    return db.ref('mlk_passwords').set(defaultPasswords);
 }
 
 /* ===== ДОБАВЛЕНИЕ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
@@ -643,6 +594,98 @@ function checkIfBanned(username) {
     return activeBan ? { banned: true, ...activeBan } : { banned: false };
 }
 
+/* ===== ФУНКЦИИ ДЛЯ БАНОВ ===== */
+window.banByStaticId = async function(staticId, reason = "Причина не указана") {
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return false;
+    }
+    
+    return banUser(user.username, reason);
+}
+
+window.unbanByStaticId = async function(staticId) {
+    const activeBan = bans.find(ban => ban.staticId === staticId && !ban.unbanned);
+    if (!activeBan) {
+        showNotification("Активный бан не найден", "error");
+        return false;
+    }
+    
+    if (!confirm(`Разбанить пользователя ${activeBan.username}?`)) return false;
+    
+    return db.ref('mlk_bans/' + activeBan.id).update({
+        unbanned: true,
+        unbannedBy: CURRENT_USER,
+        unbannedDate: new Date().toLocaleString()
+    }).then(() => {
+        loadData(() => {
+            if (window.renderBanInterface) window.renderBanInterface();
+            showNotification("Пользователь разбанен", "success");
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка разбана: " + error.message, "error");
+        return false;
+    });
+}
+
+async function banUser(username, reason) {
+    // Проверяем права
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав для выдачи бана", "error");
+        return false;
+    }
+    
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return false;
+    }
+    
+    // Проверяем, является ли пользователь защищенным
+    const isProtected = PROTECTED_USERS.some(protectedUser => 
+        protectedUser.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (isProtected) {
+        showNotification("Нельзя забанить защищенного пользователя", "error");
+        return false;
+    }
+    
+    // Проверяем, не забанен ли уже
+    const existingBan = bans.find(ban => 
+        (ban.username.toLowerCase() === username.toLowerCase() || ban.staticId === user.staticId) && 
+        !ban.unbanned
+    );
+    
+    if (existingBan) {
+        showNotification("Пользователь уже забанен", "warning");
+        return false;
+    }
+    
+    const banData = {
+        username: username,
+        staticId: user.staticId,
+        reason: reason,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        unbanned: false
+    };
+    
+    return db.ref('mlk_bans').push(banData).then(() => {
+        loadData(() => {
+            if (window.renderBanInterface) window.renderBanInterface();
+            if (window.renderUsers) window.renderUsers();
+            showNotification(`Пользователь ${username} забанен`, "success");
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка бана: " + error.message, "error");
+        return false;
+    });
+}
+
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
 const PROTECTED_USERS = ["Tihiy"];
 
@@ -658,7 +701,7 @@ function checkSpecialAccess(username, password) {
         const usernameLower = username.toLowerCase().trim();
         
         db.ref('mlk_passwords').once('value').then(snapshot => {
-            const passwords = snapshot.val() || {};
+            const passwords = snapshotSnapshot.val() || {};
             const specialPassword = passwords.special;
             
             if (!specialPassword) {
@@ -682,6 +725,7 @@ function checkSpecialAccess(username, password) {
         });
     });
 }
+
 /* ===== ИНТЕРФЕЙС УПРАВЛЕНИЯ БАНАМИ ===== */
 window.renderBanInterface = function() {
     const content = document.getElementById("content-body");
@@ -695,7 +739,7 @@ window.renderBanInterface = function() {
     const activeBans = bans.filter(ban => !ban.unbanned);
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #b43c3c; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
             </h2>
@@ -744,20 +788,22 @@ window.renderBanInterface = function() {
                             <p>ВСЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП</p>
                         </div>
                     ` : `
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                    <th>STATIC ID</th>
-                                    <th>ПРИЧИНА</th>
-                                    <th>ЗАБАНИЛ</th>
-                                    <th>ДАТА</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bans-table-body">
-                            </tbody>
-                        </table>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                        <th>STATIC ID</th>
+                                        <th>ПРИЧИНА</th>
+                                        <th>ЗАБАНИЛ</th>
+                                        <th>ДАТА</th>
+                                        <th>ДЕЙСТВИЯ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bans-table-body">
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
                 
@@ -774,19 +820,21 @@ window.renderBanInterface = function() {
                             <p>БАНЫ ЕЩЕ НЕ ВЫДАВАЛИСЬ</p>
                         </div>
                     ` : `
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                    <th>STATIC ID</th>
-                                    <th>ПРИЧИНА</th>
-                                    <th>СТАТУС</th>
-                                    <th>ДАТА</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bans-history-body">
-                            </tbody>
-                        </table>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                        <th>STATIC ID</th>
+                                        <th>ПРИЧИНА</th>
+                                        <th>СТАТУС</th>
+                                        <th>ДАТА</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bans-history-body">
+                                </tbody>
+                            </table>
+                        </div>
                     `}
                 </div>
             </div>
@@ -920,6 +968,11 @@ window.addBanByStaticId = function() {
 
 /* ===== ФУНКЦИИ ПОВЫШЕНИЯ/ПОНИЖЕНИЯ РАНГА ===== */
 window.promoteToAdminByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только администратор может повышать до администратора", "error");
+        return;
+    }
+    
     if (!confirm("Повысить пользователя до администратора?")) return;
     
     const user = users.find(u => u.staticId === staticId);
@@ -942,6 +995,11 @@ window.promoteToAdminByStaticId = function(staticId) {
 }
 
 window.promoteToSeniorByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только администратор может повышать до старшего куратора", "error");
+        return;
+    }
+    
     if (!confirm("Повысить пользователя до старшего куратора?")) return;
     
     const user = users.find(u => u.staticId === staticId);
@@ -963,8 +1021,13 @@ window.promoteToSeniorByStaticId = function(staticId) {
     });
 }
 
-window.demoteToCuratorByStaticId = function(staticId) {
-    if (!confirm("Понизить пользователя до куратора?")) return;
+window.promoteToCuratorByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только старший куратор или выше может повышать до куратора", "error");
+        return;
+    }
+    
+    if (!confirm("Повысить пользователя до куратора?")) return;
     
     const user = users.find(u => u.staticId === staticId);
     if (!user) {
@@ -978,7 +1041,34 @@ window.demoteToCuratorByStaticId = function(staticId) {
     }).then(() => {
         loadData(() => {
             renderUsers();
-            showNotification("Пользователь понижен до куратора", "success");
+            showNotification("Пользователь повышен до куратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+window.demoteToJuniorByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только старший куратор или выше может понижать", "error");
+        return;
+    }
+    
+    if (!confirm("Понизить пользователя до младшего куратора?")) return;
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.JUNIOR_CURATOR.name,
+        rank: RANKS.JUNIOR_CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            renderUsers();
+            showNotification("Пользователь понижен до младшего куратора", "success");
         });
     }).catch(error => {
         showNotification("Ошибка: " + error.message, "error");
@@ -1097,13 +1187,14 @@ window.login = async function() {
         
         /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
         if (!existingUser) {
-            let userRank = RANKS.CURATOR;
+            let userRank = RANKS.JUNIOR_CURATOR;
             let isValidPassword = false;
             
             // Проверяем пароли
             const adminValid = await verifyPassword(passwordInput, passwords.admin);
             const seniorValid = await verifyPassword(passwordInput, passwords.senior);
             const curatorValid = await verifyPassword(passwordInput, passwords.curator);
+            const juniorValid = await verifyPassword(passwordInput, passwords.junior);
             
             if (adminValid) {
                 const isInWhitelist = whitelist.some(user => 
@@ -1131,6 +1222,9 @@ window.login = async function() {
                 isValidPassword = true;
             } else if (curatorValid) {
                 userRank = RANKS.CURATOR;
+                isValidPassword = true;
+            } else if (juniorValid) {
+                userRank = RANKS.JUNIOR_CURATOR;
                 isValidPassword = true;
             }
             
@@ -1177,24 +1271,28 @@ window.login = async function() {
         /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
         else {
             let isValidPassword = false;
-            let userRank = RANKS.CURATOR;
+            let userRank = RANKS.JUNIOR_CURATOR;
             
             // Определяем текущий ранг пользователя
             if (existingUser.role === RANKS.ADMIN.name) {
                 userRank = RANKS.ADMIN;
             } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
                 userRank = RANKS.SENIOR_CURATOR;
-            } else {
+            } else if (existingUser.role === RANKS.CURATOR.name) {
                 userRank = RANKS.CURATOR;
+            } else {
+                userRank = RANKS.JUNIOR_CURATOR;
             }
             
-            // Проверяем пароль
+            // Проверяем пароль в зависимости от ранга
             if (userRank.level >= RANKS.ADMIN.level) {
                 isValidPassword = await verifyPassword(passwordInput, passwords.admin);
             } else if (userRank.level >= RANKS.SENIOR_CURATOR.level) {
                 isValidPassword = await verifyPassword(passwordInput, passwords.senior);
-            } else {
+            } else if (userRank.level >= RANKS.CURATOR.level) {
                 isValidPassword = await verifyPassword(passwordInput, passwords.curator);
+            } else {
+                isValidPassword = await verifyPassword(passwordInput, passwords.junior);
             }
             
             if (!isValidPassword) {
@@ -1350,7 +1448,10 @@ function completeLogin() {
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
         loadReports(renderSystem);
+    } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+        loadReports(renderMLKScreen);
     } else {
+        // Для младших кураторов
         loadReports(renderMLKScreen);
     }
 }
@@ -1399,6 +1500,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
                 loadReports(renderSystem);
+            } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+                loadReports(renderMLKScreen);
             } else {
                 loadReports(renderMLKScreen);
             }
@@ -1573,7 +1676,7 @@ function renderMLKScreen() {
     if (!content) return;
     content.innerHTML = '';
     
-    if (CURRENT_RANK.level === RANKS.CURATOR.level) {
+    if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
         btnContainer.style.justifyContent = "flex-end";
@@ -1600,7 +1703,7 @@ function renderMLKForm() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-file-medical"></i> НОВЫЙ ОТЧЕТ
             </h2>
@@ -1674,7 +1777,7 @@ function renderMLKList() {
     const listDiv = document.getElementById("mlk-list");
     if (!listDiv) return;
     
-    const filteredReports = (CURRENT_RANK.level === RANKS.CURATOR.level)
+    const filteredReports = (CURRENT_RANK.level <= RANKS.CURATOR.level)
         ? reports.filter(r => r.author === CURRENT_USER)
         : reports;
     
@@ -1753,7 +1856,7 @@ function renderReports() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     let html = `
-        <div style="margin-bottom: 30px;">
+        <div style="margin-bottom: 30px; padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
             </h2>
@@ -1771,7 +1874,7 @@ function renderReports() {
         `;
     } else {
         html += `
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
+            <div class="dashboard-grid" style="margin-bottom: 30px; padding: 0 20px;">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-clock"></i></div>
                     <div class="card-value">${pendingReports}</div>
@@ -1789,19 +1892,20 @@ function renderReports() {
                 </div>
             </div>
             
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>ИДЕНТИФИКАТОР</th>
-                        <th>НАРУШЕНИЕ</th>
-                        <th>АВТОР</th>
-                        <th>STATIC ID</th>
-                        <th>ВРЕМЯ</th>
-                        <th>СТАТУС</th>
-                        <th>ДЕЙСТВИЯ</th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div style="padding: 0 20px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ИДЕНТИФИКАТОР</th>
+                            <th>НАРУШЕНИЕ</th>
+                            <th>АВТОР</th>
+                            <th>STATIC ID</th>
+                            <th>ВРЕМЯ</th>
+                            <th>СТАТУС</th>
+                            <th>ДЕЙСТВИЯ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
         
         reports.forEach(r => {
@@ -1835,7 +1939,7 @@ function renderReports() {
             </tr>`;
         });
         
-        html += "</tbody></table>";
+        html += "</tbody></table></div>";
     }
     
     content.innerHTML = html;
@@ -1852,7 +1956,7 @@ window.renderPasswords = function() {
     }
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
             </h2>
@@ -1861,6 +1965,21 @@ window.renderPasswords = function() {
                 ИЗМЕНЕНИЕ КОДОВ ДОСТУПА В СИСТЕМУ<br>
                 <span style="color: #c0b070;">ИЗМЕНЕНИЯ ВСТУПАЮТ В СИЛУ НЕМЕДЛЕННО</span>
             </p>
+            
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ МЛАДШИХ КУРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ МЛАДШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="junior-password" class="form-input" 
+                           value="${passwords.junior || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('junior')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
+            </div>
             
             <div class="zone-card" style="margin-bottom: 25px;">
                 <div class="card-icon"><i class="fas fa-users"></i></div>
@@ -1961,7 +2080,7 @@ window.renderWhitelist = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
@@ -1995,19 +2114,21 @@ window.renderWhitelist = function() {
                         <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
                     </div>
                 ` : `
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ПСЕВДОНИМ</th>
-                                <th>STATIC ID</th>
-                                <th>ДОБАВИЛ</th>
-                                <th>ДАТА ДОБАВЛЕНИЯ</th>
-                                <th>ДЕЙСТВИЯ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="whitelist-table-body">
-                        </tbody>
-                    </table>
+                    <div style="max-height: 500px; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ПСЕВДОНИМ</th>
+                                    <th>STATIC ID</th>
+                                    <th>ДОБАВИЛ</th>
+                                    <th>ДАТА ДОБАВЛЕНИЯ</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whitelist-table-body">
+                            </tbody>
+                        </table>
+                    </div>
                 `}
             </div>
         </div>
@@ -2121,7 +2242,7 @@ window.renderUsers = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ СТАЛКЕРЫ
             </h2>
@@ -2152,6 +2273,11 @@ window.renderUsers = function() {
                         <div class="card-value">${users.filter(u => u.role === RANKS.CURATOR.name).length}</div>
                         <div class="card-label">КУРАТОРЫ</div>
                     </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                        <div class="card-value">${users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length}</div>
+                        <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                    </div>
                 </div>
             </div>
             
@@ -2168,21 +2294,23 @@ window.renderUsers = function() {
                         <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
                     </div>
                 ` : `
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ПСЕВДОНИМ</th>
-                                <th>STATIC ID</th>
-                                <th>РАНГ</th>
-                                <th>РЕГИСТРАЦИЯ</th>
-                                <th>ПОСЛЕДНИЙ ВХОД</th>
-                                <th>СТАТУС</th>
-                                <th>ДЕЙСТВИЯ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body">
-                        </tbody>
-                    </table>
+                    <div style="max-height: 600px; overflow-y: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ПСЕВДОНИМ</th>
+                                    <th>STATIC ID</th>
+                                    <th>РАНГ</th>
+                                    <th>РЕГИСТРАЦИЯ</th>
+                                    <th>ПОСЛЕДНИЙ ВХОД</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                            </tbody>
+                        </table>
+                    </div>
                 `}
             </div>
         </div>
@@ -2215,13 +2343,15 @@ function renderUsersTable() {
             rankBadge = '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-user-shield"></i> АДМИНИСТРАТОР</span>';
         } else if (user.role === RANKS.SENIOR_CURATOR.name) {
             rankBadge = '<span class="report-status status-pending" style="display: inline-flex; padding: 4px 10px;"><i class="fas fa-star"></i> СТАРШИЙ КУРАТОР</span>';
-        } else {
+        } else if (user.role === RANKS.CURATOR.name) {
             rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(140, 180, 60, 0.1); color: #8cb43c; border: 1px solid rgba(140, 180, 60, 0.3);"><i class="fas fa-user"></i> КУРАТОР</span>';
+        } else {
+            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(100, 100, 100, 0.1); color: #8f9779; border: 1px solid rgba(100, 100, 100, 0.3);"><i class="fas fa-user-graduate"></i> МЛАДШИЙ КУРАТОР</span>';
         }
         
         row.innerHTML = `
             <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
-                <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : 'fa-user'}"></i>
+                <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : user.role === RANKS.CURATOR.name ? 'fa-user' : 'fa-user-graduate'}"></i>
                 ${user.username}
                 ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
                 ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
@@ -2241,15 +2371,27 @@ function renderUsersTable() {
             <td>
                 <div style="display: flex; flex-direction: column; gap: 5px;">
                     <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                            `<button onclick="promoteToSeniorCurator('${user.id}')" class="action-btn confirm" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                                <i class="fas fa-star"></i> ПОВЫСИТЬ
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
+                            `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-user-shield"></i> АДМ
                             </button>` : 
                             ''
                         }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
-                            `<button onclick="removeUser('${user.id}')" class="action-btn delete" style="margin-right: 5px; font-size: 0.8rem; padding: 3px 8px;">
-                                <i class="fas fa-trash"></i> УДАЛИТЬ
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
+                            `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-star"></i> СТ.КУР
+                            </button>` : 
+                            ''
+                        }
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
+                            `<button onclick="promoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-user"></i> КУР
+                            </button>` : 
+                            ''
+                        }
+                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.JUNIOR_CURATOR.name ? 
+                            `<button onclick="demoteToJuniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8f9779; border-color: #8f9779; color: white; font-size: 0.8rem; padding: 3px 8px;">
+                                <i class="fas fa-user-graduate"></i> МЛ.КУР
                             </button>` : 
                             ''
                         }
@@ -2260,47 +2402,11 @@ function renderUsersTable() {
                             ''
                         }
                     </div>
-                    
-                    <div style="margin-top: 5px; padding-top: 5px; border-top: 1px dashed #4a4a3a;">
-                        <div style="font-size: 0.7rem; color: #6a6a5a; margin-bottom: 3px;">ПО STATIC ID:</div>
-                        <div style="display: flex; gap: 3px; flex-wrap: wrap;">
-                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.ADMIN.name ? 
-                                `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                                    <i class="fas fa-user-shield"></i> АДМ
-                                </button>` : 
-                                ''
-                            }
-                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                                `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.7rem; padding: 2px 5px;">
-                                    <i class="fas fa-star"></i> СТ.КУР
-                                </button>` : 
-                                ''
-                            }
-                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                                `<button onclick="demoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                                    <i class="fas fa-user"></i> КУР
-                                </button>` : 
-                                ''
-                            }
-                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                                `<button onclick="window.banByStaticId('${user.staticId}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.7rem; padding: 2px 5px;">
-                                    <i class="fas fa-ban"></i> БАН
-                                </button>` : 
-                                ''
-                            }
-                            ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
-                                `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.7rem; padding: 2px 5px;">
-                                    <i class="fas fa-unlock"></i> РАЗБАН
-                                </button>` : 
-                                ''
-                            }
-                        </div>
-                    </div>
-                    
-                    <span style="color: #8f9779; font-size: 0.85rem;">
-                        ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
-                    </span>
                 </div>
+                
+                <span style="color: #8f9779; font-size: 0.85rem;">
+                    ${isProtected ? 'ЗАЩИЩЕН' : isCurrentUser ? 'ТЕКУЩИЙ' : ''}
+                </span>
             </td>
         `;
         
@@ -2368,51 +2474,6 @@ window.processBan = function(username) {
     });
 }
 
-window.promoteToSeniorCurator = function(userId) {
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    
-    if (!confirm(`Повысить ${user.username} до старшего куратора?`)) return;
-    
-    db.ref('mlk_users/' + userId).update({
-        role: RANKS.SENIOR_CURATOR.name,
-        rank: RANKS.SENIOR_CURATOR.level
-    }).then(() => {
-        loadData(() => {
-            renderUsers();
-            showNotification("Ранг успешно повышен", "success");
-        });
-    }).catch(error => {
-        showNotification("Ошибка: " + error.message, "error");
-    });
-}
-
-window.removeUser = function(id) {
-    const userToRemove = users.find(user => user.id === id);
-    
-    if (!userToRemove) return;
-    
-    const isProtected = PROTECTED_USERS.some(protectedUser => 
-        protectedUser.toLowerCase() === userToRemove.username.toLowerCase()
-    );
-    
-    if (isProtected) {
-        showNotification("Нельзя удалить защищенного пользователя", "error");
-        return;
-    }
-    
-    if (!confirm(`Удалить пользователя "${userToRemove.username}"? Все его отчеты останутся в системе.`)) return;
-    
-    db.ref('mlk_users/' + id).remove().then(() => {
-        loadData(() => {
-            renderUsers();
-            showNotification("Пользователь удален", "success");
-        });
-    }).catch(error => {
-        showNotification("Ошибка: " + error.message, "error");
-    });
-}
-
 /* ===== СТРАНИЦА СИСТЕМЫ ===== */
 window.renderSystem = function() {
     const content = document.getElementById("content-body");
@@ -2424,10 +2485,11 @@ window.renderSystem = function() {
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
             </h2>
@@ -2507,6 +2569,11 @@ window.renderSystem = function() {
                     <div class="card-value">${curators}</div>
                     <div class="card-label">КУРАТОРЫ</div>
                 </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                    <div class="card-value">${juniorCurators}</div>
+                    <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                </div>
             </div>
             
             <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
@@ -2516,7 +2583,7 @@ window.renderSystem = function() {
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                        <div>1.5.0 (STATIC ID)</div>
+                        <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
                     </div>
                     <div>
                         <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
@@ -3420,5 +3487,6 @@ window.exportIPData = function() {
     });
 
 }
+
 
 

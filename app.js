@@ -202,8 +202,9 @@ function loadData(callback) {
 function createDefaultPasswords() {
     const defaultPasswords = {
         curator: "123",
+        senior: "SENIOR123",
         admin: "EOD",
-        special: "HASKIKGOADFSKL"  // Этот пароль будет в БД
+        special: "HASKIKGOADFSKL" 
     };
     
     return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
@@ -2708,3 +2709,4 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+

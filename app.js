@@ -2212,8 +2212,8 @@ window.renderSystem = function() {
     `;
 }
 
-/* ===== ФУНКЦИИ ДЛЯ DISCORD ВЕБХУКОВ ===== */
-window.renderWebhookManager = function() {
+/* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
+function renderWebhookManager() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -2224,12 +2224,17 @@ window.renderWebhookManager = function() {
     
     content.innerHTML = `
         <div class="form-container">
-            <h2 style="color: #5865F2; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fab fa-discord"></i> DISCORD ВЕБХУКИ
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-broadcast-tower"></i> УПРАВЛЕНИЕ DISCORD ВЕБХУКАМИ
             </h2>
             
+            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
+                НАСТРОЙКА И ТЕСТИРОВАНИЕ ВЕБХУКОВ ДЛЯ ОТПРАВКИ УВЕДОМЛЕНИЙ В DISCORD<br>
+                <span style="color: #c0b070;">СИСТЕМА ПОДДЕРЖИВАЕТ КАСТОМНЫЕ ВЛОЖЕНИЯ И ШАБЛОНЫ</span>
+            </p>
+            
             <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
-                <div class="card-icon" style="color: #5865F2;"><i class="fas fa-broadcast-tower"></i></div>
+                <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
                 <h4 style="color: #5865F2; margin-bottom: 15px;">НАСТРОЙКА ВЕБХУКА</h4>
                 
                 <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -2238,6 +2243,9 @@ window.renderWebhookManager = function() {
                         <input type="text" id="webhook-url" class="form-input" 
                                placeholder="https://discord.com/api/webhooks/..."
                                value="${DISCORD_WEBHOOK_URL || ''}">
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
+                            Получить URL можно в настройках канала Discord: Канал → Редактировать канал → Интеграции → Вебхуки
+                        </div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -2255,57 +2263,249 @@ window.renderWebhookManager = function() {
                         </div>
                     </div>
                     
+                    <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
+                        <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #5865F2;">
+                            <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                        </div>
+                        <div>
+                            <div style="color: #c0b070; font-weight: 500;">${DISCORD_WEBHOOK_NAME}</div>
+                            <div style="color: #8f9779; font-size: 0.8rem;">Превью отправителя</div>
+                        </div>
+                    </div>
+                    
                     <div style="display: flex; gap: 10px;">
                         <button onclick="testWebhook()" class="btn-primary" style="border-color: #5865F2;">
-                            <i class="fas fa-broadcast-tower"></i> ТЕСТ
+                            <i class="fas fa-broadcast-tower"></i> ТЕСТИРОВАТЬ
                         </button>
                         <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c;">
-                            <i class="fas fa-save"></i> СОХРАНИТЬ
+                            <i class="fas fa-save"></i> СОХРАНИТЬ ВСЕ
+                        </button>
+                        <button onclick="clearWebhook()" class="btn-secondary">
+                            <i class="fas fa-trash"></i> ОЧИСТИТЬ
                         </button>
                     </div>
                 </div>
             </div>
             
-            <div class="zone-card" style="border-color: #c0b070;">
-                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-history"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ИСТОРИЯ ВЕБХУКОВ</h4>
+            <div class="zone-card" style="margin-bottom: 30px; border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-paper-plane"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ОТПРАВИТЬ СООБЩЕНИЕ</h4>
                 
-                <div style="max-height: 300px; overflow-y: auto;">
-                    <div id="webhook-history">
-                        ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 20px;">История пуста</div>' : ''}
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label class="form-label">ТИП СООБЩЕНИЯ</label>
+                        <select id="message-type" class="form-input" onchange="changeMessageType()">
+                            <option value="simple">Простое сообщение</option>
+                            <option value="embed">Сообщение с Embed</option>
+                            <option value="report">Уведомление об отчете</option>
+                            <option value="ban">Уведомление о бане</option>
+                            <option value="user_join">Новый пользователь</option>
+                            <option value="admin_alert">Алерт админам</option>
+                            <option value="custom">Кастомный JSON</option>
+                        </select>
+                    </div>
+                    
+                    <!-- ПРОСТОЕ СООБЩЕНИЕ -->
+                    <div id="simple-message" class="message-section">
+                        <label class="form-label">ТЕКСТ СООБЩЕНИЯ</label>
+                        <textarea id="message-content" class="form-textarea" rows="6" 
+                                  placeholder="Введите текст сообщения..."></textarea>
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
+                            Простой текст будет отправлен как обычное сообщение Discord
+                        </div>
+                    </div>
+                    
+                    <!-- СООБЩЕНИЕ С EMBED -->
+                    <div id="embed-message" class="message-section" style="display: none;">
+                        <div>
+                            <label class="form-label">ОСНОВНОЙ ТЕКСТ (ОПЦИОНАЛЬНО)</label>
+                            <textarea id="embed-content" class="form-textarea" rows="3" 
+                                      placeholder="Текст перед Embed (опционально)..."></textarea>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <label class="form-label">НАСТРОЙКИ EMBED</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label class="form-label">ЗАГОЛОВОК</label>
+                                    <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed">
+                                </div>
+                                <div>
+                                    <label class="form-label">ЦВЕТ (HEX)</label>
+                                    <input type="text" id="embed-color" class="form-input" placeholder="#5865F2" value="#5865F2">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label class="form-label">ОПИСАНИЕ</label>
+                                <textarea id="embed-description" class="form-textarea" rows="6" 
+                                          placeholder="Описание embed..."></textarea>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label class="form-label">ИМЯ АВТОРА</label>
+                                    <input type="text" id="embed-author" class="form-input" placeholder="Имя автора">
+                                </div>
+                                <div>
+                                    <label class="form-label">URL ИЗОБРАЖЕНИЯ</label>
+                                    <input type="text" id="embed-thumbnail" class="form-input" placeholder="URL изображения">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- КАСТОМНЫЙ JSON -->
+                    <div id="custom-message" class="message-section" style="display: none;">
+                        <label class="form-label">JSON ПАЙЛОАД</label>
+                        <textarea id="custom-payload" class="form-textarea" rows="10" 
+                                  placeholder='{
+  "content": "Ваше сообщение",
+  "username": "Бот",
+  "avatar_url": "https://example.com/avatar.png",
+  "embeds": [
+    {
+      "title": "Заголовок",
+      "description": "Описание",
+      "color": 5793266
+    }
+  ]
+}'
+                                  style="font-family: 'Courier New', monospace; font-size: 0.9rem;"></textarea>
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
+                            Введите кастомный JSON для отправки в Discord
+                        </div>
+                    </div>
+                    
+                    <button onclick="sendDiscordMessage()" class="btn-primary" style="border-color: #5865F2;">
+                        <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ В DISCORD
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-code"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 15px;">ШАБЛОНЫ СООБЩЕНИЙ</h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <button onclick="loadTemplate('report')" class="template-btn">
+                        <i class="fas fa-file-alt"></i>
+                        <span>ШАБЛОН ОТЧЕТА</span>
+                    </button>
+                    <button onclick="loadTemplate('ban')" class="template-btn">
+                        <i class="fas fa-ban"></i>
+                        <span>ШАБЛОН БАНА</span>
+                    </button>
+                    <button onclick="loadTemplate('user_join')" class="template-btn">
+                        <i class="fas fa-user-plus"></i>
+                        <span>НОВЫЙ ПОЛЬЗОВАТЕЛЬ</span>
+                    </button>
+                    <button onclick="loadTemplate('admin_alert')" class="template-btn">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>АЛЕРТ АДМИНАМ</span>
+                    </button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
+                    <h5 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ВЕБХУКОВ</h5>
+                    <div style="max-height: 150px; overflow-y: auto;">
+                        <div id="webhook-history">
+                            ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 10px;">История пуста</div>' : ''}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
     
+    // Обновляем превью аватарки при изменении URL
+    const avatarInput = document.getElementById('webhook-avatar');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const nameInput = document.getElementById('webhook-name');
+
+    if (avatarInput && avatarPreview) {
+        avatarInput.addEventListener('input', function() {
+            avatarPreview.src = this.value || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        });
+    }
+
     if (webhooks.length > 0) {
         renderWebhookHistory();
     }
 }
 
-window.testWebhook = function() {
-    if (!DISCORD_WEBHOOK_URL) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
+/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
+function changeMessageType() {
+    const type = document.getElementById('message-type').value;
+    
+    // Скрыть все секции
+    document.querySelectorAll('.message-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    // Показать нужную секцию
+    if (type === 'custom') {
+        document.getElementById('custom-message').style.display = 'block';
+    } else if (type === 'embed') {
+        document.getElementById('embed-message').style.display = 'block';
+        document.getElementById('simple-message').style.display = 'block';
+    } else {
+        document.getElementById('simple-message').style.display = 'block';
     }
-    
-    const payload = {
-        username: DISCORD_WEBHOOK_NAME,
-        avatar_url: DISCORD_WEBHOOK_AVATAR,
-        content: null,
-        embeds: [{
-            title: "✅ ТЕСТ ВЕБХУКА",
-            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
-            color: 5793266,
-            timestamp: new Date().toISOString()
-        }]
-    };
-    
-    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, true);
 }
 
-window.saveWebhook = function() {
+function loadTemplate(templateType) {
+    const messageContent = document.getElementById('message-content');
+    const embedTitle = document.getElementById('embed-title');
+    const embedDescription = document.getElementById('embed-description');
+    const embedColor = document.getElementById('embed-color');
+    const embedAuthor = document.getElementById('embed-author');
+    const embedContent = document.getElementById('embed-content');
+    
+    switch(templateType) {
+        case 'report':
+            if (embedContent) embedContent.value = '🆕 НОВЫЙ ОТЧЕТ В СИСТЕМЕ';
+            if (embedTitle) embedTitle.value = 'ОТЧЕТ МЛК';
+            if (embedDescription) embedDescription.value = `**Автор:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}\n**Статус:** На рассмотрении\n\nТребуется проверка администратора.`;
+            if (embedColor) embedColor.value = '#5865F2';
+            if (embedAuthor) embedAuthor.value = 'Система отчетов Зоны';
+            document.getElementById('message-type').value = 'embed';
+            changeMessageType();
+            break;
+            
+        case 'ban':
+            if (embedContent) embedContent.value = '🔨 ВЫДАН БАН ПОЛЬЗОВАТЕЛЮ';
+            if (embedTitle) embedTitle.value = 'БЛОКИРОВКА ПОЛЬЗОВАТЕЛЯ';
+            if (embedDescription) embedDescription.value = `**Нарушитель:** USERNAME\n**Причина:** НАРУШЕНИЕ ПРАВИЛ\n**Забанил:** ${CURRENT_USER}\n**Дата:** ${new Date().toLocaleString()}\n**Static ID:** UNKNOWN`;
+            if (embedColor) embedColor.value = '#b43c3c';
+            if (embedAuthor) embedAuthor.value = 'Система банов';
+            document.getElementById('message-type').value = 'embed';
+            changeMessageType();
+            break;
+            
+        case 'user_join':
+            if (embedContent) embedContent.value = '👤 НОВЫЙ СТАЛКЕР В СИСТЕМЕ';
+            if (embedTitle) embedTitle.value = 'РЕГИСТРАЦИЯ';
+            if (embedDescription) embedDescription.value = `**Имя:** НОВЫЙ ПОЛЬЗОВАТЕЛЬ\n**Ранг:** КУРАТОР\n**Static ID:** GENERATED-ID\n**Дата:** ${new Date().toLocaleString()}\n**IP:** 192.168.1.1`;
+            if (embedColor) embedColor.value = '#8cb43c';
+            if (embedAuthor) embedAuthor.value = 'Система пользователей';
+            document.getElementById('message-type').value = 'embed';
+            changeMessageType();
+            break;
+            
+        case 'admin_alert':
+            if (embedContent) embedContent.value = '🚨 ВНИМАНИЕ АДМИНИСТРАТОРАМ';
+            if (embedTitle) embedTitle.value = 'ВАЖНОЕ УВЕДОМЛЕНИЕ';
+            if (embedDescription) embedDescription.value = `**От:** ${CURRENT_USER}\n**Приоритет:** ВЫСОКИЙ\n**Сообщение:** ТРЕБУЕТСЯ ВАШЕ ВНИМАНИЕ\n**Время:** ${new Date().toLocaleString()}\n**Сектор:** Припять-12`;
+            if (embedColor) embedColor.value = '#c0b070';
+            if (embedAuthor) embedAuthor.value = 'Система оповещений';
+            document.getElementById('message-type').value = 'embed';
+            changeMessageType();
+            break;
+    }
+}  // ← ЗАКРЫВАЮЩАЯ ФИГУРНАЯ СКОБКА ДЛЯ loadTemplate
+
+function saveWebhook() {
     const urlInput = document.getElementById('webhook-url');
     const nameInput = document.getElementById('webhook-name');
     const avatarInput = document.getElementById('webhook-avatar');
@@ -2324,10 +2524,16 @@ window.saveWebhook = function() {
         return;
     }
     
+    if (!name) {
+        showNotification('Введите имя вебхука', 'error');
+        return;
+    }
+    
     DISCORD_WEBHOOK_URL = url;
     DISCORD_WEBHOOK_NAME = name;
     DISCORD_WEBHOOK_AVATAR = avatar || "https://i.imgur.com/6B7zHqj.png";
     
+    // Сохраняем все настройки в базу данных
     const updates = {
         'mlk_settings/webhook_url': url,
         'mlk_settings/webhook_name': name,
@@ -2336,13 +2542,166 @@ window.saveWebhook = function() {
     
     db.ref().update(updates).then(() => {
         showNotification('Настройки вебхука сохранены', 'success');
+        addWebhookHistory('Сохранены настройки вебхука', 'success');
+        
+        // Обновляем превью
+        const avatarPreview = document.getElementById('avatar-preview');
+        if (avatarPreview) {
+            avatarPreview.src = DISCORD_WEBHOOK_AVATAR;
+        }
     }).catch(error => {
         showNotification('Ошибка сохранения: ' + error.message, 'error');
     });
 }
 
+function clearWebhook() {
+    if (confirm('Очистить все настройки вебхука?')) {
+        DISCORD_WEBHOOK_URL = null;
+        DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
+        DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
+        
+        const urlInput = document.getElementById('webhook-url');
+        const nameInput = document.getElementById('webhook-name');
+        const avatarInput = document.getElementById('webhook-avatar');
+        const avatarPreview = document.getElementById('avatar-preview');
+        
+        if (urlInput) urlInput.value = '';
+        if (nameInput) nameInput.value = 'Система отчетов Зоны';
+        if (avatarInput) avatarInput.value = 'https://i.imgur.com/6B7zHqj.png';
+        if (avatarPreview) avatarPreview.src = 'https://i.imgur.com/6B7zHqj.png';
+        
+        const updates = {
+            'mlk_settings/webhook_url': null,
+            'mlk_settings/webhook_name': null,
+            'mlk_settings/webhook_avatar': null
+        };
+        
+        db.ref().update(updates).then(() => {
+            showNotification('Настройки вебхука очищены', 'success');
+            addWebhookHistory('Настройки вебхука очищены', 'info');
+        });
+    }
+}
+
+function testWebhook() {
+    const urlInput = document.getElementById('webhook-url');
+    const url = urlInput ? urlInput.value.trim() : '';
+    const nameInput = document.getElementById('webhook-name');
+    const name = nameInput ? nameInput.value.trim() : 'Система отчетов Зоны';
+    const avatarInput = document.getElementById('webhook-avatar');
+    const avatar = avatarInput ? avatarInput.value.trim() : 'https://i.imgur.com/6B7zHqj.png';
+    
+    if (!url) {
+        showNotification('Сначала настройте вебхук', 'error');
+        return;
+    }
+    
+    const testPayload = {
+        username: name,
+        avatar_url: avatar,
+        content: null,
+        embeds: [{
+            title: "✅ ТЕСТ ВЕБХУКА",
+            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
+            color: 5793266,
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: "Система вебхуков | Версия 1.5"
+            }
+        }]
+    };
+    
+    sendDiscordWebhook(url, testPayload, true);
+}
+
+function sendDiscordMessage() {
+    if (!DISCORD_WEBHOOK_URL) {
+        showNotification('Сначала настройте вебхук', 'error');
+        return;
+    }
+    
+    const type = document.getElementById('message-type').value;
+    let payload = {};
+    
+    switch(type) {
+        case 'simple':
+            const content = document.getElementById('message-content').value.trim();
+            if (!content) {
+                showNotification('Введите текст сообщения', 'error');
+                return;
+            }
+            payload = { 
+                content,
+                username: DISCORD_WEBHOOK_NAME,
+                avatar_url: DISCORD_WEBHOOK_AVATAR
+            };
+            break;
+            
+        case 'embed':
+            const embedTitle = document.getElementById('embed-title').value.trim();
+            const embedDescription = document.getElementById('embed-description').value.trim();
+            const embedColor = document.getElementById('embed-color').value.trim();
+            const embedAuthor = document.getElementById('embed-author').value.trim();
+            const embedThumbnail = document.getElementById('embed-thumbnail').value.trim();
+            const embedContent = document.getElementById('embed-content').value.trim();
+            
+            if (!embedDescription) {
+                showNotification('Введите описание embed', 'error');
+                return;
+            }
+            
+            payload = {
+                content: embedContent || null,
+                username: DISCORD_WEBHOOK_NAME,
+                avatar_url: DISCORD_WEBHOOK_AVATAR,
+                embeds: [{
+                    title: embedTitle || undefined,
+                    description: embedDescription,
+                    color: hexToDecimal(embedColor) || 5793266,
+                    author: embedAuthor ? { name: embedAuthor } : undefined,
+                    thumbnail: embedThumbnail ? { url: embedThumbnail } : undefined,
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            break;
+            
+        case 'custom':
+            const customJson = document.getElementById('custom-payload').value.trim();
+            if (!customJson) {
+                showNotification('Введите JSON payload', 'error');
+                return;
+            }
+            try {
+                payload = JSON.parse(customJson);
+                if (!payload.username) payload.username = DISCORD_WEBHOOK_NAME;
+                if (!payload.avatar_url) payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
+            } catch (e) {
+                showNotification('Ошибка в JSON: ' + e.message, 'error');
+                return;
+            }
+            break;
+            
+        case 'report':
+        case 'ban':
+        case 'user_join':
+        case 'admin_alert':
+            loadTemplate(type);
+            sendDiscordMessage();
+            return;
+    }
+    
+    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
+}
+
 function sendDiscordWebhook(url, payload, isTest = false) {
     showNotification('Отправка сообщения в Discord...', 'info');
+    
+    if (!payload.username) {
+        payload.username = DISCORD_WEBHOOK_NAME;
+    }
+    if (!payload.avatar_url) {
+        payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
+    }
     
     fetch(url, {
         method: 'POST',
@@ -2355,11 +2714,13 @@ function sendDiscordWebhook(url, payload, isTest = false) {
         if (response.ok) {
             const message = isTest ? 'Тест вебхука выполнен успешно!' : 'Сообщение отправлено в Discord!';
             showNotification(message, 'success');
+            addWebhookHistory(isTest ? 'Тест вебхука' : 'Отправлено сообщение', 'success');
             
             const historyEntry = {
                 type: isTest ? 'test' : 'message',
                 timestamp: new Date().toLocaleString(),
-                user: CURRENT_USER
+                user: CURRENT_USER,
+                payload: payload
             };
             
             webhooks.unshift(historyEntry);
@@ -2369,12 +2730,51 @@ function sendDiscordWebhook(url, payload, isTest = false) {
             
             db.ref('mlk_webhooks').push(historyEntry);
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            return response.text().then(text => {
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            });
         }
     })
     .catch(error => {
-        showNotification(`Ошибка отправки: ${error.message}`, 'error');
+        const errorMessage = `Ошибка отправки: ${error.message}`;
+        showNotification(errorMessage, 'error');
+        addWebhookHistory('Ошибка отправки', 'error');
+        console.error('Discord webhook error:', error);
     });
+}
+
+function hexToDecimal(hex) {
+    if (!hex) return null;
+    hex = hex.replace('#', '');
+    return parseInt(hex, 16);
+}
+
+function addWebhookHistory(message, type) {
+    const historyDiv = document.getElementById('webhook-history');
+    if (!historyDiv) return;
+    
+    const entry = document.createElement('div');
+    entry.style.cssText = `
+        padding: 8px 10px;
+        margin-bottom: 5px;
+        border-left: 3px solid ${type === 'success' ? '#8cb43c' : type === 'error' ? '#b43c3c' : '#c0b070'};
+        background: rgba(40, 42, 36, 0.3);
+        font-size: 0.8rem;
+        color: #8f9779;
+    `;
+    
+    const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    entry.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <span style="color: ${type === 'success' ? '#8cb43c' : type === 'error' ? '#b43c3c' : '#c0b070'}">
+                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
+                ${message}
+            </span>
+            <span style="color: #6a6a5a;">${time}</span>
+        </div>
+    `;
+    
+    historyDiv.insertBefore(entry, historyDiv.firstChild);
 }
 
 function renderWebhookHistory() {
@@ -2410,3 +2810,5 @@ function renderWebhookHistory() {
         historyDiv.appendChild(div);
     });
 }
+
+/* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */

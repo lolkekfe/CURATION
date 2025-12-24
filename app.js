@@ -2093,7 +2093,7 @@ function renderSystem(){
         </div>
     `;
 }
-/* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
+
 /* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
 function renderWebhookManager() {
     const content = document.getElementById("content-body");
@@ -2171,7 +2171,132 @@ function renderWebhookManager() {
                 </div>
             </div>
             
-            <!-- ОСТАЛЬНАЯ ЧАСТЬ HTML КОДА (как в предыдущих примерах) -->
+            <div class="zone-card" style="margin-bottom: 30px; border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-paper-plane"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ОТПРАВИТЬ СООБЩЕНИЕ</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label class="form-label">ТИП СООБЩЕНИЯ</label>
+                        <select id="message-type" class="form-input" onchange="changeMessageType()">
+                            <option value="simple">Простое сообщение</option>
+                            <option value="embed">Сообщение с Embed</option>
+                            <option value="report">Уведомление об отчете</option>
+                            <option value="ban">Уведомление о бане</option>
+                            <option value="user_join">Новый пользователь</option>
+                            <option value="admin_alert">Алерт админам</option>
+                            <option value="custom">Кастомный JSON</option>
+                        </select>
+                    </div>
+                    
+                    <!-- ПРОСТОЕ СООБЩЕНИЕ -->
+                    <div id="simple-message" class="message-section">
+                        <label class="form-label">ТЕКСТ СООБЩЕНИЯ</label>
+                        <textarea id="message-content" class="form-textarea" rows="6" 
+                                  placeholder="Введите текст сообщения..."></textarea>
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
+                            Простой текст будет отправлен как обычное сообщение Discord
+                        </div>
+                    </div>
+                    
+                    <!-- СООБЩЕНИЕ С EMBED -->
+                    <div id="embed-message" class="message-section" style="display: none;">
+                        <div>
+                            <label class="form-label">ОСНОВНОЙ ТЕКСТ (ОПЦИОНАЛЬНО)</label>
+                            <textarea id="embed-content" class="form-textarea" rows="3" 
+                                      placeholder="Текст перед Embed (опционально)..."></textarea>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <label class="form-label">НАСТРОЙКИ EMBED</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div>
+                                    <label class="form-label">ЗАГОЛОВОК</label>
+                                    <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed">
+                                </div>
+                                <div>
+                                    <label class="form-label">ЦВЕТ (HEX)</label>
+                                    <input type="text" id="embed-color" class="form-input" placeholder="#5865F2" value="#5865F2">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label class="form-label">ОПИСАНИЕ</label>
+                                <textarea id="embed-description" class="form-textarea" rows="6" 
+                                          placeholder="Описание embed..."></textarea>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label class="form-label">ИМЯ АВТОРА</label>
+                                    <input type="text" id="embed-author" class="form-input" placeholder="Имя автора">
+                                </div>
+                                <div>
+                                    <label class="form-label">URL ИЗОБРАЖЕНИЯ</label>
+                                    <input type="text" id="embed-thumbnail" class="form-input" placeholder="URL изображения">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- КАСТОМНЫЙ JSON -->
+                    <div id="custom-message" class="message-section" style="display: none;">
+                        <label class="form-label">JSON ПАЙЛОАД</label>
+                        <textarea id="custom-payload" class="form-textarea" rows="10" 
+                                  placeholder='{
+  "content": "Ваше сообщение",
+  "username": "Бот",
+  "avatar_url": "https://example.com/avatar.png",
+  "embeds": [
+    {
+      "title": "Заголовок",
+      "description": "Описание",
+      "color": 5793266
+    }
+  ]
+}'
+                                  style="font-family: 'Courier New', monospace; font-size: 0.9rem;"></textarea>
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
+                            Введите кастомный JSON для отправки в Discord
+                        </div>
+                    </div>
+                    
+                    <button onclick="sendDiscordMessage()" class="btn-primary" style="border-color: #5865F2;">
+                        <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ В DISCORD
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-code"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 15px;">ШАБЛОНЫ СООБЩЕНИЙ</h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <button onclick="loadTemplate('report')" class="template-btn">
+                        <i class="fas fa-file-alt"></i>
+                        <span>ШАБЛОН ОТЧЕТА</span>
+                    </button>
+                    <button onclick="loadTemplate('ban')" class="template-btn">
+                        <i class="fas fa-ban"></i>
+                        <span>ШАБЛОН БАНА</span>
+                    </button>
+                    <button onclick="loadTemplate('user_join')" class="template-btn">
+                        <i class="fas fa-user-plus"></i>
+                        <span>НОВЫЙ ПОЛЬЗОВАТЕЛЬ</span>
+                    </button>
+                    <button onclick="loadTemplate('admin_alert')" class="template-btn">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>АЛЕРТ АДМИНАМ</span>
+                    </button>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
+                    <h5 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ВЕБХУКОВ</h5>
+                    <div style="max-height: 150px; overflow-y: auto;">
+                        <div id="webhook-history">
+                            ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 10px;">История пуста</div>' : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     `;
     
@@ -2189,7 +2314,7 @@ function renderWebhookManager() {
     if (webhooks.length > 0) {
         renderWebhookHistory();
     }
-}  // <-- ЗАКРЫТИЕ ФУНКЦИИ renderWebhookManager
+}
 
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
 function changeMessageType() {
@@ -2212,17 +2337,19 @@ function changeMessageType() {
 }
 
 function loadTemplate(templateType) {
+    function loadTemplate(templateType) {
     const messageContent = document.getElementById('message-content');
     const embedTitle = document.getElementById('embed-title');
     const embedDescription = document.getElementById('embed-description');
     const embedColor = document.getElementById('embed-color');
     const embedAuthor = document.getElementById('embed-author');
+    const embedContent = document.getElementById('embed-content'); // Новое поле!
     
     switch(templateType) {
         case 'report':
-            if (messageContent) messageContent.value = '🆕 НОВЫЙ ОТЧЕТ В СИСТЕМЕ';
+            if (embedContent) embedContent.value = '🆕 НОВЫЙ ОТЧЕТ В СИСТЕМЕ';
             if (embedTitle) embedTitle.value = 'ОТЧЕТ МЛК';
-            if (embedDescription) embedDescription.value = `Автор: ${CURRENT_USER}\nВремя: ${new Date().toLocaleString()}\nСтатус: На рассмотрении`;
+            if (embedDescription) embedDescription.value = `**Автор:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}\n**Статус:** На рассмотрении\n\nТребуется проверка администратора.`;
             if (embedColor) embedColor.value = '#5865F2';
             if (embedAuthor) embedAuthor.value = 'Система отчетов Зоны';
             document.getElementById('message-type').value = 'embed';
@@ -2230,9 +2357,9 @@ function loadTemplate(templateType) {
             break;
             
         case 'ban':
-            if (messageContent) messageContent.value = '🔨 ВЫДАН БАН';
-            if (embedTitle) embedTitle.value = 'БАН ПОЛЬЗОВАТЕЛЯ';
-            if (embedDescription) embedDescription.value = `Нарушитель: USERNAME\nПричина: НАРУШЕНИЕ ПРАВИЛ\nЗабанил: ${CURRENT_USER}\nДата: ${new Date().toLocaleString()}`;
+            if (embedContent) embedContent.value = '🔨 ВЫДАН БАН ПОЛЬЗОВАТЕЛЮ';
+            if (embedTitle) embedTitle.value = 'БЛОКИРОВКА ПОЛЬЗОВАТЕЛЯ';
+            if (embedDescription) embedDescription.value = `**Нарушитель:** USERNAME\n**Причина:** НАРУШЕНИЕ ПРАВИЛ\n**Забанил:** ${CURRENT_USER}\n**Дата:** ${new Date().toLocaleString()}\n**Static ID:** UNKNOWN`;
             if (embedColor) embedColor.value = '#b43c3c';
             if (embedAuthor) embedAuthor.value = 'Система банов';
             document.getElementById('message-type').value = 'embed';
@@ -2240,9 +2367,9 @@ function loadTemplate(templateType) {
             break;
             
         case 'user_join':
-            if (messageContent) messageContent.value = '👤 НОВЫЙ СТАЛКЕР В СИСТЕМЕ';
+            if (embedContent) embedContent.value = '👤 НОВЫЙ СТАЛКЕР В СИСТЕМЕ';
             if (embedTitle) embedTitle.value = 'РЕГИСТРАЦИЯ';
-            if (embedDescription) embedDescription.value = `Имя: НОВЫЙ ПОЛЬЗОВАТЕЛЬ\nРанг: КУРАТОР\nStatic ID: GENERATED-ID\nДата: ${new Date().toLocaleString()}`;
+            if (embedDescription) embedDescription.value = `**Имя:** НОВЫЙ ПОЛЬЗОВАТЕЛЬ\n**Ранг:** КУРАТОР\n**Static ID:** GENERATED-ID\n**Дата:** ${new Date().toLocaleString()}\n**IP:** 192.168.1.1`;
             if (embedColor) embedColor.value = '#8cb43c';
             if (embedAuthor) embedAuthor.value = 'Система пользователей';
             document.getElementById('message-type').value = 'embed';
@@ -2250,9 +2377,9 @@ function loadTemplate(templateType) {
             break;
             
         case 'admin_alert':
-            if (messageContent) messageContent.value = '🚨 ВНИМАНИЕ АДМИНИСТРАТОРАМ';
+            if (embedContent) embedContent.value = '🚨 ВНИМАНИЕ АДМИНИСТРАТОРАМ';
             if (embedTitle) embedTitle.value = 'ВАЖНОЕ УВЕДОМЛЕНИЕ';
-            if (embedDescription) embedDescription.value = `От: ${CURRENT_USER}\nПриоритет: ВЫСОКИЙ\nСообщение: ТРЕБУЕТСЯ ВАШЕ ВНИМАНИЕ\nВремя: ${new Date().toLocaleString()}`;
+            if (embedDescription) embedDescription.value = `**От:** ${CURRENT_USER}\n**Приоритет:** ВЫСОКИЙ\n**Сообщение:** ТРЕБУЕТСЯ ВАШЕ ВНИМАНИЕ\n**Время:** ${new Date().toLocaleString()}\n**Сектор:** Припять-12`;
             if (embedColor) embedColor.value = '#c0b070';
             if (embedAuthor) embedAuthor.value = 'Система оповещений';
             document.getElementById('message-type').value = 'embed';
@@ -2260,7 +2387,7 @@ function loadTemplate(templateType) {
             break;
     }
 }
-
+    
 function saveWebhook() {
     const urlInput = document.getElementById('webhook-url');
     const nameInput = document.getElementById('webhook-name');
@@ -2399,7 +2526,7 @@ function sendDiscordMessage() {
             const embedColor = document.getElementById('embed-color').value.trim();
             const embedAuthor = document.getElementById('embed-author').value.trim();
             const embedThumbnail = document.getElementById('embed-thumbnail').value.trim();
-            const messageContent = document.getElementById('message-content').value.trim();
+            const embedContent = document.getElementById('embed-content').value.trim(); // Новое поле!
             
             if (!embedDescription) {
                 showNotification('Введите описание embed', 'error');
@@ -2407,7 +2534,7 @@ function sendDiscordMessage() {
             }
             
             payload = {
-                content: messageContent || null,
+                content: embedContent || null,
                 username: DISCORD_WEBHOOK_NAME,
                 avatar_url: DISCORD_WEBHOOK_AVATAR,
                 embeds: [{
@@ -2440,6 +2567,8 @@ function sendDiscordMessage() {
             
         case 'report':
         case 'ban':
+        case 'user_join':
+        case 'admin_alert':
             // Используем шаблоны
             loadTemplate(type);
             sendDiscordMessage(); // Рекурсивный вызов с заполненными данными
@@ -2571,5 +2700,6 @@ function renderWebhookHistory() {
 }
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+
 
 

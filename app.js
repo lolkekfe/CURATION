@@ -696,6 +696,7 @@ function login(){
         const passwords = snapshot.val() || {};
         
         const curatorHash = simpleHash(passwords.curator || "123");
+        const seniorHash= simpleHash(password.curator || "SENIOR123");
         const adminHash = simpleHash(passwords.admin || "EOD");
         const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
         
@@ -2709,4 +2710,5 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+
 

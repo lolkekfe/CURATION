@@ -829,104 +829,7 @@ function login(){
         showLoginError("ОШИБКА СИСТЕМЫ");
     });
 }
-    
-    /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
-    if (!existingUser) {
-        let userRank = RANKS.CURATOR;
-        
-        if (hash === adminHash) {
-            const isInWhitelist = whitelist.some(user => 
-                user.username.toLowerCase() === username.toLowerCase()
-            );
-            
-            if (!isInWhitelist) {
-                showLoginError("ДОСТУП ЗАПРЕЩЕН");
-                return;
-            }
-            userRank = RANKS.ADMIN;
-        } else if (hash === curatorHash) {
-            userRank = RANKS.CURATOR;
-        } else if (hash === specialHash) {
-            const isProtected = PROTECTED_USERS.some(protectedUser => 
-                protectedUser.toLowerCase() === username.toLowerCase()
-            );
-            
-            if (!isProtected) {
-                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-                return;
-            }
-            userRank = RANKS.ADMIN;
-        } else {
-            showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-            return;
-        }
-        
-        const staticId = generateStaticId(username);
-        const newUser = {
-            username: username,
-            staticId: staticId,
-            role: userRank.name,
-            rank: userRank.level,
-            registrationDate: new Date().toLocaleString(),
-            lastLogin: new Date().toLocaleString()
-        };
-        
-        db.ref('mlk_users').push(newUser).then(() => {
-            loadData(() => {
-                CURRENT_ROLE = userRank.name;
-                CURRENT_USER = username;
-                CURRENT_RANK = userRank;
-                CURRENT_STATIC_ID = staticId;
-                completeLogin();
-            });
-        });
-        return;
-    }
-    
-    /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
-    else {
-        let isValidPassword = false;
-        let userRank = RANKS.CURATOR;
-        
-        if (existingUser.role === RANKS.ADMIN.name) {
-            userRank = RANKS.ADMIN;
-        } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
-            userRank = RANKS.SENIOR_CURATOR;
-        } else {
-            userRank = RANKS.CURATOR;
-        }
-        
-        if (userRank.level >= RANKS.ADMIN.level && hash === adminHash) {
-            isValidPassword = true;
-        } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && hash === adminHash) {
-            isValidPassword = true;
-        } else if (hash === curatorHash) {
-            isValidPassword = true;
-        } else if (hash === specialHash) {
-            const isProtected = PROTECTED_USERS.some(protectedUser => 
-                protectedUser.toLowerCase() === username.toLowerCase()
-            );
-            if (isProtected) {
-                isValidPassword = true;
-                userRank = RANKS.ADMIN;
-            }
-        }
-        
-        if (!isValidPassword) {
-            showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-            return;
-        }
-        
-        db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-        
-        CURRENT_ROLE = userRank.name;
-        CURRENT_USER = username;
-        CURRENT_RANK = userRank;
-        CURRENT_STATIC_ID = existingUser.staticId;
-        completeLogin();
-    }
-}
-
+ 
 function showBannedScreen(banInfo) {
     const loginScreen = document.getElementById("login-screen");
     if (!loginScreen) return;
@@ -2805,4 +2708,5 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+
 

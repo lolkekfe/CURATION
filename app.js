@@ -44,13 +44,28 @@ let DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png"; // дефолт�
 /* ===== ЗАЩИЩЕННЫЕ ПОЛЬЗОВАТЕЛЫ ===== */
 const PROTECTED_USERS = ["Tihiy"];
 
-/* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ TIHIY ===== */
-const SPECIAL_ACCESS_USERS = {
-    "TIHIY": {
-        password: "HASKIKGOADFSKL",
-        rank: CREATOR_RANK
-    }
-};
+/* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
+function checkSpecialAccess(username, password) {
+    return new Promise((resolve) => {
+        db.ref('mlk_passwords').once('value').then(snapshot => {
+            const passwords = snapshot.val() || {};
+            const specialPassword = passwords.special;
+            
+            // Проверяем, является ли пользователь защищенным
+            const isProtected = PROTECTED_USERS.some(protectedUser => 
+                protectedUser.toLowerCase() === username.toLowerCase()
+            );
+            
+            if (isProtected && password === specialPassword) {
+                resolve({ access: true, rank: CREATOR_RANK });
+            } else {
+                resolve({ access: false });
+            }
+        }).catch(() => {
+            resolve({ access: false });
+        });
+    });
+}
 
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
@@ -188,7 +203,7 @@ function createDefaultPasswords() {
     const defaultPasswords = {
         curator: "123",
         admin: "EOD",
-        special: "HASKIKGOADFSKL"
+        special: "HASKIKGOADFSKL"  // Этот пароль будет в БД
     };
     
     return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
@@ -660,7 +675,6 @@ function login(){
     const input = document.getElementById("password").value.trim();
     const usernameInput = document.getElementById("username");
     const username = usernameInput ? usernameInput.value.trim() : "";
-    const hash = simpleHash(input);
     
     const errorElement = document.getElementById("login-error");
     if (errorElement) errorElement.textContent = "";
@@ -676,50 +690,145 @@ function login(){
         return;
     }
     
-    const curatorHash = simpleHash(passwords.curator || "123");
-    const adminHash = simpleHash(passwords.admin || "EOD");
-    const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
-    
-    const existingUser = users.find(user => 
-        user.username.toLowerCase() === username.toLowerCase()
-    );
-    
-    /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ TIHIY === */
-    const upperUsername = username.toUpperCase();
-    if (SPECIAL_ACCESS_USERS[upperUsername]) {
-        if (input === SPECIAL_ACCESS_USERS[upperUsername].password) {
-            if (!existingUser) {
-                const staticId = generateStaticId(username);
-                const newUser = {
-                    username: username,
-                    staticId: staticId,
-                    role: SPECIAL_ACCESS_USERS[upperUsername].rank.name,
-                    rank: SPECIAL_ACCESS_USERS[upperUsername].rank.level,
-                    registrationDate: new Date().toLocaleString(),
-                    lastLogin: new Date().toLocaleString()
-                };
-                
-                db.ref('mlk_users').push(newUser).then(() => {
-                    loadData(() => {
-                        CURRENT_ROLE = SPECIAL_ACCESS_USERS[upperUsername].rank.name;
-                        CURRENT_USER = username;
-                        CURRENT_RANK = SPECIAL_ACCESS_USERS[upperUsername].rank;
-                        CURRENT_STATIC_ID = staticId;
-                        completeLogin();
+    // Загружаем пароли из БД
+    db.ref('mlk_passwords').once('value').then(snapshot => {
+        const passwords = snapshot.val() || {};
+        
+        const curatorHash = simpleHash(passwords.curator || "123");
+        const adminHash = simpleHash(passwords.admin || "EOD");
+        const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
+        
+        const existingUser = users.find(user => 
+            user.username.toLowerCase() === username.toLowerCase()
+        );
+        
+        /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
+        const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === username.toLowerCase()
+        );
+
+        if (isProtectedUser) {
+            if (input === passwords.special) {
+                if (!existingUser) {
+                    const staticId = generateStaticId(username);
+                    const newUser = {
+                        username: username,
+                        staticId: staticId,
+                        role: CREATOR_RANK.name,
+                        rank: CREATOR_RANK.level,
+                        registrationDate: new Date().toLocaleString(),
+                        lastLogin: new Date().toLocaleString()
+                    };
+                    
+                    db.ref('mlk_users').push(newUser).then(() => {
+                        loadData(() => {
+                            CURRENT_ROLE = CREATOR_RANK.name;
+                            CURRENT_USER = username;
+                            CURRENT_RANK = CREATOR_RANK;
+                            CURRENT_STATIC_ID = staticId;
+                            completeLogin();
+                        });
                     });
-                });
+                } else {
+                    db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                    
+                    CURRENT_ROLE = CREATOR_RANK.name;
+                    CURRENT_USER = username;
+                    CURRENT_RANK = CREATOR_RANK;
+                    CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(username);
+                    completeLogin();
+                }
+                return;
             } else {
-                db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-                
-                CURRENT_ROLE = SPECIAL_ACCESS_USERS[upperUsername].rank.name;
-                CURRENT_USER = username;
-                CURRENT_RANK = SPECIAL_ACCESS_USERS[upperUsername].rank;
-                CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(username);
-                completeLogin();
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
             }
+        }
+        
+        /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
+        if (!existingUser) {
+            let userRank = RANKS.CURATOR;
+            
+            if (simpleHash(input) === adminHash) {
+                const isInWhitelist = whitelist.some(user => 
+                    user.username.toLowerCase() === username.toLowerCase()
+                );
+                
+                if (!isInWhitelist) {
+                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
+                    return;
+                }
+                userRank = RANKS.ADMIN;
+            } else if (simpleHash(input) === curatorHash) {
+                userRank = RANKS.CURATOR;
+            } else {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
+            }
+            
+            const staticId = generateStaticId(username);
+            const newUser = {
+                username: username,
+                staticId: staticId,
+                role: userRank.name,
+                rank: userRank.level,
+                registrationDate: new Date().toLocaleString(),
+                lastLogin: new Date().toLocaleString()
+            };
+            
+            db.ref('mlk_users').push(newUser).then(() => {
+                loadData(() => {
+                    CURRENT_ROLE = userRank.name;
+                    CURRENT_USER = username;
+                    CURRENT_RANK = userRank;
+                    CURRENT_STATIC_ID = staticId;
+                    completeLogin();
+                });
+            });
             return;
         }
-    }
+        
+        /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
+        else {
+            let isValidPassword = false;
+            let userRank = RANKS.CURATOR;
+            
+            if (existingUser.role === RANKS.ADMIN.name) {
+                userRank = RANKS.ADMIN;
+            } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
+                userRank = RANKS.SENIOR_CURATOR;
+            } else {
+                userRank = RANKS.CURATOR;
+            }
+            
+            const inputHash = simpleHash(input);
+            
+            if (userRank.level >= RANKS.ADMIN.level && inputHash === adminHash) {
+                isValidPassword = true;
+            } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && inputHash === adminHash) {
+                isValidPassword = true;
+            } else if (inputHash === curatorHash) {
+                isValidPassword = true;
+            }
+            
+            if (!isValidPassword) {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
+            }
+            
+            db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+            
+            CURRENT_ROLE = userRank.name;
+            CURRENT_USER = username;
+            CURRENT_RANK = userRank;
+            CURRENT_STATIC_ID = existingUser.staticId;
+            completeLogin();
+        }
+    }).catch(error => {
+        console.error("Ошибка загрузки паролей:", error);
+        showLoginError("ОШИБКА СИСТЕМЫ");
+    });
+}
     
     /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
     if (!existingUser) {
@@ -2696,3 +2805,4 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+

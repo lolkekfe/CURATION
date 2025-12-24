@@ -3,1217 +3,699 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Система отчетов Зоны</title>
-    
-    <!-- Font Awesome для иконок -->
+    <title>ZONE ACCESS TERMINAL // SECURITY SYSTEM v2.4</title>
+    <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Шрифт Orbitron для стиля "Зоны" -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <style>
-        /* ===== БАЗОВЫЕ СТИЛИ ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            color: #e0e0e0;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ===== ЭКРАН ВХОДА ===== */
-        #login-screen {
-            width: 100%;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: linear-gradient(rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.9)), 
-                        url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
-            background-size: cover;
-            background-position: center;
-            padding: 20px;
-        }
-
-        .login-container {
-            width: 100%;
-            max-width: 500px;
-            background: rgba(20, 20, 20, 0.95);
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 40px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(10px);
-        }
-
-        .login-title {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #c0b070;
-        }
-
-        .login-title h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.2rem;
-            color: #c0b070;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(192, 176, 112, 0.3);
-        }
-
-        .login-title p {
-            color: #8f9779;
-            font-size: 1rem;
-            letter-spacing: 1px;
-        }
-
-        /* Форма входа */
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .form-group label {
-            color: #c0b070;
-            font-weight: 500;
-            font-size: 1rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .form-group input {
-            padding: 14px 16px;
-            background: rgba(30, 32, 28, 0.8);
-            border: 1px solid #4a4a3a;
-            border-radius: 4px;
-            font-size: 1rem;
-            color: #e0e0e0;
-            transition: all 0.3s ease;
-            font-family: 'Courier New', monospace;
-        }
-
-        .form-group input:focus {
-            outline: none;
-            border-color: #c0b070;
-            box-shadow: 0 0 0 2px rgba(192, 176, 112, 0.2);
-            background: rgba(40, 42, 36, 0.8);
-        }
-
-        .form-group input::placeholder {
-            color: #6a6a5a;
-        }
-
-        #login-btn {
-            background: linear-gradient(135deg, #c0b070 0%, #a09050 100%);
-            color: #1a1a1a;
-            border: none;
-            padding: 16px;
-            border-radius: 4px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-top: 15px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        #login-btn:hover {
-            background: linear-gradient(135deg, #d0c080 0%, #b0a060 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(192, 176, 112, 0.4);
-        }
-
-        #login-btn:active {
-            transform: translateY(0);
-        }
-
-        #login-error {
-            color: #b43c3c;
-            font-size: 0.95rem;
-            margin-top: 15px;
-            min-height: 24px;
-            text-align: center;
-            font-weight: 500;
-            padding: 8px;
-            background: rgba(180, 60, 60, 0.1);
-            border: 1px solid rgba(180, 60, 60, 0.3);
-            border-radius: 4px;
-        }
-
-        /* ===== ОСНОВНОЙ ИНТЕРФЕЙС (ТЕРМИНАЛ) ===== */
-        #terminal {
-            width: 100%;
-            min-height: 100vh;
-            display: none;
-            flex-direction: column;
-            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
-            overflow: hidden;
-        }
-
-        /* ШАПКА */
-        .app-header {
-            background: linear-gradient(to right, rgba(20, 20, 20, 0.95), rgba(30, 32, 28, 0.95));
-            border-bottom: 2px solid #4a4a3a;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            position: relative;
-        }
-
-        .app-header h1 {
-            font-family: 'Orbitron', sans-serif;
-            color: #c0b070;
-            font-size: 1.6rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            color: #8f9779;
-            font-size: 0.95rem;
-        }
-
-        .user-info strong {
-            color: #c0b070;
-            font-weight: 600;
-        }
-
-        #logout-btn {
-            background: rgba(180, 60, 60, 0.2);
-            color: #b43c3c;
-            border: 1px solid #b43c3c;
-            padding: 8px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 500;
-        }
-
-        #logout-btn:hover {
-            background: rgba(180, 60, 60, 0.4);
-            color: #fff;
-        }
-
-        /* ОСНОВНОЙ КОНТЕНТ */
-        .main-content {
-            flex: 1;
-            display: flex;
-            min-height: calc(100vh - 70px);
-            overflow: hidden;
-        }
-
-        /* БОКОВАЯ ПАНЕЛЬ */
-        .sidebar {
-            width: 280px;
-            background: linear-gradient(to bottom, rgba(20, 20, 20, 0.95), rgba(30, 32, 28, 0.95));
-            border-right: 2px solid #4a4a3a;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            overflow-y: auto;
-        }
-
-        .user-profile {
-            padding: 25px;
-            border-bottom: 2px solid #4a4a3a;
-            background: rgba(40, 42, 36, 0.3);
-        }
-
-        .user-profile h3 {
-            color: #c0b070;
-            margin-bottom: 15px;
-            font-size: 1.2rem;
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .user-profile p {
-            color: #8f9779;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .user-profile span {
-            color: #c0b070;
-            font-weight: 500;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-        }
-
-        .nav-menu {
-            flex: 1;
-            padding: 20px 0;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .nav-button {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            padding: 15px 25px;
-            border: none;
-            background: transparent;
-            text-align: left;
-            color: #8f9779;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-left: 4px solid transparent;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 500;
-        }
-
-        .nav-button:hover {
-            background: rgba(192, 176, 112, 0.1);
-            color: #c0b070;
-            border-left-color: #c0b070;
-        }
-
-        .nav-button.active {
-            background: rgba(192, 176, 112, 0.15);
-            color: #c0b070;
-            border-left-color: #c0b070;
-            font-weight: 600;
-        }
-
-        .nav-button i {
-            margin-right: 15px;
-            width: 20px;
-            text-align: center;
-            font-size: 1.1rem;
-        }
-
-        /* ОСНОВНОЕ СОДЕРЖИМОЕ */
-        .content-area {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            overflow-x: hidden;
-            background: rgba(10, 10, 10, 0.8);
-        }
-
-        .content-header {
-            margin-bottom: 35px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #4a4a3a;
-        }
-
-        .content-header h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: #c0b070;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .content-header p {
-            color: #8f9779;
-            font-size: 1rem;
-            line-height: 1.6;
-        }
-
-        /* КОНТЕЙНЕР КОНТЕНТА */
-        .content-body {
-            width: 100%;
-            max-width: 100%;
-            overflow-x: hidden;
-        }
-
-        /* СТИЛИ ДЛЯ КОМПОНЕНТОВ ИЗ APP.JS */
-
-        /* Карточки зоны */
-        .zone-card {
-            background: rgba(30, 32, 28, 0.8);
-            border: 2px solid #4a4a3a;
-            border-radius: 2px;
-            padding: 25px;
-            margin-bottom: 25px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .zone-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #c0b070, transparent);
-        }
-
-        .card-icon {
-            color: #c0b070;
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-        }
-
-        .zone-card h4 {
-            color: #c0b070;
-            font-size: 1.3rem;
-            margin-bottom: 15px;
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Контейнер форм */
-        .form-container {
-            width: 100%;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 10px;
-            box-sizing: border-box;
-        }
-
-        /* Формы */
-        .form-label {
-            display: block;
-            color: #8cb43c;
-            font-size: 0.9rem;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 500;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(40, 42, 36, 0.8);
-            border: 1px solid #4a4a3a;
-            color: #e0e0e0;
-            border-radius: 2px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-            max-width: 100%;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #8cb43c;
-        }
-
-        .form-textarea {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(40, 42, 36, 0.8);
-            border: 1px solid #4a4a3a;
-            color: #e0e0e0;
-            border-radius: 2px;
-            font-size: 1rem;
-            resize: vertical;
-            min-height: 120px;
-            font-family: inherit;
-            box-sizing: border-box;
-            max-width: 100%;
-        }
-
-        .form-textarea:focus {
-            outline: none;
-            border-color: #8cb43c;
-        }
-
-        /* Кнопки */
-        .btn-primary {
-            background: linear-gradient(135deg, #8cb43c 0%, #6a943c 100%);
-            color: #1a1a1a;
-            border: 2px solid #8cb43c;
-            padding: 12px 24px;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #9cc44c 0%, #7aa44c 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(140, 180, 60, 0.3);
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #8f9779;
-            border: 2px solid #4a4a3a;
-            padding: 12px 24px;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .btn-secondary:hover {
-            border-color: #c0b070;
-            color: #c0b070;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
-            flex-wrap: wrap;
-        }
-
-        /* Таблицы */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: rgba(30, 32, 28, 0.8);
-            border: 2px solid #4a4a3a;
-            border-radius: 2px;
-            overflow: hidden;
-            margin-bottom: 25px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            table-layout: fixed;
-            word-wrap: break-word;
-        }
-
-        .data-table th {
-            background: linear-gradient(to right, rgba(40, 42, 36, 0.9), rgba(50, 52, 46, 0.9));
-            padding: 15px;
-            text-align: left;
-            color: #c0b070;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 2px solid #4a4a3a;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .data-table td {
-            padding: 15px;
-            border-bottom: 1px solid #4a4a3a;
-            color: #8f9779;
-            font-size: 0.95rem;
-            vertical-align: middle;
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .data-table tr:hover {
-            background: rgba(192, 176, 112, 0.05);
-        }
-
-        .data-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Кнопки действий в таблице */
-        .action-btn {
-            padding: 8px 16px;
-            border: 1px solid;
-            border-radius: 2px;
-            background: transparent;
-            color: inherit;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin: 2px;
-            text-transform: uppercase;
-            font-weight: 500;
-        }
-
-        .action-btn.confirm {
-            color: #8cb43c;
-            border-color: #8cb43c;
-        }
-
-        .action-btn.confirm:hover {
-            background: rgba(140, 180, 60, 0.1);
-        }
-
-        .action-btn.delete {
-            color: #b43c3c;
-            border-color: #b43c3c;
-        }
-
-        .action-btn.delete:hover {
-            background: rgba(180, 60, 60, 0.1);
-        }
-
-        .action-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .table-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        /* Статусы отчетов */
-        .report-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
-            border-radius: 2px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .status-pending {
-            background: rgba(192, 176, 112, 0.1);
-            color: #c0b070;
-            border: 1px solid rgba(192, 176, 112, 0.3);
-        }
-
-        .status-confirmed {
-            background: rgba(140, 180, 60, 0.1);
-            color: #8cb43c;
-            border: 1px solid rgba(140, 180, 60, 0.3);
-        }
-
-        .status-deleted {
-            background: rgba(180, 60, 60, 0.1);
-            color: #b43c3c;
-            border: 1px solid rgba(180, 60, 60, 0.3);
-        }
-
-        /* Сетка дашборда */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .dashboard-grid .zone-card {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .card-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #c0b070;
-            margin: 15px 0;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .card-label {
-            color: #8f9779;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Карточки отчетов */
-        .report-card {
-            background: rgba(30, 32, 28, 0.8);
-            border: 2px solid #4a4a3a;
-            border-radius: 2px;
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-
-        .report-card:hover {
-            border-color: #8cb43c;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
-        }
-
-        .report-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #4a4a3a;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .report-title {
-            color: #c0b070;
-            font-size: 1.2rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .report-meta {
-            display: flex;
-            gap: 20px;
-            color: #8f9779;
-            font-size: 0.9rem;
-        }
-
-        .report-content {
-            color: #e0e0e0;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: rgba(40, 42, 36, 0.5);
-            border-radius: 2px;
-        }
-
-        .report-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 15px;
-            border-top: 1px solid #4a4a3a;
-        }
-
-        /* Уведомления */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 16px 24px;
-            border-radius: 2px;
-            color: #1a1a1a;
-            font-size: 0.95rem;
-            font-weight: 600;
-            z-index: 10000;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-            animation: slideInRight 0.3s ease;
-            max-width: 400px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .notification.success {
-            background: linear-gradient(135deg, #8cb43c 0%, #6a943c 100%);
-            border-left: 4px solid #6a943c;
-        }
-
-        .notification.error {
-            background: linear-gradient(135deg, #b43c3c 0%, #942c3c 100%);
-            border-left: 4px solid #942c3c;
-        }
-
-        .notification.info {
-            background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
-            border-left: 4px solid #4752c4;
-        }
-
-        /* Загрузка */
-        .loading {
-            text-align: center;
-            padding: 80px 20px;
-            color: #8f9779;
-        }
-
-        .spinner {
-            border: 3px solid rgba(74, 74, 58, 0.3);
-            border-top: 3px solid #c0b070;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 25px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading p {
-            font-size: 1.1rem;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        /* Шаблоны вебхуков */
-        .template-btn {
-            background: rgba(40, 42, 36, 0.8);
-            border: 2px solid #4a4a3a;
-            color: #8f9779;
-            padding: 15px;
-            border-radius: 2px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .template-btn:hover {
-            border-color: #5865F2;
-            color: #5865F2;
-            transform: translateY(-2px);
-        }
-
-        .template-btn i {
-            font-size: 1.5rem;
-        }
-
-        /* Сообщения вебхуков */
-        .message-section {
-            display: block;
-        }
-
-        /* Ошибка доступа */
-        .error-display {
-            text-align: center;
-            padding: 60px 20px;
-            color: #b43c3c;
-            background: rgba(180, 60, 60, 0.1);
-            border: 2px solid rgba(180, 60, 60, 0.3);
-            border-radius: 2px;
-            margin: 20px 0;
-        }
-
-        .error-display i {
-            font-size: 3rem;
-            margin-bottom: 20px;
-        }
-
-        .error-display h3 {
-            font-size: 1.5rem;
-            margin-bottom: 15px;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        /* Кнопка доступа */
-        .access-button {
-            background: transparent;
-            color: #c0b070;
-            border: 2px solid #c0b070;
-            padding: 15px 30px;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin: 0 auto;
-            font-family: 'Orbitron', sans-serif;
-        }
-
-        .access-button:hover {
-            background: rgba(192, 176, 112, 0.1);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(192, 176, 112, 0.2);
-        }
-
-        /* Мигающий курсор */
-        .blink {
-            animation: blink 1s infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Предупреждения */
-        .login-warning {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            padding: 15px;
-            margin: 25px 0;
-            border: 2px solid #c0b070;
-            border-radius: 2px;
-            color: #c0b070;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background: rgba(192, 176, 112, 0.1);
-        }
-
-        /* Гейгер-счетчик */
-        .geiger-counter {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .geiger-dots {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #4a4a3a;
-        }
-
-        .dot.active {
-            background: #8cb43c;
-            box-shadow: 0 0 10px rgba(140, 180, 60, 0.5);
-        }
-
-        .geiger-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.1rem;
-            color: #8cb43c;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* Футер */
-        .zone-footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #4a4a3a;
-            color: #8f9779;
-            font-size: 0.9rem;
-        }
-
-        .footer-info {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .footer-warning {
-            text-align: center;
-            color: #b43c3c;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        /* Разделитель */
-        .sep {
-            color: #4a4a3a;
-        }
-
-        /* АДАПТИВНОСТЬ */
-        @media (max-width: 1200px) {
-            .form-container {
-                padding: 0 15px;
-            }
-            
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 992px) {
-            .main-content {
-                flex-direction: column;
-            }
-            
-            .sidebar {
-                width: 100%;
-                height: auto;
-                border-right: none;
-                border-bottom: 2px solid #4a4a3a;
-            }
-            
-            .nav-menu {
-                flex-direction: row;
-                flex-wrap: wrap;
-                padding: 15px;
-            }
-            
-            .nav-button {
-                flex: 1;
-                min-width: 200px;
-                border-left: none;
-                border-bottom: 4px solid transparent;
-                padding: 12px 15px;
-                font-size: 0.9rem;
-            }
-            
-            .nav-button.active {
-                border-left: none;
-                border-bottom-color: #c0b070;
-            }
-            
-            .user-profile {
-                padding: 15px;
-            }
-            
-            .content-area {
-                padding: 20px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .app-header {
-                flex-direction: column;
-                gap: 15px;
-                padding: 15px;
-            }
-            
-            .user-info {
-                flex-direction: column;
-                gap: 10px;
-                text-align: center;
-            }
-            
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .data-table {
-                display: block;
-                overflow-x: auto;
-            }
-            
-            .data-table th,
-            .data-table td {
-                min-width: 150px;
-            }
-            
-            .report-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-            
-            .report-meta {
-                flex-direction: column;
-                gap: 8px;
-            }
-            
-            .form-container {
-                padding: 0 10px;
-            }
-            
-            .login-container {
-                padding: 30px 20px;
-                margin: 10px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 25px 15px;
-            }
-            
-            .login-title h1 {
-                font-size: 1.8rem;
-            }
-            
-            .nav-button {
-                min-width: 100%;
-            }
-            
-            .btn-primary,
-            .btn-secondary {
-                width: 100%;
-                justify-content: center;
-                padding: 14px 20px;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .action-btn {
-                width: 100%;
-                justify-content: center;
-                margin: 5px 0;
-            }
-            
-            .table-actions {
-                flex-direction: column;
-            }
-            
-            .notification {
-                left: 10px;
-                right: 10px;
-                max-width: none;
-            }
-        }
-
-        /* Специфичные исправления для переполнения */
-        .data-table td:last-child,
-        .data-table th:last-child {
-            min-width: 200px;
-            max-width: 300px;
-        }
-        
-        .action-buttons-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            max-width: 100%;
-        }
-        
-        .action-btn.static-btn {
-            padding: 4px 8px;
-            font-size: 0.7rem;
-            margin: 1px;
-        }
-        
-        /* Для вебхук-менеджера */
-        #webhook-history {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        /* Контейнер для скролла таблиц */
-        .table-scroll-container {
-            max-width: 100%;
-            overflow-x: auto;
-            margin-bottom: 20px;
-            border: 1px solid #4a4a3a;
-        }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 </head>
-<body>
+<body class="corruption-effect">
+    <!-- Слои фона -->
+    <div class="zone-bg"></div>
+    <div class="corruption-overlay"></div>
+    <div class="scan-lines"></div>
+    <div class="data-noise"></div>
+    
     <!-- Экран входа -->
-    <div id="login-screen">
-        <div class="login-container">
-            <div class="login-title">
-                <h1>Система отчетов Зоны</h1>
-                <p>Войдите в систему для продолжения</p>
+    <div class="login-container" id="login-container">
+        <div class="zone-header">
+            <div class="system-status">
+                <div class="status-indicator active"></div>
+                <div class="status-text">SYSTEM ONLINE</div>
+                <div class="frequency-meter">
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                </div>
             </div>
             
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="username">Введите псевдоним:</label>
-                    <input type="text" id="username" placeholder="Ваш псевдоним" autocomplete="off">
+            <h1 class="zone-title">
+                <span class="title-part">ZONE</span>
+                <span class="title-part">ACCESS</span>
+                <span class="title-part">TERMINAL</span>
+            </h1>
+            
+            <div class="security-level">
+                <div class="security-bar">
+                    <div class="security-progress"></div>
+                </div>
+                <div class="security-text">SECURITY LEVEL: 64% // ENCRYPTION ACTIVE</div>
+            </div>
+        </div>
+        
+        <!-- Терминал входа -->
+        <div class="login-terminal">
+            <div class="terminal-frame">
+                <!-- Углы рамки -->
+                <div class="frame-corner top-left"></div>
+                <div class="frame-corner top-right"></div>
+                <div class="frame-corner bottom-left"></div>
+                <div class="frame-corner bottom-right"></div>
+                
+                <div class="terminal-screen">
+                    <div class="screen-header">
+                        <div class="header-glow"></div>
+                        <span><span class="blink">█</span> SECURE ACCESS TERMINAL v2.4 <span class="blink">█</span></span>
+                        <span>CORPORATE NETWORK</span>
+                    </div>
+                    
+                    <div class="screen-content">
+                        <div class="access-line">
+                            <div class="line-number">[001]</div>
+                            <div class="prompt">USER IDENTIFICATION:</div>
+                            <div class="input-wrapper">
+                                <input type="text" id="username" placeholder="ВВЕДИТЕ ID ОПЕРАТОРА">
+                                <div class="input-underline"></div>
+                                <div class="encryption-indicator">
+                                    <i class="fas fa-lock"></i>
+                                    <span>AES-256</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="access-line">
+                            <div class="line-number">[002]</div>
+                            <div class="prompt">ACCESS CODE:</div>
+                            <div class="input-wrapper">
+                                <input type="password" id="password" placeholder="················">
+                                <div class="input-underline"></div>
+                                <div class="encryption-indicator">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <span>ENCRYPTED</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="access-line">
+                            <div class="line-number">[003]</div>
+                            <div class="prompt">SECURITY CLEARANCE:</div>
+                            <div class="input-wrapper">
+                                <input type="text" id="clearance" placeholder="УРОВЕНЬ ДОСТУПА">
+                                <div class="input-underline"></div>
+                                <div class="encryption-indicator">
+                                    <i class="fas fa-user-secret"></i>
+                                    <span>CLASSIFIED</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-log">
+                            <div class="log-entry">
+                                <div class="log-time">[23:45:12]</div>
+                                <div class="log-message">Загрузка модулей безопасности... <span class="blink">█</span></div>
+                            </div>
+                            <div class="log-entry">
+                                <div class="log-time">[23:45:18]</div>
+                                <div class="log-message">Проверка биометрических данных... УСПЕХ</div>
+                            </div>
+                            <div class="log-entry">
+                                <div class="log-time">[23:45:22]</div>
+                                <div class="log-message">Сетевое шифрование активировано... <span class="blink">█</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-footer">
+                        <div class="footer-grid">
+                            <div class="grid-cell">
+                                <span class="cell-label">Версия системы</span>
+                                <span class="cell-value">2.4.7</span>
+                            </div>
+                            <div class="grid-cell">
+                                <span class="cell-label">Последний вход</span>
+                                <span class="cell-value">23:41:05</span>
+                            </div>
+                            <div class="grid-cell">
+                                <span class="cell-label">Статус сети</span>
+                                <span class="cell-value standby">STANDBY</span>
+                            </div>
+                        </div>
+                        
+                        <button class="access-button" id="login-button">
+                            <div class="button-inner">
+                                <i class="fas fa-terminal"></i>
+                                <span>ИНИЦИАЛИЗИРОВАТЬ ПОДКЛЮЧЕНИЕ</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </div>
+                            <div class="button-pulse"></div>
+                        </button>
+                        
+                        <div class="error-display" id="error-display">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>ОШИБКА АУТЕНТИФИКАЦИИ: НЕВЕРНЫЕ УЧЕТНЫЕ ДАННЫЕ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Футер экрана входа -->
+        <div class="zone-footer">
+            <div class="footer-matrix">
+                <div class="matrix-column">
+                    <div>01001010 01101111 01101000 01101110 01101110 01111001</div>
+                    <div>01001101 01101110 01100101 01101101 01101111 01101110 01101001 01100011</div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="password">Введите пароль:</label>
-                    <input type="password" id="password" placeholder="Ваш пароль" autocomplete="off">
+                <div class="footer-info">
+                    <span>СИСТЕМА КОНТРОЛЯ ЗОНЫ ██</span>
+                    <span class="sep">//</span>
+                    <span>ВРЕМЯ СИНХРОНИЗАЦИИ: <span id="sync-time">23:45:30</span></span>
+                    <span class="sep">//</span>
+                    <span>СЕТЕВОЙ СЕГМЕНТ: ALPHA-7</span>
                 </div>
                 
-                <button id="login-btn">Войти в систему</button>
-                <div id="login-error"></div>
+                <div class="matrix-column">
+                    <div>01010011 01101001 01101100 01110110 01100101 01110010 01001000 01100001 01101110 01100100</div>
+                    <div>01000110 01110101 01101100 01101100 01000011 01101111 01101110 01110100 01100001 01101001 01101110 01101101 01100101 01101110 01110100</div>
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- Основной интерфейс -->
-    <div id="terminal" style="display: none;">
-        <!-- Шапка -->
-        <div class="app-header">
-            <h1>Система отчетов Зоны</h1>
-            <div class="user-info">
-                <span>Пользователь: <strong id="current-username-display">Неизвестно</strong></span>
-                <span>Ранг: <strong id="current-rank-display">Неизвестно</strong></span>
-                <button id="logout-btn">
-                    <i class="fas fa-sign-out-alt"></i> Выйти из системы
+    
+    <!-- Основной интерфейс (скрыт по умолчанию) -->
+    <div class="zone-interface" id="main-interface">
+        <!-- Боковая панель -->
+        <div class="zone-sidebar">
+            <div class="sidebar-header">
+                <div class="header-panel">
+                    <div class="panel-glow"></div>
+                    <div class="user-terminal">
+                        <div class="terminal-display">
+                            <div class="display-line">
+                                <span class="prompt">></span>
+                                <span class="command">user.status</span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">OPERATOR: <span class="highlight">JOHNNYMNEMONIC</span></span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">CLEARANCE: <span class="highlight">LEVEL 7</span></span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">SESSION: <span class="highlight">ACTIVE</span></span>
+                            </div>
+                            <div class="display-line">
+                                <span class="prompt">></span>
+                                <span class="command cursor">█</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Панель навигации -->
+            <div class="navigation-panel">
+                <div class="panel-header">
+                    <div class="header-icon">
+                        <i class="fas fa-network-wired"></i>
+                    </div>
+                    <span>СИСТЕМНЫЕ МОДУЛИ</span>
+                    <div class="header-status">
+                        <div class="status-led"></div>
+                        <span>ONLINE</span>
+                    </div>
+                </div>
+                
+                <div class="module-grid">
+                    <div class="nav-menu">
+                        <button class="nav-button active" data-module="dashboard">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>ПАНЕЛЬ УПРАВЛЕНИЯ</span>
+                        </button>
+                        <button class="nav-button" data-module="monitoring">
+                            <i class="fas fa-binoculars"></i>
+                            <span>МОНИТОРИНГ ЗОНЫ</span>
+                        </button>
+                        <button class="nav-button" data-module="reports">
+                            <i class="fas fa-file-alt"></i>
+                            <span>ОТЧЕТЫ И АНАЛИТИКА</span>
+                        </button>
+                        <button class="nav-button" data-module="security">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>СИСТЕМЫ БЕЗОПАСНОСТИ</span>
+                        </button>
+                        <button class="nav-button" data-module="communications">
+                            <i class="fas fa-satellite-dish"></i>
+                            <span>КОММУНИКАЦИИ</span>
+                        </button>
+                        <button class="nav-button" data-module="maintenance">
+                            <i class="fas fa-cogs"></i>
+                            <span>ОБСЛУЖИВАНИЕ</span>
+                        </button>
+                    </div>
+                    
+                    <div class="module-status">
+                        <div class="status-item">
+                            <span class="status-label">CPU</span>
+                            <div class="status-bar">
+                                <div class="status-fill" style="width: 78%"></div>
+                            </div>
+                            <span class="status-value">78%</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">RAM</span>
+                            <div class="status-bar">
+                                <div class="status-fill" style="width: 64%"></div>
+                            </div>
+                            <span class="status-value">64%</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">NET</span>
+                            <div class="status-bar">
+                                <div class="status-fill" style="width: 42%"></div>
+                            </div>
+                            <span class="status-value">42%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Панель сессии -->
+            <div class="session-panel">
+                <div class="panel-header">
+                    <i class="fas fa-user-clock"></i>
+                    <span>АКТИВНАЯ СЕССИЯ</span>
+                </div>
+                
+                <div class="session-info">
+                    <div class="info-item">
+                        <span class="info-label">ID Сессии:</span>
+                        <span class="info-value">#X7B-29F-4Q1</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Длительность:</span>
+                        <span class="info-value">00:12:45</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">IP Адрес:</span>
+                        <span class="info-value">192.168.7.45</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Шифрование:</span>
+                        <span class="info-value">AES-256-GCM</span>
+                    </div>
+                </div>
+                
+                <button class="session-button" id="logout-button">
+                    <div class="button-core">
+                        <i class="fas fa-power-off"></i>
+                        <span>ЗАВЕРШИТЬ СЕССИЮ</span>
+                    </div>
+                    <div class="button-warning">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>ВСЕ НЕСОХРАНЕННЫЕ ДАННЫЕ БУДУТ УТЕРЯНЫ</span>
+                    </div>
                 </button>
             </div>
         </div>
         
-        <div class="main-content">
-            <!-- Боковая панель -->
-            <div class="sidebar">
-                <div class="user-profile">
-                    <h3>Профиль пользователя</h3>
-                    <p>ID: <span id="current-static-id-display">XXXX-XXXX</span></p>
-                    <p>Сессия активна</p>
+        <!-- Основной контент -->
+        <div class="zone-content">
+            <!-- Заголовок контента -->
+            <div class="content-header">
+                <div class="header-main">
+                    <div class="title-container">
+                        <div class="title-glow"></div>
+                        <h2>
+                            <span class="title-prefix">></span>
+                            <span class="title-text">ПАНЕЛЬ УПРАВЛЕНИЯ</span>
+                        </h2>
+                        <div class="title-sub">
+                            <span class="sub-label">СЕКТОР:</span>
+                            <span class="sub-value">ALPHA-7 // ЗОНА КОНТРОЛЯ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="header-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-satellite"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">Датчики</span>
+                                <span class="stat-value">142</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-broadcast-tower"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">Трансляции</span>
+                                <span class="stat-value">87</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">Инциденты</span>
+                                <span class="stat-value">3</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
-                <nav class="nav-menu" id="nav-menu">
-                    <!-- Навигация будет добавлена через JS -->
-                </nav>
+                <div class="header-meta">
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">СИСТЕМНОЕ ВРЕМЯ</span>
+                            <span class="meta-value">23:47:12 UTC</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">СТАТУС СЕТИ</span>
+                            <span class="meta-value operational">ОПЕРАЦИОННЫЙ</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">ВНЕШНЯЯ ТЕМПЕРАТУРА</span>
+                            <span class="meta-value">-12°C</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">РАДИАЦИОННЫЙ ФОН</span>
+                            <span class="meta-value">3.2 мЗв/ч</span>
+                        </div>
+                    </div>
+                    
+                    <div class="system-health">
+                        <div class="health-bar">
+                            <div class="health-fill" style="width: 92%"></div>
+                            <div class="health-marker"></div>
+                        </div>
+                        <div class="health-text">
+                            ЦЕЛОСТНОСТЬ СИСТЕМЫ: <span>92%</span> // ВСЕ МОДУЛИ ФУНКЦИОНИРУЮТ
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <!-- Основное содержание -->
-            <div class="content-area">
-                <div class="content-header">
-                    <h2 id="content-title">Главная панель</h2>
-                    <p>Система управления отчетами и пользователями</p>
+            <!-- Тело контента -->
+            <div class="content-body">
+                <div class="system-init" id="dashboard-content">
+                    <div class="init-loader">
+                        <div class="loader-core"></div>
+                        <div class="loader-ring"></div>
+                        <div class="loader-ring delay-1"></div>
+                        <div class="loader-ring delay-2"></div>
+                    </div>
+                    
+                    <div class="init-text">
+                        <div class="init-line">ЗАГРУЗКА МОДУЛЕЙ УПРАВЛЕНИЯ...</div>
+                        <div class="init-line">ПОДКЛЮЧЕНИЕ К СИСТЕМАМ МОНИТОРИНГА...</div>
+                        <div class="init-line">ИНИЦИАЛИЗАЦИЯ ИНТЕРФЕЙСА...</div>
+                    </div>
                 </div>
                 
-                <div class="content-body" id="content-body">
-                    <!-- Контент будет загружаться здесь -->
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Загрузка системы...</p>
+                <!-- Контент для разных модулей (изначально скрыт) -->
+                <div class="form-container" id="monitoring-content" style="display: none;">
+                    <div class="dashboard-grid">
+                        <div class="zone-card">
+                            <div class="card-icon">
+                                <i class="fas fa-video"></i>
+                            </div>
+                            <div class="card-value">24</div>
+                            <div class="card-label">АКТИВНЫЕ КАМЕРЫ</div>
+                        </div>
+                        <div class="zone-card">
+                            <div class="card-icon">
+                                <i class="fas fa-temperature-low"></i>
+                            </div>
+                            <div class="card-value">-12°C</div>
+                            <div class="card-label">ВНЕШНЯЯ ТЕМПЕРАТУРА</div>
+                        </div>
+                        <div class="zone-card">
+                            <div class="card-icon">
+                                <i class="fas fa-radiation"></i>
+                            </div>
+                            <div class="card-value">3.2</div>
+                            <div class="card-label">РАДИАЦИЯ мЗв/ч</div>
+                        </div>
+                        <div class="zone-card">
+                            <div class="card-icon">
+                                <i class="fas fa-wind"></i>
+                            </div>
+                            <div class="card-value">28 км/ч</div>
+                            <div class="card-label">СКОРОСТЬ ВЕТРА</div>
+                        </div>
+                    </div>
+                    
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>СЕКТОР</th>
+                                <th>СТАТУС</th>
+                                <th>ДАВЛЕНИЕ</th>
+                                <th>ТЕМПЕРАТУРА</th>
+                                <th>РАДИАЦИЯ</th>
+                                <th>ДЕЙСТВИЯ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>ALPHA-1</td>
+                                <td><span class="meta-value operational">НОРМА</span></td>
+                                <td>742 мм рт. ст.</td>
+                                <td>18°C</td>
+                                <td>0.8 мЗв/ч</td>
+                                <td class="table-actions">
+                                    <button class="action-btn confirm">ДЕТАЛИ</button>
+                                    <button class="action-btn delete">АВАРИЯ</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>ALPHA-7</td>
+                                <td><span class="meta-value operational">НОРМА</span></td>
+                                <td>738 мм рт. ст.</td>
+                                <td>22°C</td>
+                                <td>1.2 мЗв/ч</td>
+                                <td class="table-actions">
+                                    <button class="action-btn confirm">ДЕТАЛИ</button>
+                                    <button class="action-btn delete">АВАРИЯ</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>BETA-3</td>
+                                <td><span style="color: var(--accent-yellow)">ПРЕДУПРЕЖДЕНИЕ</span></td>
+                                <td>710 мм рт. ст.</td>
+                                <td>15°C</td>
+                                <td>5.7 мЗв/ч</td>
+                                <td class="table-actions">
+                                    <button class="action-btn confirm">ДЕТАЛИ</button>
+                                    <button class="action-btn delete">АВАРИЯ</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="reports-content" style="display: none;">
+                    <div class="report-card">
+                        <div class="report-header">
+                            <div class="report-title">ОТЧЕТ №X7-228: АНОМАЛЬНАЯ АКТИВНОСТЬ</div>
+                            <div class="report-meta">
+                                <span>СЕКТОР: BETA-3</span>
+                                <span>ВРЕМЯ: 23:30:15</span>
+                                <span>ПРИОРИТЕТ: ВЫСОКИЙ</span>
+                            </div>
+                        </div>
+                        <div class="report-content">
+                            Зафиксированы неопознанные энергетические всплески в секторе BETA-3. 
+                            Уровень радиации повышен до 5.7 мЗв/ч. Датчики движения регистрируют 
+                            перемещения, не соответствующие зарегистрированным паттернам. 
+                            Рекомендуется усилить мониторинг и отправить разведгруппу.
+                        </div>
+                        <div class="report-footer">
+                            <div class="report-status status-pending">
+                                <i class="fas fa-clock"></i>
+                                НА РАССМОТРЕНИИ
+                            </div>
+                            <div class="table-actions">
+                                <button class="action-btn confirm">ПОДТВЕРДИТЬ</button>
+                                <button class="action-btn delete">АРХИВИРОВАТЬ</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Футер контента -->
+            <div class="content-footer">
+                <div class="footer-left">
+                    <div class="transmission-log">
+                        <div class="log-line">
+                            <div class="log-time">[23:46:55]</div>
+                            <div class="log-message">Передача данных на спутник... УСПЕХ</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-right">
+                    <div class="command-prompt">
+                        <div class="prompt-symbol">></div>
+                        <div class="prompt-input">
+                            <div class="input-cursor">█</div>
+                            <div class="input-text">Введите системную команду...</div>
+                        </div>
+                        <div class="prompt-hint">
+                            <i class="fas fa-info-circle"></i>
+                            <span>F1 - Помощь</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Скрипты -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="firebase.js"></script>
-    <script src="app.js"></script> <!-- Подключаем ваш основной JS файл -->
+    
+    <!-- Уведомления -->
+    <div class="notification success" id="notification-success">
+        <i class="fas fa-check-circle"></i> Доступ разрешен. Добро пожаловать в систему.
+    </div>
+    
+    <div class="notification error" id="notification-error">
+        <i class="fas fa-exclamation-triangle"></i> Ошибка аутентификации. Проверьте учетные данные.
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обновление времени
+            function updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('ru-RU', {hour12: false});
+                document.getElementById('sync-time').textContent = timeString;
+            }
+            setInterval(updateTime, 1000);
+            updateTime();
+            
+            // Логин система
+            const loginButton = document.getElementById('login-button');
+            const loginContainer = document.getElementById('login-container');
+            const mainInterface = document.getElementById('main-interface');
+            const errorDisplay = document.getElementById('error-display');
+            const logoutButton = document.getElementById('logout-button');
+            const notificationSuccess = document.getElementById('notification-success');
+            const notificationError = document.getElementById('notification-error');
+            
+            // Показать уведомление
+            function showNotification(notification, duration = 3000) {
+                notification.classList.add('show');
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, duration);
+            }
+            
+            // Вход в систему
+            loginButton.addEventListener('click', function() {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                // Простая проверка (для демо)
+                if (username && password) {
+                    // Скрыть ошибку если была показана
+                    errorDisplay.classList.remove('show');
+                    
+                    // Показать успешное уведомление
+                    showNotification(notificationSuccess);
+                    
+                    // Задержка перед переключением
+                    setTimeout(() => {
+                        loginContainer.style.display = 'none';
+                        mainInterface.style.display = 'flex';
+                        
+                        // Имитация загрузки модулей
+                        setTimeout(() => {
+                            document.getElementById('dashboard-content').style.display = 'none';
+                        }, 3000);
+                    }, 1500);
+                } else {
+                    // Показать ошибку
+                    errorDisplay.classList.add('show');
+                    showNotification(notificationError);
+                    
+                    // Эффект глитча
+                    loginContainer.classList.add('glitch');
+                    setTimeout(() => {
+                        loginContainer.classList.remove('glitch');
+                    }, 300);
+                }
+            });
+            
+            // Выход из системы
+            logoutButton.addEventListener('click', function() {
+                mainInterface.style.display = 'none';
+                loginContainer.style.display = 'flex';
+                
+                // Сброс формы
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                document.getElementById('clearance').value = '';
+                
+                // Показать сообщение о выходе
+                showNotification(notificationSuccess, 2000);
+            });
+            
+            // Навигация по модулям
+            const navButtons = document.querySelectorAll('.nav-button');
+            const contentSections = {
+                dashboard: document.getElementById('dashboard-content'),
+                monitoring: document.getElementById('monitoring-content'),
+                reports: document.getElementById('reports-content')
+            };
+            
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Убрать активный класс у всех кнопок
+                    navButtons.forEach(btn => btn.classList.remove('active'));
+                    
+                    // Добавить активный класс текущей кнопке
+                    this.classList.add('active');
+                    
+                    // Получить модуль
+                    const module = this.getAttribute('data-module');
+                    
+                    // Скрыть все секции
+                    Object.values(contentSections).forEach(section => {
+                        if (section) section.style.display = 'none';
+                    });
+                    
+                    // Показать выбранную секцию
+                    if (contentSections[module]) {
+                        contentSections[module].style.display = 'block';
+                    }
+                });
+            });
+            
+            // Анимация для кнопок действий
+            const actionButtons = document.querySelectorAll('.action-btn');
+            actionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Эффект нажатия
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                    
+                    // Показать соответствующее уведомление
+                    if (this.classList.contains('confirm')) {
+                        showNotification(notificationSuccess);
+                    } else if (this.classList.contains('delete')) {
+                        showNotification(notificationError);
+                    }
+                });
+            });
+            
+            // Фокус на поле ввода при загрузке
+            document.getElementById('username').focus();
+            
+            // Enter для входа
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && loginContainer.style.display !== 'none') {
+                    loginButton.click();
+                }
+            });
+        });
+    </script>
 </body>
 </html>

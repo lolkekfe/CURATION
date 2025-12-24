@@ -3,373 +3,1207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ЗОНА | Система отчетов</title>
+    <title>Система отчетов Зоны</title>
+    
+    <!-- Font Awesome для иконок -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- Шрифт Orbitron для стиля "Зоны" -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ===== БАЗОВЫЕ СТИЛИ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== ЭКРАН ВХОДА ===== */
+        #login-screen {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(rgba(10, 10, 10, 0.9), rgba(10, 10, 10, 0.9)), 
+                        url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1350&q=80');
+            background-size: cover;
+            background-position: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #c0b070;
+        }
+
+        .login-title h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.2rem;
+            color: #c0b070;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(192, 176, 112, 0.3);
+        }
+
+        .login-title p {
+            color: #8f9779;
+            font-size: 1rem;
+            letter-spacing: 1px;
+        }
+
+        /* Форма входа */
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            color: #c0b070;
+            font-weight: 500;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .form-group input {
+            padding: 14px 16px;
+            background: rgba(30, 32, 28, 0.8);
+            border: 1px solid #4a4a3a;
+            border-radius: 4px;
+            font-size: 1rem;
+            color: #e0e0e0;
+            transition: all 0.3s ease;
+            font-family: 'Courier New', monospace;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #c0b070;
+            box-shadow: 0 0 0 2px rgba(192, 176, 112, 0.2);
+            background: rgba(40, 42, 36, 0.8);
+        }
+
+        .form-group input::placeholder {
+            color: #6a6a5a;
+        }
+
+        #login-btn {
+            background: linear-gradient(135deg, #c0b070 0%, #a09050 100%);
+            color: #1a1a1a;
+            border: none;
+            padding: 16px;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 15px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        #login-btn:hover {
+            background: linear-gradient(135deg, #d0c080 0%, #b0a060 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(192, 176, 112, 0.4);
+        }
+
+        #login-btn:active {
+            transform: translateY(0);
+        }
+
+        #login-error {
+            color: #b43c3c;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            min-height: 24px;
+            text-align: center;
+            font-weight: 500;
+            padding: 8px;
+            background: rgba(180, 60, 60, 0.1);
+            border: 1px solid rgba(180, 60, 60, 0.3);
+            border-radius: 4px;
+        }
+
+        /* ===== ОСНОВНОЙ ИНТЕРФЕЙС (ТЕРМИНАЛ) ===== */
+        #terminal {
+            width: 100%;
+            min-height: 100vh;
+            display: none;
+            flex-direction: column;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            overflow: hidden;
+        }
+
+        /* ШАПКА */
+        .app-header {
+            background: linear-gradient(to right, rgba(20, 20, 20, 0.95), rgba(30, 32, 28, 0.95));
+            border-bottom: 2px solid #4a4a3a;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            position: relative;
+        }
+
+        .app-header h1 {
+            font-family: 'Orbitron', sans-serif;
+            color: #c0b070;
+            font-size: 1.6rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: #8f9779;
+            font-size: 0.95rem;
+        }
+
+        .user-info strong {
+            color: #c0b070;
+            font-weight: 600;
+        }
+
+        #logout-btn {
+            background: rgba(180, 60, 60, 0.2);
+            color: #b43c3c;
+            border: 1px solid #b43c3c;
+            padding: 8px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        #logout-btn:hover {
+            background: rgba(180, 60, 60, 0.4);
+            color: #fff;
+        }
+
+        /* ОСНОВНОЙ КОНТЕНТ */
+        .main-content {
+            flex: 1;
+            display: flex;
+            min-height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        /* БОКОВАЯ ПАНЕЛЬ */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(to bottom, rgba(20, 20, 20, 0.95), rgba(30, 32, 28, 0.95));
+            border-right: 2px solid #4a4a3a;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .user-profile {
+            padding: 25px;
+            border-bottom: 2px solid #4a4a3a;
+            background: rgba(40, 42, 36, 0.3);
+        }
+
+        .user-profile h3 {
+            color: #c0b070;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .user-profile p {
+            color: #8f9779;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .user-profile span {
+            color: #c0b070;
+            font-weight: 500;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .nav-button {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 15px 25px;
+            border: none;
+            background: transparent;
+            text-align: left;
+            color: #8f9779;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .nav-button:hover {
+            background: rgba(192, 176, 112, 0.1);
+            color: #c0b070;
+            border-left-color: #c0b070;
+        }
+
+        .nav-button.active {
+            background: rgba(192, 176, 112, 0.15);
+            color: #c0b070;
+            border-left-color: #c0b070;
+            font-weight: 600;
+        }
+
+        .nav-button i {
+            margin-right: 15px;
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        /* ОСНОВНОЕ СОДЕРЖИМОЕ */
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            background: rgba(10, 10, 10, 0.8);
+        }
+
+        .content-header {
+            margin-bottom: 35px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #4a4a3a;
+        }
+
+        .content-header h2 {
+            font-family: 'Orbitron', sans-serif;
+            color: #c0b070;
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .content-header p {
+            color: #8f9779;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        /* КОНТЕЙНЕР КОНТЕНТА */
+        .content-body {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* СТИЛИ ДЛЯ КОМПОНЕНТОВ ИЗ APP.JS */
+
+        /* Карточки зоны */
+        .zone-card {
+            background: rgba(30, 32, 28, 0.8);
+            border: 2px solid #4a4a3a;
+            border-radius: 2px;
+            padding: 25px;
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .zone-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #c0b070, transparent);
+        }
+
+        .card-icon {
+            color: #c0b070;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+
+        .zone-card h4 {
+            color: #c0b070;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Контейнер форм */
+        .form-container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        /* Формы */
+        .form-label {
+            display: block;
+            color: #8cb43c;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(40, 42, 36, 0.8);
+            border: 1px solid #4a4a3a;
+            color: #e0e0e0;
+            border-radius: 2px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #8cb43c;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(40, 42, 36, 0.8);
+            border: 1px solid #4a4a3a;
+            color: #e0e0e0;
+            border-radius: 2px;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #8cb43c;
+        }
+
+        /* Кнопки */
+        .btn-primary {
+            background: linear-gradient(135deg, #8cb43c 0%, #6a943c 100%);
+            color: #1a1a1a;
+            border: 2px solid #8cb43c;
+            padding: 12px 24px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #9cc44c 0%, #7aa44c 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(140, 180, 60, 0.3);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #8f9779;
+            border: 2px solid #4a4a3a;
+            padding: 12px 24px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-secondary:hover {
+            border-color: #c0b070;
+            color: #c0b070;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        /* Таблицы */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(30, 32, 28, 0.8);
+            border: 2px solid #4a4a3a;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            table-layout: fixed;
+            word-wrap: break-word;
+        }
+
+        .data-table th {
+            background: linear-gradient(to right, rgba(40, 42, 36, 0.9), rgba(50, 52, 46, 0.9));
+            padding: 15px;
+            text-align: left;
+            color: #c0b070;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid #4a4a3a;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid #4a4a3a;
+            color: #8f9779;
+            font-size: 0.95rem;
+            vertical-align: middle;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .data-table tr:hover {
+            background: rgba(192, 176, 112, 0.05);
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Кнопки действий в таблице */
+        .action-btn {
+            padding: 8px 16px;
+            border: 1px solid;
+            border-radius: 2px;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 2px;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .action-btn.confirm {
+            color: #8cb43c;
+            border-color: #8cb43c;
+        }
+
+        .action-btn.confirm:hover {
+            background: rgba(140, 180, 60, 0.1);
+        }
+
+        .action-btn.delete {
+            color: #b43c3c;
+            border-color: #b43c3c;
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(180, 60, 60, 0.1);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Статусы отчетов */
+        .report-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 2px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-pending {
+            background: rgba(192, 176, 112, 0.1);
+            color: #c0b070;
+            border: 1px solid rgba(192, 176, 112, 0.3);
+        }
+
+        .status-confirmed {
+            background: rgba(140, 180, 60, 0.1);
+            color: #8cb43c;
+            border: 1px solid rgba(140, 180, 60, 0.3);
+        }
+
+        .status-deleted {
+            background: rgba(180, 60, 60, 0.1);
+            color: #b43c3c;
+            border: 1px solid rgba(180, 60, 60, 0.3);
+        }
+
+        /* Сетка дашборда */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .dashboard-grid .zone-card {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #c0b070;
+            margin: 15px 0;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .card-label {
+            color: #8f9779;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Карточки отчетов */
+        .report-card {
+            background: rgba(30, 32, 28, 0.8);
+            border: 2px solid #4a4a3a;
+            border-radius: 2px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .report-card:hover {
+            border-color: #8cb43c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #4a4a3a;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .report-title {
+            color: #c0b070;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-meta {
+            display: flex;
+            gap: 20px;
+            color: #8f9779;
+            font-size: 0.9rem;
+        }
+
+        .report-content {
+            color: #e0e0e0;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(40, 42, 36, 0.5);
+            border-radius: 2px;
+        }
+
+        .report-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            border-top: 1px solid #4a4a3a;
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 2px;
+            color: #1a1a1a;
+            font-size: 0.95rem;
+            font-weight: 600;
+            z-index: 10000;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+            animation: slideInRight 0.3s ease;
+            max-width: 400px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.success {
+            background: linear-gradient(135deg, #8cb43c 0%, #6a943c 100%);
+            border-left: 4px solid #6a943c;
+        }
+
+        .notification.error {
+            background: linear-gradient(135deg, #b43c3c 0%, #942c3c 100%);
+            border-left: 4px solid #942c3c;
+        }
+
+        .notification.info {
+            background: linear-gradient(135deg, #5865F2 0%, #4752c4 100%);
+            border-left: 4px solid #4752c4;
+        }
+
+        /* Загрузка */
+        .loading {
+            text-align: center;
+            padding: 80px 20px;
+            color: #8f9779;
+        }
+
+        .spinner {
+            border: 3px solid rgba(74, 74, 58, 0.3);
+            border-top: 3px solid #c0b070;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            font-size: 1.1rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Шаблоны вебхуков */
+        .template-btn {
+            background: rgba(40, 42, 36, 0.8);
+            border: 2px solid #4a4a3a;
+            color: #8f9779;
+            padding: 15px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .template-btn:hover {
+            border-color: #5865F2;
+            color: #5865F2;
+            transform: translateY(-2px);
+        }
+
+        .template-btn i {
+            font-size: 1.5rem;
+        }
+
+        /* Сообщения вебхуков */
+        .message-section {
+            display: block;
+        }
+
+        /* Ошибка доступа */
+        .error-display {
+            text-align: center;
+            padding: 60px 20px;
+            color: #b43c3c;
+            background: rgba(180, 60, 60, 0.1);
+            border: 2px solid rgba(180, 60, 60, 0.3);
+            border-radius: 2px;
+            margin: 20px 0;
+        }
+
+        .error-display i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .error-display h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Кнопка доступа */
+        .access-button {
+            background: transparent;
+            color: #c0b070;
+            border: 2px solid #c0b070;
+            padding: 15px 30px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 0 auto;
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        .access-button:hover {
+            background: rgba(192, 176, 112, 0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(192, 176, 112, 0.2);
+        }
+
+        /* Мигающий курсор */
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Предупреждения */
+        .login-warning {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 15px;
+            margin: 25px 0;
+            border: 2px solid #c0b070;
+            border-radius: 2px;
+            color: #c0b070;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: rgba(192, 176, 112, 0.1);
+        }
+
+        /* Гейгер-счетчик */
+        .geiger-counter {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .geiger-dots {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4a4a3a;
+        }
+
+        .dot.active {
+            background: #8cb43c;
+            box-shadow: 0 0 10px rgba(140, 180, 60, 0.5);
+        }
+
+        .geiger-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            color: #8cb43c;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        /* Футер */
+        .zone-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #4a4a3a;
+            color: #8f9779;
+            font-size: 0.9rem;
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .footer-warning {
+            text-align: center;
+            color: #b43c3c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Разделитель */
+        .sep {
+            color: #4a4a3a;
+        }
+
+        /* АДАПТИВНОСТЬ */
+        @media (max-width: 1200px) {
+            .form-container {
+                padding: 0 15px;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 2px solid #4a4a3a;
+            }
+            
+            .nav-menu {
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 15px;
+            }
+            
+            .nav-button {
+                flex: 1;
+                min-width: 200px;
+                border-left: none;
+                border-bottom: 4px solid transparent;
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .nav-button.active {
+                border-left: none;
+                border-bottom-color: #c0b070;
+            }
+            
+            .user-profile {
+                padding: 15px;
+            }
+            
+            .content-area {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .user-info {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .data-table th,
+            .data-table td {
+                min-width: 150px;
+            }
+            
+            .report-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .report-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .form-container {
+                padding: 0 10px;
+            }
+            
+            .login-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 25px 15px;
+            }
+            
+            .login-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .nav-button {
+                min-width: 100%;
+            }
+            
+            .btn-primary,
+            .btn-secondary {
+                width: 100%;
+                justify-content: center;
+                padding: 14px 20px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .action-btn {
+                width: 100%;
+                justify-content: center;
+                margin: 5px 0;
+            }
+            
+            .table-actions {
+                flex-direction: column;
+            }
+            
+            .notification {
+                left: 10px;
+                right: 10px;
+                max-width: none;
+            }
+        }
+
+        /* Специфичные исправления для переполнения */
+        .data-table td:last-child,
+        .data-table th:last-child {
+            min-width: 200px;
+            max-width: 300px;
+        }
+        
+        .action-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            max-width: 100%;
+        }
+        
+        .action-btn.static-btn {
+            padding: 4px 8px;
+            font-size: 0.7rem;
+            margin: 1px;
+        }
+        
+        /* Для вебхук-менеджера */
+        #webhook-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        /* Контейнер для скролла таблиц */
+        .table-scroll-container {
+            max-width: 100%;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            border: 1px solid #4a4a3a;
+        }
+    </style>
 </head>
 <body>
-    <!-- Фон Зоны -->
-    <div class="zone-bg"></div>
-    <div class="corruption-overlay"></div>
-    <div class="scan-lines"></div>
-    <div class="data-noise"></div>
-    
     <!-- Экран входа -->
-    <div id="login-screen" class="login-container">
-        <div class="zone-header">
-            <div class="system-status">
-                <div class="status-indicator active"></div>
-                <span class="status-text">СИСТЕМА ДОСТУПА ОНЛАЙН</span>
-                <div class="frequency-meter">
-                    <div class="frequency-bar"></div>
-                    <div class="frequency-bar"></div>
-                    <div class="frequency-bar"></div>
-                    <div class="frequency-bar"></div>
-                    <div class="frequency-bar"></div>
-                </div>
+    <div id="login-screen">
+        <div class="login-container">
+            <div class="login-title">
+                <h1>Система отчетов Зоны</h1>
+                <p>Войдите в систему для продолжения</p>
             </div>
             
-            <h1 class="zone-title">
-                <span class="title-part">ПРОТОКОЛ</span>
-                <span class="title-part">НАБЛЮДЕНИЯ</span>
-                <span class="title-part">ЗОНЫ</span>
-            </h1>
-            
-            <div class="security-level">
-                <div class="security-bar">
-                    <div class="security-progress"></div>
+            <div class="login-form">
+                <div class="form-group">
+                    <label for="username">Введите псевдоним:</label>
+                    <input type="text" id="username" placeholder="Ваш псевдоним" autocomplete="off">
                 </div>
-                <span class="security-text">УРОВЕНЬ БЕЗОПАСНОСТИ: [██████░░░░] 64%</span>
-            </div>
-        </div>
-        
-        <div class="login-terminal">
-            <div class="terminal-frame">
-                <div class="frame-corner top-left"></div>
-                <div class="frame-corner top-right"></div>
-                <div class="frame-corner bottom-left"></div>
-                <div class="frame-corner bottom-right"></div>
                 
-                <div class="terminal-screen">
-                    <div class="screen-header">
-                        <div class="header-glow"></div>
-                        <span>ИНИЦИАЛИЗАЦИЯ ДОСТУПА</span>
-                        <span class="blink">_</span>
-                    </div>
-                    
-                    <div class="screen-content">
-                        <div class="access-line">
-                            <div class="line-number">[001]</div>
-                            <span class="prompt">> ВВЕДИТЕ ПСЕВДОНИМ СТАЛКЕРА:</span>
-                            <div class="input-wrapper">
-                                <input type="text" id="username" placeholder="[...]" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="access-line">
-                            <div class="line-number">[002]</div>
-                            <span class="prompt">> ВВЕДИТЕ КРИПТО-КОД ДОСТУПА:</span>
-                            <div class="input-wrapper">
-                                <input type="password" id="password" placeholder="[...]" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
-                                <div class="encryption-indicator">
-                                    <i class="fas fa-lock"></i>
-                                    <span>AES-256</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="system-log">
-                            <div class="log-entry">
-                                <span class="log-time">[23:45:12]</span>
-                                <span class="log-message">>> СИСТЕМА: Загрузка модуля аутентификации...</span>
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">[23:45:14]</span>
-                                <span class="log-message">>> СИСТЕМА: Проверка базы данных пользователей...</span>
-                            </div>
-                            <div class="log-entry">
-                                <span class="log-time">[23:45:15]</span>
-                                <span class="log-message">>> СИСТЕМА: Готов к идентификации. Ожидание ввода...</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="screen-footer">
-                        <div class="footer-grid">
-                            <div class="grid-cell">
-                                <span class="cell-label">СТАТУС:</span>
-                                <span class="cell-value standby">ОЖИДАНИЕ</span>
-                            </div>
-                            <div class="grid-cell">
-                                <span class="cell-label">ПОПЫТКА:</span>
-                                <span class="cell-value">#001</span>
-                            </div>
-                            <div class="grid-cell">
-                                <span class="cell-label">IP:</span>
-                                <span class="cell-value">192.168.XX.XXX</span>
-                            </div>
-                        </div>
-                        
-                        <button id="login-btn" class="access-button">
-                            <div class="button-inner">
-                                <i class="fas fa-terminal"></i>
-                                <span>ИНИЦИИРОВАТЬ ПОДКЛЮЧЕНИЕ</span>
-                                <div class="button-pulse"></div>
-                            </div>
-                        </button>
-                        
-                        <div id="login-error" class="error-display">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span class="error-text"></span>
-                        </div>
-                    </div>
+                <div class="form-group">
+                    <label for="password">Введите пароль:</label>
+                    <input type="password" id="password" placeholder="Ваш пароль" autocomplete="off">
                 </div>
-            </div>
-        </div>
-        
-        <div class="zone-footer">
-            <div class="footer-matrix">
-                <div class="matrix-column">
-                    <span class="matrix-code">001011010101</span>
-                    <span class="matrix-code">110100101010</span>
-                    <span class="matrix-code">010101010110</span>
-                </div>
-                <div class="footer-info">
-                    <span>СИСТЕМНЫЙ ИНТЕРФЕЙС v2.7.4</span>
-                    <span class="sep">|</span>
-                    <span>БД: ОПЕРАТИВНА [███████░░░]</span>
-                    <span class="sep">|</span>
-                    <span>ПОСЛЕДНЯЯ СИНХРОНИЗАЦИЯ: <span id="sync-time">--:--:--</span></span>
-                </div>
-                <div class="matrix-column">
-                    <span class="matrix-code">101010010101</span>
-                    <span class="matrix-code">010101101001</span>
-                    <span class="matrix-code">101001010101</span>
-                </div>
+                
+                <button id="login-btn">Войти в систему</button>
+                <div id="login-error"></div>
             </div>
         </div>
     </div>
 
     <!-- Основной интерфейс -->
-    <div id="terminal" class="zone-interface">
-        <!-- Боковая панель -->
-        <div id="sidebar" class="zone-sidebar">
-            <div class="sidebar-header">
-                <div class="header-panel">
-                    <div class="panel-glow"></div>
-                    <div class="user-terminal">
-                        <div class="terminal-display">
-                            <div class="display-line">
-                                <span class="prompt">$</span>
-                                <span class="command">user.status</span>
-                                <span class="cursor blink">█</span>
-                            </div>
-                            <div class="display-line">
-                                <span class="output">> IDENTITY: <span id="current-username" class="highlight">NULL</span></span>
-                            </div>
-                            <div class="display-line">
-                                <span class="output">> CLEARANCE: <span id="current-rank" class="highlight">PENDING</span></span>
-                            </div>
-                            <div class="display-line">
-                                <span class="output">> SESSION_ID: <span id="current-static-id" class="highlight">XXXX-XXXX-XXXX</span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="navigation-panel">
-                <div class="panel-header">
-                    <div class="header-icon">
-                        <i class="fas fa-sitemap"></i>
-                    </div>
-                    <span>СИСТЕМНЫЕ МОДУЛИ</span>
-                    <div class="header-status">
-                        <div class="status-led active"></div>
-                        <span>ОНЛАЙН</span>
-                    </div>
-                </div>
-                
-                <div class="module-grid">
-                    <nav class="nav-menu" id="nav-menu">
-                        <!-- Навигация будет добавлена через JS -->
-                    </nav>
-                    
-                    <div class="module-status">
-                        <div class="status-item">
-                            <span class="status-label">ПАМЯТЬ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 78%"></div>
-                            </div>
-                            <span class="status-value">78%</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">ЦПУ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 45%"></div>
-                            </div>
-                            <span class="status-value">45%</span>
-                        </div>
-                        <div class="status-item">
-                            <span class="status-label">СЕТЬ:</span>
-                            <div class="status-bar">
-                                <div class="status-fill" style="width: 92%"></div>
-                            </div>
-                            <span class="status-value">92%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="session-panel">
-                <div class="panel-header">
-                    <i class="fas fa-history"></i>
-                    <span>АКТИВНАЯ СЕССИЯ</span>
-                </div>
-                <div class="session-info">
-                    <div class="info-item">
-                        <span class="info-label">НАЧАЛО:</span>
-                        <span class="info-value" id="session-start">--:--:--</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ДЛИТЕЛЬНОСТЬ:</span>
-                        <span class="info-value" id="session-duration">00:00:00</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">ОПЕРАЦИЙ:</span>
-                        <span class="info-value" id="session-ops">0</span>
-                    </div>
-                </div>
-                <button id="logout-btn" class="session-button">
-                    <div class="button-core">
-                        <i class="fas fa-power-off"></i>
-                        <span>ЗАВЕРШИТЬ СЕССИЮ</span>
-                    </div>
-                    <div class="button-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>ВСЕ ДАННЫЕ БУДУТ СОХРАНЕНЫ</span>
-                    </div>
+    <div id="terminal" style="display: none;">
+        <!-- Шапка -->
+        <div class="app-header">
+            <h1>Система отчетов Зоны</h1>
+            <div class="user-info">
+                <span>Пользователь: <strong id="current-username-display">Неизвестно</strong></span>
+                <span>Ранг: <strong id="current-rank-display">Неизвестно</strong></span>
+                <button id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Выйти из системы
                 </button>
             </div>
         </div>
-
-        <!-- Основной контент -->
-        <div id="content" class="zone-content">
-            <div class="content-header">
-                <div class="header-main">
-                    <div class="title-container">
-                        <div class="title-glow"></div>
-                        <h2 id="content-title">
-                            <span class="title-prefix">//</span>
-                            <span class="title-text">ЦЕНТРАЛЬНЫЙ КОНТРОЛЬ</span>
-                        </h2>
-                        <div class="title-sub">
-                            <span class="sub-label">МОДУЛЬ:</span>
-                            <span class="sub-value" id="module-name">ИНИЦИАЛИЗАЦИЯ</span>
-                        </div>
-                    </div>
-                    
-                    <div class="header-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-database"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">ОБРАБОТАНО</span>
-                                <span class="stat-value" id="processed-data">0</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">АКТИВНЫХ</span>
-                                <span class="stat-value" id="active-users">0</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">УГРОЗ</span>
-                                <span class="stat-value" id="threat-level">0</span>
-                            </div>
-                        </div>
-                    </div>
+        
+        <div class="main-content">
+            <!-- Боковая панель -->
+            <div class="sidebar">
+                <div class="user-profile">
+                    <h3>Профиль пользователя</h3>
+                    <p>ID: <span id="current-static-id-display">XXXX-XXXX</span></p>
+                    <p>Сессия активна</p>
                 </div>
                 
-                <div class="header-meta">
-                    <div class="meta-grid">
-                        <div class="meta-item">
-                            <span class="meta-label">ВРЕМЯ СИСТЕМЫ:</span>
-                            <span class="meta-value" id="current-time">00:00:00</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">ДАТА:</span>
-                            <span class="meta-value" id="current-date">--/--/----</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">ВЕРСИЯ ЯДРА:</span>
-                            <span class="meta-value">v2.7.4</span>
-                        </div>
-                        <div class="meta-item">
-                            <span class="meta-label">СТАТУС:</span>
-                            <span class="meta-value operational">ОПЕРАЦИОНЕН</span>
-                        </div>
-                    </div>
-                    <div class="system-health">
-                        <div class="health-bar">
-                            <div class="health-fill"></div>
-                            <div class="health-marker"></div>
-                        </div>
-                        <span class="health-text">ИНТЕГРИТЕТ СИСТЕМЫ: <span id="system-integrity">100%</span></span>
-                    </div>
-                </div>
+                <nav class="nav-menu" id="nav-menu">
+                    <!-- Навигация будет добавлена через JS -->
+                </nav>
             </div>
             
-            <div class="content-body" id="content-body">
-                <!-- Контент будет загружаться здесь -->
-                <div class="system-init">
-                    <div class="init-loader">
-                        <div class="loader-core"></div>
-                        <div class="loader-ring"></div>
-                        <div class="loader-ring delay-1"></div>
-                        <div class="loader-ring delay-2"></div>
-                    </div>
-                    <div class="init-text">
-                        <span class="init-line">ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ...</span>
-                        <span class="init-line">ЗАГРУЗКА МОДУЛЕЙ...</span>
-                        <span class="init-line blink">ГОТОВ К ПРИЕМУ КОМАНД</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="content-footer">
-                <div class="footer-left">
-                    <div class="transmission-log">
-                        <div class="log-line">
-                            <span class="log-time">[<span id="log-time">00:00:00</span>]</span>
-                            <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ИНИЦИАЛИЗАЦИЯ ЗАВЕРШЕНА. СИСТЕМА ГОТОВА.</span></span>
-                        </div>
-                    </div>
+            <!-- Основное содержание -->
+            <div class="content-area">
+                <div class="content-header">
+                    <h2 id="content-title">Главная панель</h2>
+                    <p>Система управления отчетами и пользователями</p>
                 </div>
                 
-                <div class="footer-right">
-                    <div class="command-prompt">
-                        <span class="prompt-symbol">></span>
-                        <div class="prompt-input">
-                            <span class="input-cursor blink">█</span>
-                            <span class="input-text">ВВЕДИТЕ КОМАНДУ...</span>
-                        </div>
-                        <div class="prompt-hint">
-                            <i class="fas fa-info-circle"></i>
-                            <span>ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ ДЛЯ ДОСТУПА К МОДУЛЯМ</span>
-                        </div>
+                <div class="content-body" id="content-body">
+                    <!-- Контент будет загружаться здесь -->
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Загрузка системы...</p>
                     </div>
                 </div>
             </div>
@@ -380,6 +1214,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="firebase.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js"></script> <!-- Подключаем ваш основной JS файл -->
 </body>
 </html>

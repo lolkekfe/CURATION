@@ -567,7 +567,6 @@ function renderPasswords() {
     if (bans.length > 0) {
         renderBansHistory();
     }
-}
 
 function renderBansTable(activeBans) {
     const tableBody = document.getElementById("bans-table-body");
@@ -2719,6 +2718,7 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+
 
 
 

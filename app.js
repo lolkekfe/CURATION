@@ -3353,6 +3353,8 @@ function updateInputValidation(input, validation) {
         error.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${validation.message}`;
         wrapper.appendChild(error);
     }
+} // <-- ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ updateInputValidation
+
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С IP МОНИТОРИНГОМ ===== */
 window.investigateIP = function(ip) {
     db.ref('mlk_ip_tracking').once('value').then(snapshot => {
@@ -3439,4 +3441,5 @@ window.exportIPData = function() {
     });
 }
 
-});
+// ЗАКРЫВАЕМ document.addEventListener('DOMContentLoaded', function() {
+}); // <-- ЭТА СКОБКА ЗАКРЫВАЕТ ВСЕ НАЧАВШИЕСЯ В НАЧАЛЕ ФАЙЛА БЛОКИ

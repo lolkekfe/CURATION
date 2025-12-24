@@ -117,23 +117,36 @@ function restoreSession() {
 
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) return; 
+    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+        showNotification("Недостаточно прав", "error");
+        return;
+    }
+    
     if(confirm("Удалить отчет?")) {
         db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReports));
     }
 }
 
 window.confirmReport = function(id) {
-    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) return;
-    db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => loadReports(renderReports));
+    if(CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+        showNotification("Недостаточно прав", "error");
+        return;
+    }
+    
+    if(confirm("Подтвердить отчет?")) {
+        db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => {
+            loadReports(renderReports);
+            showNotification("Отчет подтвержден", "success");
+        });
+    }
 }
 
 /* ===== ХЕШИРОВАНИЕ ===== */
 function simpleHash(str){
-    let h=0;
-    for(let i=0;i<str.length;i++){
-        h=(h<<5)-h+str.charCodeAt(i);
-        h|=0;
+    let h = 0;
+    for(let i = 0; i < str.length; i++){
+        h = (h << 5) - h + str.charCodeAt(i);
+        h |= 0;
     }
     return h.toString(16);
 }
@@ -170,19 +183,16 @@ function loadData(callback) {
         const data = snapshot.val() || {};
         bans = Object.keys(data).map(key => ({...data[key], id: key}));
         
-        // ТЕПЕРЬ ЗАГРУЖАЕМ ВЕБХУКИ
+        // Загружаем вебхуки
         return db.ref('mlk_settings/webhook_url').once('value');
     }).then(snapshot => {
         DISCORD_WEBHOOK_URL = snapshot.val() || null;
-
         return db.ref('mlk_settings/webhook_name').once('value');
     }).then(snapshot => {
         DISCORD_WEBHOOK_NAME = snapshot.val() || "Система отчетов Зоны";
-        
         return db.ref('mlk_settings/webhook_avatar').once('value');
     }).then(snapshot => {
         DISCORD_WEBHOOK_AVATAR = snapshot.val() || "https://i.imgur.com/6B7zHqj.png";
-        
         return db.ref('mlk_webhooks').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
@@ -198,6 +208,7 @@ function loadData(callback) {
         }
     }).catch(error => {
         console.error("Ошибка загрузки данных:", error);
+        showNotification("Ошибка загрузки данных", "error");
         if (callback) callback();
     });
 }
@@ -206,27 +217,22 @@ function loadData(callback) {
 function createOrUpdatePasswords() {
     const defaultPasswords = {
         curator: "123",
-        senior: "SENIOR123", // НОВЫЙ ПАРОЛЬ ДЛЯ СТАРШЕГО КУРАТОРА
+        senior: "SENIOR123",
         admin: "EOD",
         special: "HASKIKGOADFSKL"
     };
     
-    // Загружаем существующие пароли
     return db.ref('mlk_passwords').once('value').then(snapshot => {
         const existingPasswords = snapshot.val() || {};
-        
-        // Объединяем существующие пароли с дефолтными
         const updatedPasswords = {
             ...defaultPasswords,
-            ...existingPasswords // Существующие пароли имеют приоритет
+            ...existingPasswords
         };
         
-        // Убедимся, что все необходимые пароли есть
         if (!updatedPasswords.senior) {
             updatedPasswords.senior = defaultPasswords.senior;
         }
         
-        // Сохраняем обновленные пароли в базу
         return db.ref('mlk_passwords').set(updatedPasswords).then(() => {
             console.log("Пароли созданы/обновлены в базе данных");
             passwords = updatedPasswords;
@@ -234,7 +240,6 @@ function createOrUpdatePasswords() {
         });
     }).catch(error => {
         console.error("Ошибка при создании паролей:", error);
-        // Если ошибка, пробуем просто создать новые
         return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
             console.log("Созданы новые пароли в базе данных");
             passwords = defaultPasswords;
@@ -271,12 +276,12 @@ function addProtectedUsersToWhitelist() {
 function changePassword(type, newPassword) {
     if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
         showNotification("Только администратор может изменять коды доступа", "error");
-        return;
+        return Promise.reject("Недостаточно прав");
     }
     
     if (!newPassword || newPassword.trim() === "") {
         showNotification("Введите новый код", "error");
-        return;
+        return Promise.reject("Пустой пароль");
     }
     
     const updates = {};
@@ -301,8 +306,421 @@ function changePassword(type, newPassword) {
     });
 }
 
-/* ===== ЛОГИКА ВХОДА С ПРОВЕРКОЙ БАНОВ И STATIC ID ===== */
-function login(){
+/* ===== СИСТЕМА БАНОВ ===== */
+function checkIfBanned(username) {
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) return { banned: false };
+    
+    const activeBan = bans.find(ban => 
+        (ban.username.toLowerCase() === username.toLowerCase() || 
+         ban.staticId === user.staticId) && 
+        !ban.unbanned
+    );
+    
+    return activeBan ? { banned: true, ...activeBan } : { banned: false };
+}
+
+function banUser(username, reason) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав для бана", "error");
+        return Promise.resolve(false);
+    }
+    
+    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return Promise.resolve(false);
+    }
+    
+    const banData = {
+        username: username,
+        staticId: user.staticId,
+        reason: reason,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        unbanned: false
+    };
+    
+    return db.ref('mlk_bans').push(banData).then(() => {
+        showNotification(`Пользователь ${username} забанен`, "success");
+        loadData(() => {
+            if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
+                renderBanInterface();
+            }
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка бана: " + error.message, "error");
+        return false;
+    });
+}
+
+function banByStaticId(staticId, reason) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав для бана", "error");
+        return Promise.resolve(false);
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    const username = user ? user.username : "Неизвестный пользователь";
+    
+    const banData = {
+        username: username,
+        staticId: staticId,
+        reason: reason,
+        bannedBy: CURRENT_USER,
+        bannedDate: new Date().toLocaleString(),
+        unbanned: false
+    };
+    
+    return db.ref('mlk_bans').push(banData).then(() => {
+        showNotification(`Пользователь (${staticId}) забанен`, "success");
+        loadData(() => {
+            if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
+                renderBanInterface();
+            }
+        });
+        return true;
+    }).catch(error => {
+        showNotification("Ошибка бана: " + error.message, "error");
+        return false;
+    });
+}
+
+function unbanByStaticId(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Недостаточно прав для разбана", "error");
+        return;
+    }
+    
+    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
+    if (!ban) {
+        showNotification("Активный бан не найден", "error");
+        return;
+    }
+    
+    if (confirm(`Снять бан с пользователя ${ban.username}?`)) {
+        db.ref('mlk_bans/' + ban.id).update({
+            unbanned: true,
+            unbannedBy: CURRENT_USER,
+            unbannedDate: new Date().toLocaleString()
+        }).then(() => {
+            showNotification(`Бан с ${ban.username} снят`, "success");
+            loadData(() => {
+                if (document.getElementById('content-title')?.textContent.includes('БАНЫ')) {
+                    renderBanInterface();
+                }
+            });
+        }).catch(error => {
+            showNotification("Ошибка снятия бана: " + error.message, "error");
+        });
+    }
+}
+
+/* ===== ИНТЕРФЕЙС УПРАВЛЕНИЯ БАНАМИ ===== */
+window.renderBanInterface = function() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+        return;
+    }
+    
+    const activeBans = bans.filter(ban => !ban.unbanned);
+    
+    content.innerHTML = `
+        <div class="form-container">
+            <h2 style="color: #b43c3c; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
+            </h2>
+            
+            <div class="zone-card" style="margin-bottom: 30px; border-color: #b43c3c;">
+                <div class="card-icon" style="color: #b43c3c;"><i class="fas fa-user-slash"></i></div>
+                <h4 style="color: #b43c3c; margin-bottom: 15px;">НОВЫЙ БАН</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label class="form-label">БАН ПО ИМЕНИ ПОЛЬЗОВАТЕЛЯ</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя">
+                            <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана">
+                            <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c;">
+                                <i class="fas fa-ban"></i> ЗАБАНИТЬ
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">БАН ПО STATIC ID</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" 
+                                   style="font-family: 'Courier New', monospace;">
+                            <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана">
+                            <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c;">
+                                <i class="fas fa-id-card"></i> БАН ПО ID
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                <div>
+                    <h4 style="color: #b43c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-exclamation-circle"></i> АКТИВНЫЕ БАНЫ
+                        <span style="font-size: 0.9rem; color: #8f9779;">(${activeBans.length})</span>
+                    </h4>
+                    
+                    ${activeBans.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: rgba(180, 60, 60, 0.5); border: 1px dashed rgba(180, 60, 60, 0.3); border-radius: 2px;">
+                            <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                            <h4>АКТИВНЫХ БАНОВ НЕТ</h4>
+                            <p>ВСЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП</p>
+                        </div>
+                    ` : `
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                    <th>STATIC ID</th>
+                                    <th>ПРИЧИНА</th>
+                                    <th>ЗАБАНИЛ</th>
+                                    <th>ДАТА</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bans-table-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+                
+                <div>
+                    <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-history"></i> ИСТОРИЯ БАНОВ
+                        <span style="font-size: 0.9rem; color: #8f9779;">(${bans.length})</span>
+                    </h4>
+                    
+                    ${bans.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
+                            <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                            <h4>ИСТОРИЯ ПУСТА</h4>
+                            <p>БАНЫ ЕЩЕ НЕ ВЫДАВАЛИСЬ</p>
+                        </div>
+                    ` : `
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                    <th>STATIC ID</th>
+                                    <th>ПРИЧИНА</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДАТА</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bans-history-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (activeBans.length > 0) {
+        renderBansTable(activeBans);
+    }
+    
+    if (bans.length > 0) {
+        renderBansHistory();
+    }
+}
+
+function renderBansTable(activeBans) {
+    const tableBody = document.getElementById("bans-table-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    activeBans.forEach(ban => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="font-weight: 500; color: #b43c3c;">
+                <i class="fas fa-user-slash"></i> ${ban.username}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>${ban.bannedBy || "Неизвестно"}</td>
+            <td>${ban.bannedDate || "Неизвестно"}</td>
+            <td>
+                ${CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? `
+                    <button onclick="unbanByStaticId('${ban.staticId}')" class="action-btn confirm">
+                        <i class="fas fa-unlock"></i> РАЗБАН
+                    </button>
+                ` : '<span style="color: #8f9779;">НЕТ ДОСТУПА</span>'}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+function renderBansHistory() {
+    const tableBody = document.getElementById("bans-history-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    bans.forEach(ban => {
+        const isActive = !ban.unbanned;
+        const bannedDate = ban.bannedDate || "Неизвестно";
+        const unbannedDate = ban.unbannedDate || "";
+        
+        row.innerHTML = `
+            <td style="color: ${isActive ? '#b43c3c' : '#8f9779'}">
+                <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
+            <td>${ban.reason || "Причина не указана"}</td>
+            <td>
+                <span class="report-status ${isActive ? 'status-deleted' : 'status-confirmed'}" 
+                      style="display: inline-flex; padding: 4px 10px;">
+                    <i class="fas ${isActive ? 'fa-ban' : 'fa-check'}"></i>
+                    ${isActive ? 'АКТИВЕН' : 'СНЯТ'}
+                </span>
+            </td>
+            <td>
+                ${bannedDate}
+                ${unbannedDate ? `<br><small style="color: #6a6a5a;">Снят: ${unbannedDate}</small>` : ''}
+            </td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
+window.addBan = function() {
+    const usernameInput = document.getElementById("ban-username");
+    const reasonInput = document.getElementById("ban-reason");
+    
+    const username = usernameInput ? usernameInput.value.trim() : "";
+    const reason = reasonInput ? reasonInput.value.trim() : "";
+    
+    if (!username) {
+        showNotification("Введите имя пользователя", "error");
+        return;
+    }
+    
+    if (!reason) {
+        showNotification("Введите причину бана", "error");
+        return;
+    }
+    
+    banUser(username, reason).then(success => {
+        if (success) {
+            if (usernameInput) usernameInput.value = "";
+            if (reasonInput) reasonInput.value = "";
+        }
+    });
+}
+
+window.addBanByStaticId = function() {
+    const staticIdInput = document.getElementById("ban-staticid");
+    const reasonInput = document.getElementById("ban-reason-static");
+    
+    const staticId = staticIdInput ? staticIdInput.value.trim() : "";
+    const reason = reasonInput ? reasonInput.value.trim() : "";
+    
+    if (!staticId) {
+        showNotification("Введите STATIC ID", "error");
+        return;
+    }
+    
+    if (!reason) {
+        showNotification("Введите причину бана", "error");
+        return;
+    }
+    
+    banByStaticId(staticId, reason).then(success => {
+        if (success) {
+            if (staticIdInput) staticIdInput.value = "";
+            if (reasonInput) reasonInput.value = "";
+        }
+    });
+}
+
+/* ===== ФУНКЦИИ ПОВЫШЕНИЯ/ПОНИЖЕНИЯ РАНГА ===== */
+window.promoteToAdminByStaticId = function(staticId) {
+    if (!confirm("Повысить пользователя до администратора?")) return;
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.ADMIN.name,
+        rank: RANKS.ADMIN.level
+    }).then(() => {
+        loadData(() => {
+            renderUsers();
+            showNotification("Пользователь повышен до администратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+window.promoteToSeniorByStaticId = function(staticId) {
+    if (!confirm("Повысить пользователя до старшего куратора?")) return;
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.SENIOR_CURATOR.name,
+        rank: RANKS.SENIOR_CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            renderUsers();
+            showNotification("Пользователь повышен до старшего куратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+window.demoteToCuratorByStaticId = function(staticId) {
+    if (!confirm("Понизить пользователя до куратора?")) return;
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.CURATOR.name,
+        rank: RANKS.CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            renderUsers();
+            showNotification("Пользователь понижен до куратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+/* ===== ЛОГИКА ВХОДА ===== */
+window.login = function() {
     const input = document.getElementById("password").value.trim();
     const usernameInput = document.getElementById("username");
     const username = usernameInput ? usernameInput.value.trim() : "";
@@ -326,7 +744,7 @@ function login(){
         const passwords = snapshot.val() || {};
         
         const curatorHash = simpleHash(passwords.curator || "123");
-        const seniorHash = simpleHash(passwords.senior || "SENIOR123"); // НОВЫЙ ХЕШ ДЛЯ СТАРШЕГО КУРАТОРА
+        const seniorHash = simpleHash(passwords.senior || "SENIOR123");
         const adminHash = simpleHash(passwords.admin || "EOD");
         const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
         
@@ -479,367 +897,7 @@ function login(){
     });
 }
 
-/* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
-function renderPasswords() {
-    const content = document.getElementById("content-body");
-    if (!content) return;
-    
-    content.innerHTML = `
-        <div class="form-container">
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
-            </h2>
-            
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                ИЗМЕНЕНИЕ КОДОВ ДОСТУПА В СИСТЕМУ<br>
-                <span style="color: #c0b070;">ИЗМЕНЕНИЯ ВСТУПАЮТ В СИЛУ НЕМЕДЛЕННО</span>
-            </p>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-users"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ КУРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="curator-password" class="form-input" 
-                           value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('curator')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
-                </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-star"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="senior-password" class="form-input" 
-                           value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('senior')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
-                </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="admin-password" class="form-input" 
-                           value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('admin')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
-                </div>
-            </div>
-            
-            <div class="zone-card" style="border-color: #c0b070;">
-                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="special-password" class="form-input" 
-                           value="${passwords.special || ''}" placeholder="НОВЫЙ КОД"
-                           style="border-color: #c0b070;">
-                    <button onclick="updatePassword('special')" class="btn-primary" 
-                            style="border-color: #c0b070;">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-    if (activeBans.length > 0) {
-        renderBansTable(activeBans);
-    }
-    
-    if (bans.length > 0) {
-        renderBansHistory();
-    }
-
-function renderBansTable(activeBans) {
-    const tableBody = document.getElementById("bans-table-body");
-    if (!tableBody) return;
-    
-    tableBody.innerHTML = '';
-    
-    activeBans.forEach(ban => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td style="font-weight: 500; color: #b43c3c;">
-                <i class="fas fa-user-slash"></i> ${ban.username}
-            </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
-                ${ban.staticId || "N/A"}
-            </td>
-            <td>${ban.reason || "Причина не указана"}</td>
-            <td>${ban.bannedBy || "Неизвестно"}</td>
-            <td>${ban.bannedDate || "Неизвестно"}</td>
-            <td>
-                ${CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? `
-                    <button onclick="unbanByStaticId('${ban.staticId}')" class="action-btn confirm">
-                        <i class="fas fa-unlock"></i> РАЗБАН
-                    </button>
-                ` : '<span style="color: #8f9779;">НЕТ ДОСТУПА</span>'}
-            </td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function renderBansHistory() {
-    const tableBody = document.getElementById("bans-history-body");
-    if (!tableBody) return;
-    
-    tableBody.innerHTML = '';
-    
-    bans.forEach(ban => {
-        const row = document.createElement('tr');
-        const isActive = !ban.unbanned;
-        
-        row.innerHTML = `
-            <td style="color: ${isActive ? '#b43c3c' : '#8f9779'}">
-                <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username}
-            </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
-                ${ban.staticId || "N/A"}
-            </td>
-            <td>${ban.reason || "Причина не указана"}</td>
-            <td>
-                <span class="report-status ${isActive ? 'status-deleted' : 'status-confirmed'}" 
-                      style="display: inline-flex; padding: 4px 10px;">
-                    <i class="fas ${isActive ? 'fa-ban' : 'fa-check'}"></i>
-                    ${isActive ? 'АКТИВЕН' : 'СНЯТ'}
-                </span>
-            </td>
-            <td>${ban.bannedDate || "Неизвестно"}</td>
-        `;
-        tableBody.appendChild(row);
-    });
-}
-
-function addBan() {
-    const usernameInput = document.getElementById("ban-username");
-    const reasonInput = document.getElementById("ban-reason");
-    
-    const username = usernameInput ? usernameInput.value.trim() : "";
-    const reason = reasonInput ? reasonInput.value.trim() : "";
-    
-    if (!username) {
-        showNotification("Введите имя пользователя", "error");
-        return;
-    }
-    
-    if (!reason) {
-        showNotification("Введите причину бана", "error");
-        return;
-    }
-    
-    banUser(username, reason).then(success => {
-        if (success) {
-            if (usernameInput) usernameInput.value = "";
-            if (reasonInput) reasonInput.value = "";
-        }
-    });
-}
-
-function addBanByStaticId() {
-    const staticIdInput = document.getElementById("ban-staticid");
-    const reasonInput = document.getElementById("ban-reason-static");
-    
-    const staticId = staticIdInput ? staticIdInput.value.trim() : "";
-    const reason = reasonInput ? reasonInput.value.trim() : "";
-    
-    if (!staticId) {
-        showNotification("Введите STATIC ID", "error");
-        return;
-    }
-    
-    if (!reason) {
-        showNotification("Введите причину бана", "error");
-        return;
-    }
-    
-    banByStaticId(staticId, reason).then(success => {
-        if (success) {
-            if (staticIdInput) staticIdInput.value = "";
-            if (reasonInput) reasonInput.value = "";
-        }
-    });
-}
-
-/* ===== ЛОГИКА ВХОДА С ПРОВЕРКОЙ БАНОВ И STATIC ID ===== */
-function login(){
-    const input = document.getElementById("password").value.trim();
-    const usernameInput = document.getElementById("username");
-    const username = usernameInput ? usernameInput.value.trim() : "";
-    
-    const errorElement = document.getElementById("login-error");
-    if (errorElement) errorElement.textContent = "";
-    
-    if (!username) {
-        showLoginError("ВВЕДИТЕ ПСЕВДОНИМ");
-        return;
-    }
-    
-    const banCheck = checkIfBanned(username);
-    if (banCheck.banned) {
-        showBannedScreen(banCheck);
-        return;
-    }
-    
-    // Загружаем пароли из БД
-    db.ref('mlk_passwords').once('value').then(snapshot => {
-        const passwords = snapshot.val() || {};
-        
-        const curatorHash = simpleHash(passwords.curator || "123");
-        const seniorHash = simpleHash(password.curator || "SENIOR123");
-        const adminHash = simpleHash(passwords.admin || "EOD");
-        const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
-        
-        const existingUser = users.find(user => 
-            user.username.toLowerCase() === username.toLowerCase()
-        );
-        
-        /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
-        const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
-            protectedUser.toLowerCase() === username.toLowerCase()
-        );
-
-        if (isProtectedUser) {
-            if (input === passwords.special) {
-                if (!existingUser) {
-                    const staticId = generateStaticId(username);
-                    const newUser = {
-                        username: username,
-                        staticId: staticId,
-                        role: CREATOR_RANK.name,
-                        rank: CREATOR_RANK.level,
-                        registrationDate: new Date().toLocaleString(),
-                        lastLogin: new Date().toLocaleString()
-                    };
-                    
-                    db.ref('mlk_users').push(newUser).then(() => {
-                        loadData(() => {
-                            CURRENT_ROLE = CREATOR_RANK.name;
-                            CURRENT_USER = username;
-                            CURRENT_RANK = CREATOR_RANK;
-                            CURRENT_STATIC_ID = staticId;
-                            completeLogin();
-                        });
-                    });
-                } else {
-                    db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-                    
-                    CURRENT_ROLE = CREATOR_RANK.name;
-                    CURRENT_USER = username;
-                    CURRENT_RANK = CREATOR_RANK;
-                    CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(username);
-                    completeLogin();
-                }
-                return;
-            } else {
-                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-                return;
-            }
-        }
-        
-        /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
-        if (!existingUser) {
-            let userRank = RANKS.CURATOR;
-            
-            if (simpleHash(input) === adminHash) {
-                const isInWhitelist = whitelist.some(user => 
-                    user.username.toLowerCase() === username.toLowerCase()
-                );
-                
-                if (!isInWhitelist) {
-                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
-                    return;
-                }
-                userRank = RANKS.ADMIN;
-            } else if (simpleHash(input) === curatorHash) {
-                userRank = RANKS.CURATOR;
-            } else {
-                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-                return;
-            }
-            
-            const staticId = generateStaticId(username);
-            const newUser = {
-                username: username,
-                staticId: staticId,
-                role: userRank.name,
-                rank: userRank.level,
-                registrationDate: new Date().toLocaleString(),
-                lastLogin: new Date().toLocaleString()
-            };
-            
-            db.ref('mlk_users').push(newUser).then(() => {
-                loadData(() => {
-                    CURRENT_ROLE = userRank.name;
-                    CURRENT_USER = username;
-                    CURRENT_RANK = userRank;
-                    CURRENT_STATIC_ID = staticId;
-                    completeLogin();
-                });
-            });
-            return;
-        }
-        
-        /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
-        else {
-            let isValidPassword = false;
-            let userRank = RANKS.CURATOR;
-            
-            if (existingUser.role === RANKS.ADMIN.name) {
-                userRank = RANKS.ADMIN;
-            } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
-                userRank = RANKS.SENIOR_CURATOR;
-            } else {
-                userRank = RANKS.CURATOR;
-            }
-            
-            const inputHash = simpleHash(input);
-            
-            if (userRank.level >= RANKS.ADMIN.level && inputHash === adminHash) {
-                isValidPassword = true;
-            } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && inputHash === adminHash) {
-                isValidPassword = true;
-            } else if (inputHash === curatorHash) {
-                isValidPassword = true;
-            }
-            
-            if (!isValidPassword) {
-                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
-                return;
-            }
-            
-            db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-            
-            CURRENT_ROLE = userRank.name;
-            CURRENT_USER = username;
-            CURRENT_RANK = userRank;
-            CURRENT_STATIC_ID = existingUser.staticId;
-            completeLogin();
-        }
-    }).catch(error => {
-        console.error("Ошибка загрузки паролей:", error);
-        showLoginError("ОШИБКА СИСТЕМЫ");
-    });
-}
- 
+/* ===== ЭКРАН БАНА ===== */
 function showBannedScreen(banInfo) {
     const loginScreen = document.getElementById("login-screen");
     if (!loginScreen) return;
@@ -976,6 +1034,7 @@ function completeLogin() {
 
 /* ===== UI ИНИЦИАЛИЗАЦИЯ ===== */
 document.addEventListener('DOMContentLoaded', function() {
+    // Обновление времени
     function updateTime() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ru-RU', {
@@ -984,15 +1043,24 @@ document.addEventListener('DOMContentLoaded', function() {
             second: '2-digit',
             hour12: false
         });
+        
+        const dateString = now.toLocaleDateString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+        
         const timeElement = document.getElementById('current-time');
-        if (timeElement) {
-            timeElement.textContent = timeString;
-        }
+        const dateElement = document.getElementById('current-date');
+        
+        if (timeElement) timeElement.textContent = timeString;
+        if (dateElement) dateElement.textContent = dateString;
     }
     
     setInterval(updateTime, 1000);
     updateTime();
     
+    // Восстановление сессии или настройка входа
     if (restoreSession()) {
         loadData(() => {
             const loginScreen = document.getElementById("login-screen");
@@ -1038,7 +1106,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ===== НАВИГАЦИЯ И SIDEBAR ===== */
-function setupSidebar(){
+function setupSidebar() {
     const sidebar = document.getElementById("sidebar");
     const navMenu = document.getElementById("nav-menu");
     
@@ -1074,7 +1142,6 @@ function setupSidebar(){
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
-        /* === СТРОКА 1 === */
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
@@ -1132,6 +1199,8 @@ function logout() {
     document.querySelectorAll('.nav-button').forEach(btn => {
         btn.classList.remove('active');
     });
+    
+    showNotification("Сессия завершена", "info");
 }
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
@@ -1162,50 +1231,50 @@ function updateSystemPrompt(message) {
 }
 
 /* ===== ЗАГРУЗКА ОТЧЕТОВ ===== */
-function loadReports(callback){
-    db.ref('mlk_reports').once('value').then(snapshot=>{
+function loadReports(callback) {
+    db.ref('mlk_reports').once('value').then(snapshot => {
         const data = snapshot.val() || {};
-        reports = Object.keys(data).map(key => ({...data[key], id:key}));
-        if(callback) callback();
+        reports = Object.keys(data).map(key => ({...data[key], id: key}));
+        if (callback) callback();
     }).catch(error => {
         console.error("Ошибка загрузки отчетов:", error);
         showNotification("Ошибка загрузки отчетов", "error");
-        if(callback) callback();
+        if (callback) callback();
     });
 }
 
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
-function renderMLKScreen(){
+function renderMLKScreen() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    content.innerHTML = ''; 
-
+    content.innerHTML = '';
+    
     if (CURRENT_RANK.level === RANKS.CURATOR.level) {
         const btnContainer = document.createElement("div");
         btnContainer.style.display = "flex";
         btnContainer.style.justifyContent = "flex-end";
         btnContainer.style.marginBottom = "20px";
-
+        
         const addBtn = document.createElement("button");
         addBtn.className = "btn-primary";
         addBtn.innerHTML = '<i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ';
         addBtn.onclick = renderMLKForm;
-
+        
         btnContainer.appendChild(addBtn);
         content.appendChild(btnContainer);
     }
-
+    
     const listDiv = document.createElement("div");
     listDiv.id = "mlk-list";
     content.appendChild(listDiv);
-
+    
     renderMLKList();
 }
 
-function renderMLKForm(){
+function renderMLKForm() {
     const content = document.getElementById("content-body");
-    if (!content) return; 
-
+    if (!content) return;
+    
     content.innerHTML = `
         <div class="form-container">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
@@ -1235,38 +1304,41 @@ function renderMLKForm(){
     
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
     
-    document.getElementById("mlk-action").addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && e.ctrlKey) {
-            addMLKReport();
-        }
-    });
+    const actionTextarea = document.getElementById("mlk-action");
+    if (actionTextarea) {
+        actionTextarea.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                addMLKReport();
+            }
+        });
+    }
 }
 
-function addMLKReport(){
-    const tag = document.getElementById("mlk-tag").value.trim();
-    const action = document.getElementById("mlk-action").value.trim();
+function addMLKReport() {
+    const tag = document.getElementById("mlk-tag")?.value.trim() || "";
+    const action = document.getElementById("mlk-action")?.value.trim() || "";
     
-    if(!tag){ 
+    if (!tag) {
         showNotification("Введите идентификатор нарушителя", "error");
-        return; 
+        return;
     }
-    if(!action){ 
+    if (!action) {
         showNotification("Опишите нарушение", "error");
-        return; 
+        return;
     }
-
+    
     const report = {
-        tag, 
-        action, 
+        tag,
+        action,
         author: CURRENT_USER,
         authorStaticId: CURRENT_STATIC_ID,
         role: CURRENT_ROLE,
-        time: new Date().toLocaleString(), 
-        confirmed: false, 
+        time: new Date().toLocaleString(),
+        confirmed: false,
         deleted: false
     };
     
-    db.ref('mlk_reports').push(report).then(()=>{
+    db.ref('mlk_reports').push(report).then(() => {
         showNotification("Отчет успешно сохранен", "success");
         loadReports(renderMLKScreen);
     }).catch(error => {
@@ -1274,35 +1346,35 @@ function addMLKReport(){
     });
 }
 
-function renderMLKList(){
+function renderMLKList() {
     const listDiv = document.getElementById("mlk-list");
-    if (!listDiv) return; 
+    if (!listDiv) return;
     
-    const filteredReports = (CURRENT_RANK.level === RANKS.CURATOR.level) 
+    const filteredReports = (CURRENT_RANK.level === RANKS.CURATOR.level)
         ? reports.filter(r => r.author === CURRENT_USER)
         : reports;
-
-    if(filteredReports.length===0){ 
-        listDiv.innerHTML=`
+    
+    if (filteredReports.length === 0) {
+        listDiv.innerHTML = `
             <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
                 <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 20px;"></i>
                 <h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3>
                 <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ</p>
             </div>
-        `; 
-        return; 
+        `;
+        return;
     }
-
-    listDiv.innerHTML = ''; 
-
-    filteredReports.forEach(r=>{
+    
+    listDiv.innerHTML = '';
+    
+    filteredReports.forEach(r => {
         const card = document.createElement("div");
         card.className = "report-card";
         
-        let status = r.deleted ? 'удален' : (r.confirmed?'подтвержден':'рассматривается');
-        let statusClass = r.deleted ? 'status-deleted' : (r.confirmed?'status-confirmed':'status-pending');
-        let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed?'fa-check':'fa-clock');
-
+        let status = r.deleted ? 'удален' : (r.confirmed ? 'подтвержден' : 'рассматривается');
+        let statusClass = r.deleted ? 'status-deleted' : (r.confirmed ? 'status-confirmed' : 'status-pending');
+        let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed ? 'fa-check' : 'fa-clock');
+        
         card.innerHTML = `
             <div class="report-header">
                 <div class="report-title">
@@ -1343,14 +1415,19 @@ function renderMLKList(){
 }
 
 /* ===== СТРАНИЦА ВСЕХ ОТЧЕТОВ ===== */
-function renderReports(){
+function renderReports() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK){ 
-        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
-        return; 
+    
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+        return;
     }
-
+    
+    const pendingReports = reports.filter(r => !r.confirmed && !r.deleted).length;
+    const confirmedReports = reports.filter(r => r.confirmed).length;
+    const deletedReports = reports.filter(r => r.deleted).length;
+    
     let html = `
         <div style="margin-bottom: 30px;">
             <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
@@ -1360,31 +1437,30 @@ function renderReports(){
         </div>
     `;
     
-    if(reports.length===0){ 
-        html+=`
+    if (reports.length === 0) {
+        html += `
             <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
                 <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px;"></i>
                 <h3>БАЗА ДАННЫХ ПУСТА</h3>
                 <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
             </div>
-        `; 
-    }
-    else{
-        html+=`
+        `;
+    } else {
+        html += `
             <div class="dashboard-grid" style="margin-bottom: 30px;">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-clock"></i></div>
-                    <div class="card-value">${reports.filter(r => !r.confirmed && !r.deleted).length}</div>
+                    <div class="card-value">${pendingReports}</div>
                     <div class="card-label">НА РАССМОТРЕНИИ</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-check"></i></div>
-                    <div class="card-value">${reports.filter(r => r.confirmed).length}</div>
+                    <div class="card-value">${confirmedReports}</div>
                     <div class="card-label">ПОДТВЕРЖДЕНО</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-trash"></i></div>
-                    <div class="card-value">${reports.filter(r => r.deleted).length}</div>
+                    <div class="card-value">${deletedReports}</div>
                     <div class="card-label">УДАЛЕНО</div>
                 </div>
             </div>
@@ -1404,10 +1480,10 @@ function renderReports(){
                 <tbody>
         `;
         
-        reports.forEach(r=>{
+        reports.forEach(r => {
             let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
-            let statusClass = r.deleted ? "status-deleted" : (r.confirmed?"status-confirmed":"status-pending");
-            let statusIcon = r.deleted ? "fa-trash" : (r.confirmed?"fa-check":"fa-clock");
+            let statusClass = r.deleted ? "status-deleted" : (r.confirmed ? "status-confirmed" : "status-pending");
+            let statusIcon = r.deleted ? "fa-trash" : (r.confirmed ? "fa-check" : "fa-clock");
             
             const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
                 `<div class="table-actions">
@@ -1419,8 +1495,8 @@ function renderReports(){
                     </button>
                 </div>` :
                 '';
-
-            html+=`<tr>
+            
+            html += `<tr>
                 <td><i class="fas fa-user-tag"></i> ${r.tag || '—'}</td>
                 <td>${r.action || '—'}</td>
                 <td><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</td>
@@ -1435,16 +1511,21 @@ function renderReports(){
             </tr>`;
         });
         
-        html+="</tbody></table>";
+        html += "</tbody></table>";
     }
     
-    content.innerHTML=html;
+    content.innerHTML = html;
 }
 
 /* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
-function renderPasswords() {
+window.renderPasswords = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
+    
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+        return;
+    }
     
     content.innerHTML = `
         <div class="form-container">
@@ -1473,10 +1554,25 @@ function renderPasswords() {
             </div>
             
             <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <div class="card-icon"><i class="fas fa-star"></i></div>
                 <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
                 <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРЫМИ ДЛЯ ВХОДА
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="senior-password" class="form-input" 
+                           value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('senior')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="admin-password" class="form-input" 
@@ -1491,7 +1587,7 @@ function renderPasswords() {
                 <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
                 <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
                 <p style="color: #8f9779; margin-bottom: 15px;">
-                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ
+                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ
                 </p>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="password" id="special-password" class="form-input" 
@@ -1507,7 +1603,7 @@ function renderPasswords() {
     `;
 }
 
-function updatePassword(type) {
+window.updatePassword = function(type) {
     const inputId = type + "-password";
     const input = document.getElementById(inputId);
     const newPassword = input ? input.value.trim() : "";
@@ -1536,7 +1632,7 @@ function updatePassword(type) {
 }
 
 /* ===== СТРАНИЦА СПИСКА ДОСТУПА ===== */
-function renderWhitelist() {
+window.renderWhitelist = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -1552,7 +1648,7 @@ function renderWhitelist() {
             
             <div class="zone-card" style="margin-bottom: 30px;">
                 <div class="card-icon"><i class="fas fa-user-plus"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСКА ДОСТУПА</h4>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
                 <div style="display: flex; gap: 10px; align-items: center;">
                     <input type="text" id="new-whitelist-user" class="form-input" 
                            placeholder="ВВЕДИТЕ ПСЕВДОНИМ">
@@ -1634,7 +1730,7 @@ function renderWhitelistTable() {
     });
 }
 
-function addToWhitelist() {
+window.addToWhitelist = function() {
     const input = document.getElementById("new-whitelist-user");
     const username = input ? input.value.trim() : "";
     
@@ -1673,7 +1769,7 @@ function addToWhitelist() {
     });
 }
 
-function removeFromWhitelist(id) {
+window.removeFromWhitelist = function(id) {
     const userToRemove = whitelist.find(user => user.id === id);
     
     if (!userToRemove) return;
@@ -1696,7 +1792,7 @@ function removeFromWhitelist(id) {
 }
 
 /* ===== СТРАНИЦА ПОЛЬЗОВАТЕЛЕЙ ===== */
-function renderUsers() {
+window.renderUsers = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -1888,7 +1984,7 @@ function renderUsersTable() {
     });
 }
 
-function showBanModal(username) {
+window.showBanModal = function(username) {
     const modalHTML = `
         <div id="ban-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
             <div style="background: rgba(30, 32, 28, 0.95); border: 1px solid #b43c3c; padding: 30px; max-width: 500px; width: 90%;">
@@ -1924,14 +2020,14 @@ function showBanModal(username) {
     document.body.appendChild(modalDiv);
 }
 
-function closeBanModal() {
+window.closeBanModal = function() {
     const modal = document.getElementById('ban-modal');
     if (modal && modal.parentNode) {
         modal.parentNode.removeChild(modal);
     }
 }
 
-function processBan(username) {
+window.processBan = function(username) {
     const reasonInput = document.getElementById('modal-ban-reason');
     const reason = reasonInput ? reasonInput.value.trim() : "";
     
@@ -1948,7 +2044,7 @@ function processBan(username) {
     });
 }
 
-function promoteToSeniorCurator(userId) {
+window.promoteToSeniorCurator = function(userId) {
     const user = users.find(u => u.id === userId);
     if (!user) return;
     
@@ -1967,7 +2063,7 @@ function promoteToSeniorCurator(userId) {
     });
 }
 
-function removeUser(id) {
+window.removeUser = function(id) {
     const userToRemove = users.find(user => user.id === id);
     
     if (!userToRemove) return;
@@ -1994,7 +2090,7 @@ function removeUser(id) {
 }
 
 /* ===== СТРАНИЦА СИСТЕМЫ ===== */
-function renderSystem(){
+window.renderSystem = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -2116,8 +2212,8 @@ function renderSystem(){
     `;
 }
 
-/* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
-function renderWebhookManager() {
+/* ===== ФУНКЦИИ ДЛЯ DISCORD ВЕБХУКОВ ===== */
+window.renderWebhookManager = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -2128,17 +2224,12 @@ function renderWebhookManager() {
     
     content.innerHTML = `
         <div class="form-container">
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-broadcast-tower"></i> УПРАВЛЕНИЕ DISCORD ВЕБХУКАМИ
+            <h2 style="color: #5865F2; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fab fa-discord"></i> DISCORD ВЕБХУКИ
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                НАСТРОЙКА И ТЕСТИРОВАНИЕ ВЕБХУКОВ ДЛЯ ОТПРАВКИ УВЕДОМЛЕНИЙ В DISCORD<br>
-                <span style="color: #c0b070;">СИСТЕМА ПОДДЕРЖИВАЕТ КАСТОМНЫЕ ВЛОЖЕНИЯ И ШАБЛОНЫ</span>
-            </p>
-            
             <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
-                <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
+                <div class="card-icon" style="color: #5865F2;"><i class="fas fa-broadcast-tower"></i></div>
                 <h4 style="color: #5865F2; margin-bottom: 15px;">НАСТРОЙКА ВЕБХУКА</h4>
                 
                 <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -2147,9 +2238,6 @@ function renderWebhookManager() {
                         <input type="text" id="webhook-url" class="form-input" 
                                placeholder="https://discord.com/api/webhooks/..."
                                value="${DISCORD_WEBHOOK_URL || ''}">
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Получить URL можно в настройках канала Discord: Канал → Редактировать канал → Интеграции → Вебхуки
-                        </div>
                     </div>
                     
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -2167,250 +2255,57 @@ function renderWebhookManager() {
                         </div>
                     </div>
                     
-                    <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
-                        <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #5865F2;">
-                            <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
-                                 style="width: 100%; height: 100%; object-fit: cover;"
-                                 onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                        </div>
-                        <div>
-                            <div style="color: #c0b070; font-weight: 500;">${DISCORD_WEBHOOK_NAME}</div>
-                            <div style="color: #8f9779; font-size: 0.8rem;">Превью отправителя</div>
-                        </div>
-                    </div>
-                    
                     <div style="display: flex; gap: 10px;">
                         <button onclick="testWebhook()" class="btn-primary" style="border-color: #5865F2;">
-                            <i class="fas fa-broadcast-tower"></i> ТЕСТИРОВАТЬ
+                            <i class="fas fa-broadcast-tower"></i> ТЕСТ
                         </button>
                         <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c;">
-                            <i class="fas fa-save"></i> СОХРАНИТЬ ВСЕ
-                        </button>
-                        <button onclick="clearWebhook()" class="btn-secondary">
-                            <i class="fas fa-trash"></i> ОЧИСТИТЬ
+                            <i class="fas fa-save"></i> СОХРАНИТЬ
                         </button>
                     </div>
                 </div>
             </div>
             
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #c0b070;">
-                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-paper-plane"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ОТПРАВИТЬ СООБЩЕНИЕ</h4>
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-history"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ИСТОРИЯ ВЕБХУКОВ</h4>
                 
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label class="form-label">ТИП СООБЩЕНИЯ</label>
-                        <select id="message-type" class="form-input" onchange="changeMessageType()">
-                            <option value="simple">Простое сообщение</option>
-                            <option value="embed">Сообщение с Embed</option>
-                            <option value="report">Уведомление об отчете</option>
-                            <option value="ban">Уведомление о бане</option>
-                            <option value="user_join">Новый пользователь</option>
-                            <option value="admin_alert">Алерт админам</option>
-                            <option value="custom">Кастомный JSON</option>
-                        </select>
-                    </div>
-                    
-                    <!-- ПРОСТОЕ СООБЩЕНИЕ -->
-                    <div id="simple-message" class="message-section">
-                        <label class="form-label">ТЕКСТ СООБЩЕНИЯ</label>
-                        <textarea id="message-content" class="form-textarea" rows="6" 
-                                  placeholder="Введите текст сообщения..."></textarea>
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Простой текст будет отправлен как обычное сообщение Discord
-                        </div>
-                    </div>
-                    
-                    <!-- СООБЩЕНИЕ С EMBED -->
-                    <div id="embed-message" class="message-section" style="display: none;">
-                        <div>
-                            <label class="form-label">ОСНОВНОЙ ТЕКСТ (ОПЦИОНАЛЬНО)</label>
-                            <textarea id="embed-content" class="form-textarea" rows="3" 
-                                      placeholder="Текст перед Embed (опционально)..."></textarea>
-                        </div>
-                        
-                        <div style="margin-top: 15px;">
-                            <label class="form-label">НАСТРОЙКИ EMBED</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                <div>
-                                    <label class="form-label">ЗАГОЛОВОК</label>
-                                    <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed">
-                                </div>
-                                <div>
-                                    <label class="form-label">ЦВЕТ (HEX)</label>
-                                    <input type="text" id="embed-color" class="form-input" placeholder="#5865F2" value="#5865F2">
-                                </div>
-                            </div>
-                            <div style="margin-bottom: 15px;">
-                                <label class="form-label">ОПИСАНИЕ</label>
-                                <textarea id="embed-description" class="form-textarea" rows="6" 
-                                          placeholder="Описание embed..."></textarea>
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                <div>
-                                    <label class="form-label">ИМЯ АВТОРА</label>
-                                    <input type="text" id="embed-author" class="form-input" placeholder="Имя автора">
-                                </div>
-                                <div>
-                                    <label class="form-label">URL ИЗОБРАЖЕНИЯ</label>
-                                    <input type="text" id="embed-thumbnail" class="form-input" placeholder="URL изображения">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- КАСТОМНЫЙ JSON -->
-                    <div id="custom-message" class="message-section" style="display: none;">
-                        <label class="form-label">JSON ПАЙЛОАД</label>
-                        <textarea id="custom-payload" class="form-textarea" rows="10" 
-                                  placeholder='{
-  "content": "Ваше сообщение",
-  "username": "Бот",
-  "avatar_url": "https://example.com/avatar.png",
-  "embeds": [
-    {
-      "title": "Заголовок",
-      "description": "Описание",
-      "color": 5793266
-    }
-  ]
-}'
-                                  style="font-family: 'Courier New', monospace; font-size: 0.9rem;"></textarea>
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Введите кастомный JSON для отправки в Discord
-                        </div>
-                    </div>
-                    
-                    <button onclick="sendDiscordMessage()" class="btn-primary" style="border-color: #5865F2;">
-                        <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ В DISCORD
-                    </button>
-                </div>
-            </div>
-            
-            <div class="zone-card" style="border-color: #8cb43c;">
-                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-code"></i></div>
-                <h4 style="color: #8cb43c; margin-bottom: 15px;">ШАБЛОНЫ СООБЩЕНИЙ</h4>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                    <button onclick="loadTemplate('report')" class="template-btn">
-                        <i class="fas fa-file-alt"></i>
-                        <span>ШАБЛОН ОТЧЕТА</span>
-                    </button>
-                    <button onclick="loadTemplate('ban')" class="template-btn">
-                        <i class="fas fa-ban"></i>
-                        <span>ШАБЛОН БАНА</span>
-                    </button>
-                    <button onclick="loadTemplate('user_join')" class="template-btn">
-                        <i class="fas fa-user-plus"></i>
-                        <span>НОВЫЙ ПОЛЬЗОВАТЕЛЬ</span>
-                    </button>
-                    <button onclick="loadTemplate('admin_alert')" class="template-btn">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>АЛЕРТ АДМИНАМ</span>
-                    </button>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
-                    <h5 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ВЕБХУКОВ</h5>
-                    <div style="max-height: 150px; overflow-y: auto;">
-                        <div id="webhook-history">
-                            ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 10px;">История пуста</div>' : ''}
-                        </div>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <div id="webhook-history">
+                        ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 20px;">История пуста</div>' : ''}
                     </div>
                 </div>
             </div>
         </div>
     `;
     
-    // Обновляем превью аватарки при изменении URL
-    const avatarInput = document.getElementById('webhook-avatar');
-    const avatarPreview = document.getElementById('avatar-preview');
-    const nameInput = document.getElementById('webhook-name');
-
-    if (avatarInput && avatarPreview) {
-        avatarInput.addEventListener('input', function() {
-            avatarPreview.src = this.value || 'https://cdn.discordapp.com/embed/avatars/0.png';
-        });
-    }
-
     if (webhooks.length > 0) {
         renderWebhookHistory();
     }
 }
 
-/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
-/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
-function changeMessageType() {
-    const type = document.getElementById('message-type').value;
-    
-    // Скрыть все секции
-    document.querySelectorAll('.message-section').forEach(section => {
-        section.style.display = 'none';
-    });
-    
-    // Показать нужную секцию
-    if (type === 'custom') {
-        document.getElementById('custom-message').style.display = 'block';
-    } else if (type === 'embed') {
-        document.getElementById('embed-message').style.display = 'block';
-        document.getElementById('simple-message').style.display = 'block';
-    } else {
-        document.getElementById('simple-message').style.display = 'block';
+window.testWebhook = function() {
+    if (!DISCORD_WEBHOOK_URL) {
+        showNotification('Сначала настройте вебхук', 'error');
+        return;
     }
+    
+    const payload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        content: null,
+        embeds: [{
+            title: "✅ ТЕСТ ВЕБХУКА",
+            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
+            color: 5793266,
+            timestamp: new Date().toISOString()
+        }]
+    };
+    
+    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, true);
 }
 
-function loadTemplate(templateType) {
-    const messageContent = document.getElementById('message-content');
-    const embedTitle = document.getElementById('embed-title');
-    const embedDescription = document.getElementById('embed-description');
-    const embedColor = document.getElementById('embed-color');
-    const embedAuthor = document.getElementById('embed-author');
-    const embedContent = document.getElementById('embed-content');
-    
-    switch(templateType) {
-        case 'report':
-            if (embedContent) embedContent.value = '🆕 НОВЫЙ ОТЧЕТ В СИСТЕМЕ';
-            if (embedTitle) embedTitle.value = 'ОТЧЕТ МЛК';
-            if (embedDescription) embedDescription.value = `**Автор:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}\n**Статус:** На рассмотрении\n\nТребуется проверка администратора.`;
-            if (embedColor) embedColor.value = '#5865F2';
-            if (embedAuthor) embedAuthor.value = 'Система отчетов Зоны';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'ban':
-            if (embedContent) embedContent.value = '🔨 ВЫДАН БАН ПОЛЬЗОВАТЕЛЮ';
-            if (embedTitle) embedTitle.value = 'БЛОКИРОВКА ПОЛЬЗОВАТЕЛЯ';
-            if (embedDescription) embedDescription.value = `**Нарушитель:** USERNAME\n**Причина:** НАРУШЕНИЕ ПРАВИЛ\n**Забанил:** ${CURRENT_USER}\n**Дата:** ${new Date().toLocaleString()}\n**Static ID:** UNKNOWN`;
-            if (embedColor) embedColor.value = '#b43c3c';
-            if (embedAuthor) embedAuthor.value = 'Система банов';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'user_join':
-            if (embedContent) embedContent.value = '👤 НОВЫЙ СТАЛКЕР В СИСТЕМЕ';
-            if (embedTitle) embedTitle.value = 'РЕГИСТРАЦИЯ';
-            if (embedDescription) embedDescription.value = `**Имя:** НОВЫЙ ПОЛЬЗОВАТЕЛЬ\n**Ранг:** КУРАТОР\n**Static ID:** GENERATED-ID\n**Дата:** ${new Date().toLocaleString()}\n**IP:** 192.168.1.1`;
-            if (embedColor) embedColor.value = '#8cb43c';
-            if (embedAuthor) embedAuthor.value = 'Система пользователей';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'admin_alert':
-            if (embedContent) embedContent.value = '🚨 ВНИМАНИЕ АДМИНИСТРАТОРАМ';
-            if (embedTitle) embedTitle.value = 'ВАЖНОЕ УВЕДОМЛЕНИЕ';
-            if (embedDescription) embedDescription.value = `**От:** ${CURRENT_USER}\n**Приоритет:** ВЫСОКИЙ\n**Сообщение:** ТРЕБУЕТСЯ ВАШЕ ВНИМАНИЕ\n**Время:** ${new Date().toLocaleString()}\n**Сектор:** Припять-12`;
-            if (embedColor) embedColor.value = '#c0b070';
-            if (embedAuthor) embedAuthor.value = 'Система оповещений';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-    }
-}  // ← ЗАКРЫВАЮЩАЯ ФИГУРНАЯ СКОБКА ДЛЯ loadTemplate
-
-function saveWebhook() {
+window.saveWebhook = function() {
     const urlInput = document.getElementById('webhook-url');
     const nameInput = document.getElementById('webhook-name');
     const avatarInput = document.getElementById('webhook-avatar');
@@ -2429,16 +2324,10 @@ function saveWebhook() {
         return;
     }
     
-    if (!name) {
-        showNotification('Введите имя вебхука', 'error');
-        return;
-    }
-    
     DISCORD_WEBHOOK_URL = url;
     DISCORD_WEBHOOK_NAME = name;
     DISCORD_WEBHOOK_AVATAR = avatar || "https://i.imgur.com/6B7zHqj.png";
     
-    // Сохраняем все настройки в базу данных
     const updates = {
         'mlk_settings/webhook_url': url,
         'mlk_settings/webhook_name': name,
@@ -2447,166 +2336,13 @@ function saveWebhook() {
     
     db.ref().update(updates).then(() => {
         showNotification('Настройки вебхука сохранены', 'success');
-        addWebhookHistory('Сохранены настройки вебхука', 'success');
-        
-        // Обновляем превью
-        const avatarPreview = document.getElementById('avatar-preview');
-        if (avatarPreview) {
-            avatarPreview.src = DISCORD_WEBHOOK_AVATAR;
-        }
     }).catch(error => {
         showNotification('Ошибка сохранения: ' + error.message, 'error');
     });
 }
 
-function clearWebhook() {
-    if (confirm('Очистить все настройки вебхука?')) {
-        DISCORD_WEBHOOK_URL = null;
-        DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
-        DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
-        
-        const urlInput = document.getElementById('webhook-url');
-        const nameInput = document.getElementById('webhook-name');
-        const avatarInput = document.getElementById('webhook-avatar');
-        const avatarPreview = document.getElementById('avatar-preview');
-        
-        if (urlInput) urlInput.value = '';
-        if (nameInput) nameInput.value = 'Система отчетов Зоны';
-        if (avatarInput) avatarInput.value = 'https://i.imgur.com/6B7zHqj.png';
-        if (avatarPreview) avatarPreview.src = 'https://i.imgur.com/6B7zHqj.png';
-        
-        const updates = {
-            'mlk_settings/webhook_url': null,
-            'mlk_settings/webhook_name': null,
-            'mlk_settings/webhook_avatar': null
-        };
-        
-        db.ref().update(updates).then(() => {
-            showNotification('Настройки вебхука очищены', 'success');
-            addWebhookHistory('Настройки вебхука очищены', 'info');
-        });
-    }
-}
-
-function testWebhook() {
-    const urlInput = document.getElementById('webhook-url');
-    const url = urlInput ? urlInput.value.trim() : '';
-    const nameInput = document.getElementById('webhook-name');
-    const name = nameInput ? nameInput.value.trim() : 'Система отчетов Зоны';
-    const avatarInput = document.getElementById('webhook-avatar');
-    const avatar = avatarInput ? avatarInput.value.trim() : 'https://i.imgur.com/6B7zHqj.png';
-    
-    if (!url) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const testPayload = {
-        username: name,
-        avatar_url: avatar,
-        content: null,
-        embeds: [{
-            title: "✅ ТЕСТ ВЕБХУКА",
-            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
-            color: 5793266,
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: "Система вебхуков | Версия 1.5"
-            }
-        }]
-    };
-    
-    sendDiscordWebhook(url, testPayload, true);
-}
-
-function sendDiscordMessage() {
-    if (!DISCORD_WEBHOOK_URL) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const type = document.getElementById('message-type').value;
-    let payload = {};
-    
-    switch(type) {
-        case 'simple':
-            const content = document.getElementById('message-content').value.trim();
-            if (!content) {
-                showNotification('Введите текст сообщения', 'error');
-                return;
-            }
-            payload = { 
-                content,
-                username: DISCORD_WEBHOOK_NAME,
-                avatar_url: DISCORD_WEBHOOK_AVATAR
-            };
-            break;
-            
-        case 'embed':
-            const embedTitle = document.getElementById('embed-title').value.trim();
-            const embedDescription = document.getElementById('embed-description').value.trim();
-            const embedColor = document.getElementById('embed-color').value.trim();
-            const embedAuthor = document.getElementById('embed-author').value.trim();
-            const embedThumbnail = document.getElementById('embed-thumbnail').value.trim();
-            const embedContent = document.getElementById('embed-content').value.trim();
-            
-            if (!embedDescription) {
-                showNotification('Введите описание embed', 'error');
-                return;
-            }
-            
-            payload = {
-                content: embedContent || null,
-                username: DISCORD_WEBHOOK_NAME,
-                avatar_url: DISCORD_WEBHOOK_AVATAR,
-                embeds: [{
-                    title: embedTitle || undefined,
-                    description: embedDescription,
-                    color: hexToDecimal(embedColor) || 5793266,
-                    author: embedAuthor ? { name: embedAuthor } : undefined,
-                    thumbnail: embedThumbnail ? { url: embedThumbnail } : undefined,
-                    timestamp: new Date().toISOString()
-                }]
-            };
-            break;
-            
-        case 'custom':
-            const customJson = document.getElementById('custom-payload').value.trim();
-            if (!customJson) {
-                showNotification('Введите JSON payload', 'error');
-                return;
-            }
-            try {
-                payload = JSON.parse(customJson);
-                if (!payload.username) payload.username = DISCORD_WEBHOOK_NAME;
-                if (!payload.avatar_url) payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
-            } catch (e) {
-                showNotification('Ошибка в JSON: ' + e.message, 'error');
-                return;
-            }
-            break;
-            
-        case 'report':
-        case 'ban':
-        case 'user_join':
-        case 'admin_alert':
-            loadTemplate(type);
-            sendDiscordMessage();
-            return;
-    }
-    
-    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
-}
-
 function sendDiscordWebhook(url, payload, isTest = false) {
     showNotification('Отправка сообщения в Discord...', 'info');
-    
-    if (!payload.username) {
-        payload.username = DISCORD_WEBHOOK_NAME;
-    }
-    if (!payload.avatar_url) {
-        payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
-    }
     
     fetch(url, {
         method: 'POST',
@@ -2619,13 +2355,11 @@ function sendDiscordWebhook(url, payload, isTest = false) {
         if (response.ok) {
             const message = isTest ? 'Тест вебхука выполнен успешно!' : 'Сообщение отправлено в Discord!';
             showNotification(message, 'success');
-            addWebhookHistory(isTest ? 'Тест вебхука' : 'Отправлено сообщение', 'success');
             
             const historyEntry = {
                 type: isTest ? 'test' : 'message',
                 timestamp: new Date().toLocaleString(),
-                user: CURRENT_USER,
-                payload: payload
+                user: CURRENT_USER
             };
             
             webhooks.unshift(historyEntry);
@@ -2635,51 +2369,12 @@ function sendDiscordWebhook(url, payload, isTest = false) {
             
             db.ref('mlk_webhooks').push(historyEntry);
         } else {
-            return response.text().then(text => {
-                throw new Error(`HTTP ${response.status}: ${text}`);
-            });
+            throw new Error(`HTTP ${response.status}`);
         }
     })
     .catch(error => {
-        const errorMessage = `Ошибка отправки: ${error.message}`;
-        showNotification(errorMessage, 'error');
-        addWebhookHistory('Ошибка отправки', 'error');
-        console.error('Discord webhook error:', error);
+        showNotification(`Ошибка отправки: ${error.message}`, 'error');
     });
-}
-
-function hexToDecimal(hex) {
-    if (!hex) return null;
-    hex = hex.replace('#', '');
-    return parseInt(hex, 16);
-}
-
-function addWebhookHistory(message, type) {
-    const historyDiv = document.getElementById('webhook-history');
-    if (!historyDiv) return;
-    
-    const entry = document.createElement('div');
-    entry.style.cssText = `
-        padding: 8px 10px;
-        margin-bottom: 5px;
-        border-left: 3px solid ${type === 'success' ? '#8cb43c' : type === 'error' ? '#b43c3c' : '#c0b070'};
-        background: rgba(40, 42, 36, 0.3);
-        font-size: 0.8rem;
-        color: #8f9779;
-    `;
-    
-    const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    entry.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-            <span style="color: ${type === 'success' ? '#8cb43c' : type === 'error' ? '#b43c3c' : '#c0b070'}">
-                <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}"></i>
-                ${message}
-            </span>
-            <span style="color: #6a6a5a;">${time}</span>
-        </div>
-    `;
-    
-    historyDiv.insertBefore(entry, historyDiv.firstChild);
 }
 
 function renderWebhookHistory() {
@@ -2715,11 +2410,3 @@ function renderWebhookHistory() {
         historyDiv.appendChild(div);
     });
 }
-
-
-/* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
-
-
-
-
-

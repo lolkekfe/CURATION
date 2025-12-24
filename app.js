@@ -232,20 +232,27 @@ function isIPLocked(ip) {
 
 /* ===== ВАЛИДАЦИЯ ПОЛЬЗОВАТЕЛЬСКОГО ВВОДА ===== */
 function validateUsername(username) {
+    // Проверка на undefined или null
+    if (!username) {
+        return { valid: false, message: "Имя пользователя не указано" };
+    }
+    
+    const trimmedUsername = username.trim();
+    
     // Проверка длины
-    if (username.length < 3 || username.length > 20) {
+    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
         return { valid: false, message: "Имя пользователя должно быть от 3 до 20 символов" };
     }
     
     // Проверка символов (только буквы, цифры, подчеркивание)
     const usernameRegex = /^[a-zA-Zа-яА-Я0-9_]+$/;
-    if (!usernameRegex.test(username)) {
+    if (!usernameRegex.test(trimmedUsername)) {
         return { valid: false, message: "Имя пользователя может содержать только буквы, цифры и подчеркивание" };
     }
     
     // Запрещенные имена
     const forbiddenNames = ['admin', 'root', 'system', 'administrator', 'модератор', 'куратор'];
-    if (forbiddenNames.includes(username.toLowerCase())) {
+    if (forbiddenNames.includes(trimmedUsername.toLowerCase())) {
         return { valid: false, message: "Это имя пользователя запрещено" };
     }
     
@@ -253,6 +260,11 @@ function validateUsername(username) {
 }
 
 function validatePassword(password) {
+    // Проверка на undefined или null
+    if (!password) {
+        return { valid: false, message: "Пароль не указан" };
+    }
+    
     // Проверка длины
     if (password.length < 6) {
         return { valid: false, message: "Пароль должен содержать минимум 6 символов" };
@@ -272,7 +284,6 @@ function validatePassword(password) {
     
     return { valid: true, message: "" };
 }
-
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
     const timestamp = Date.now().toString(36);
@@ -438,68 +449,99 @@ function loadData(callback) {
 }
 
 /* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
-async function createOrUpdatePasswords() {
-    const defaultPasswords = {
-        curator: "Curator123!",
-        senior: "SeniorCurator456!",
-        admin: "AdminSecure789!",
-        special: "CreatorMasterPass!@#"
-    };
-    
-    return db.ref('mlk_passwords').once('value').then(async snapshot => {
-        const existingPasswords = snapshot.val() || {};
-        const updatedPasswords = { ...defaultPasswords, ...existingPasswords };
+/* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
+function loadData(callback) {
+    db.ref('mlk_users').once('value').then(snapshot => {
+        const data = snapshot.val() || {};
+        // Безопасно преобразуем данные пользователей
+        users = Object.keys(data).map(key => {
+            const userData = data[key] || {};
+            return {
+                ...userData,
+                id: key,
+                username: userData.username || '',
+                staticId: userData.staticId || '',
+                role: userData.role || '',
+                rank: userData.rank || 1
+            };
+        });
         
-        // Шифруем пароли при первом сохранении
-        const shouldEncrypt = !existingPasswords.encrypted;
+        return db.ref('mlk_whitelist').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        // Безопасно преобразуем данные белого списка
+        whitelist = Object.keys(data).map(key => {
+            const wlData = data[key] || {};
+            return {
+                ...wlData,
+                id: key,
+                username: wlData.username || '',
+                staticId: wlData.staticId || '',
+                addedBy: wlData.addedBy || 'СИСТЕМА'
+            };
+        });
         
-        if (shouldEncrypt) {
-            const encryptedPasswords = {};
-            for (const [key, value] of Object.entries(updatedPasswords)) {
-                if (key !== 'encrypted') {
-                    const salt = generateSalt();
-                    const hash = await hashPassword(value, salt);
-                    encryptedPasswords[key] = {
-                        hash: hash,
-                        salt: salt,
-                        created: new Date().toLocaleString()
-                    };
-                }
-            }
-            encryptedPasswords.encrypted = true;
-            
-            return db.ref('mlk_passwords').set(encryptedPasswords).then(() => {
-                console.log("Пароли зашифрованы и сохранены в базе данных");
-                passwords = encryptedPasswords;
-                return encryptedPasswords;
+        return db.ref('mlk_passwords').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        passwords = data || {};
+        
+        // Проверяем наличие всех необходимых паролей
+        if (!passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
+            console.log("Не все пароли найдены, создаем недостающие...");
+            return createOrUpdatePasswords().then(() => {
+                return db.ref('mlk_passwords').once('value'); // Перезагружаем пароли
+            }).then(snapshot => {
+                passwords = snapshot.val() || {};
+                return db.ref('mlk_bans').once('value');
             });
         }
         
-        return db.ref('mlk_passwords').set(updatedPasswords).then(() => {
-            passwords = updatedPasswords;
-            return updatedPasswords;
-        });
-    }).catch(async error => {
-        console.error("Ошибка при создании паролей:", error);
-        
-        // Создаем новые зашифрованные пароли
-        const encryptedPasswords = {};
-        for (const [key, value] of Object.entries(defaultPasswords)) {
-            const salt = generateSalt();
-            const hash = await hashPassword(value, salt);
-            encryptedPasswords[key] = {
-                hash: hash,
-                salt: salt,
-                created: new Date().toLocaleString()
+        return db.ref('mlk_bans').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        // Безопасно преобразуем данные банов
+        bans = Object.keys(data).map(key => {
+            const banData = data[key] || {};
+            return {
+                ...banData,
+                id: key,
+                username: banData.username || '',
+                staticId: banData.staticId || '',
+                reason: banData.reason || 'Причина не указана',
+                bannedBy: banData.bannedBy || 'Система'
             };
-        }
-        encryptedPasswords.encrypted = true;
-        
-        return db.ref('mlk_passwords').set(encryptedPasswords).then(() => {
-            console.log("Созданы новые зашифрованные пароли");
-            passwords = encryptedPasswords;
-            return encryptedPasswords;
         });
+        
+        // Загружаем вебхуки
+        return db.ref('mlk_settings/webhook_url').once('value');
+    }).then(snapshot => {
+        DISCORD_WEBHOOK_URL = snapshot.val() || null;
+        return db.ref('mlk_settings/webhook_name').once('value');
+    }).then(snapshot => {
+        DISCORD_WEBHOOK_NAME = snapshot.val() || "Система отчетов Зоны";
+        return db.ref('mlk_settings/webhook_avatar').once('value');
+    }).then(snapshot => {
+        DISCORD_WEBHOOK_AVATAR = snapshot.val() || "https://i.imgur.com/6B7zHqj.png";
+        return db.ref('mlk_webhooks').once('value');
+    }).then(snapshot => {
+        const data = snapshot.val() || {};
+        webhooks = Object.keys(data).map(key => ({...data[key], id: key}));
+        webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        console.log("Система безопасности инициализирована");
+
+        if (whitelist.length === 0) {
+            return addProtectedUsersToWhitelist().then(() => {
+                if (callback) callback();
+            });
+        } else {
+            if (callback) callback();
+        }
+    }).catch(error => {
+        console.error("Ошибка загрузки данных:", error);
+        showNotification("Ошибка загрузки данных", "error");
+        if (callback) callback();
     });
 }
 
@@ -564,7 +606,7 @@ function changePassword(type, newPassword) {
 /* ===== СИСТЕМА БАНОВ ===== */
 function checkIfBanned(username) {
     // Проверяем, передан ли username
-    if (!username || username.trim() === '') {
+    if (!username || typeof username !== 'string' || username.trim() === '') {
         return { banned: false };
     }
     
@@ -573,7 +615,7 @@ function checkIfBanned(username) {
     
     // Ищем пользователя (используем trim для сравнения)
     const user = users.find(u => {
-        if (!u || !u.username) return false;
+        if (!u || !u.username || typeof u.username !== 'string') return false;
         return u.username.toLowerCase().trim() === usernameLower;
     });
     
@@ -587,7 +629,9 @@ function checkIfBanned(username) {
         if (!ban) return false;
         
         // Проверяем по username (с учетом регистра)
-        const banUsername = ban.username ? ban.username.toLowerCase().trim() : '';
+        const banUsername = ban.username && typeof ban.username === 'string' 
+            ? ban.username.toLowerCase().trim() 
+            : '';
         const banUsernameMatch = banUsername === usernameLower;
         
         // Проверяем по staticId
@@ -3376,4 +3420,5 @@ window.exportIPData = function() {
     });
 
 }
+
 

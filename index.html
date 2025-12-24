@@ -3,24 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Система управления КУРАЦИЯ EOD. Панель мониторинга и управления.">
+    <meta name="theme-color" content="#0a0e17">
+    
     <title>КУРАЦИЯ EOD | Система управления</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Шрифты -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Иконки -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Основные стили -->
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Иконка сайта -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
-    <!-- Фон системы -->
-    <div class="zone-bg"></div>
-    <div class="corruption-overlay"></div>
-    <div class="scan-lines"></div>
-    
-    <!-- Экран входа -->
-    <div id="login-screen" class="login-container">
-        <div class="zone-header">
-            <div class="system-status">
-                <div class="status-indicator active"></div>
+    <!-- Фоновые элементы -->
+    <div class="zone-bg" aria-hidden="true"></div>
+    <div class="corruption-overlay" aria-hidden="true"></div>
+    <div class="scan-lines" aria-hidden="true"></div>
+
+    <!-- Экран входа (виден по умолчанию) -->
+    <main id="login-screen" class="login-container" role="main">
+        <header class="zone-header">
+            <div class="system-status" role="status" aria-live="polite">
+                <div class="status-indicator active" aria-hidden="true"></div>
                 <span class="status-text">СИСТЕМА КУРАЦИИ ОНЛАЙН</span>
-                <div class="frequency-meter">
+                <div class="frequency-meter" aria-hidden="true">
                     <div class="frequency-bar"></div>
                     <div class="frequency-bar"></div>
                     <div class="frequency-bar"></div>
@@ -34,60 +48,60 @@
                 <span class="title-part">EOD</span>
             </h1>
             
-            <div class="security-level">
+            <div class="security-level" role="progressbar" aria-valuenow="64" aria-valuemin="0" aria-valuemax="100">
                 <div class="security-bar">
-                    <div class="security-progress"></div>
+                    <div class="security-progress" style="width: 64%"></div>
                 </div>
                 <span class="security-text">УРОВЕНЬ ДОСТУПА: 64%</span>
             </div>
-        </div>
+        </header>
         
-        <div class="login-terminal">
+        <section class="login-terminal" aria-label="Терминал аутентификации">
             <div class="terminal-frame">
-                <div class="frame-corner top-left"></div>
-                <div class="frame-corner top-right"></div>
-                <div class="frame-corner bottom-left"></div>
-                <div class="frame-corner bottom-right"></div>
+                <div class="frame-corner top-left" aria-hidden="true"></div>
+                <div class="frame-corner top-right" aria-hidden="true"></div>
+                <div class="frame-corner bottom-left" aria-hidden="true"></div>
+                <div class="frame-corner bottom-right" aria-hidden="true"></div>
                 
                 <div class="terminal-screen">
-                    <div class="screen-header">
-                        <div class="header-glow"></div>
-                        <span>АУТЕНТИФИКАЦИЯ</span>
-                        <span class="blink">_</span>
-                    </div>
+                    <header class="screen-header">
+                        <div class="header-glow" aria-hidden="true"></div>
+                        <h2>АУТЕНТИФИКАЦИЯ</h2>
+                        <span class="blink" aria-hidden="true">_</span>
+                    </header>
                     
                     <div class="screen-content">
                         <div class="access-line">
-                            <div class="line-number">[001]</div>
-                            <span class="prompt">> ИДЕНТИФИКАТОР:</span>
+                            <div class="line-number" aria-hidden="true">[001]</div>
+                            <label for="username" class="prompt">> ИДЕНТИФИКАТОР:</label>
                             <div class="input-wrapper">
-                                <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
+                                <input type="text" id="username" name="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="username" spellcheck="false" required>
+                                <div class="input-underline" aria-hidden="true"></div>
                             </div>
                         </div>
                         
                         <div class="access-line">
-                            <div class="line-number">[002]</div>
-                            <span class="prompt">> КОД ДОСТУПА:</span>
+                            <div class="line-number" aria-hidden="true">[002]</div>
+                            <label for="password" class="prompt">> КОД ДОСТУПА:</label>
                             <div class="input-wrapper">
-                                <input type="password" id="password" placeholder="ВВЕДИТЕ КОД" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
-                                <div class="encryption-indicator">
-                                    <i class="fas fa-lock"></i>
+                                <input type="password" id="password" name="password" placeholder="ВВЕДИТЕ КОД" autocomplete="current-password" spellcheck="false" required>
+                                <div class="input-underline" aria-hidden="true"></div>
+                                <div class="encryption-indicator" aria-label="Шифрование AES-256">
+                                    <i class="fas fa-lock" aria-hidden="true"></i>
                                     <span>AES-256</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="system-log">
+                        <div class="system-log" role="log" aria-live="polite">
                             <div class="log-entry">
-                                <span class="log-time">[...]</span>
+                                <span class="log-time" aria-hidden="true">[...]</span>
                                 <span class="log-message">>> СИСТЕМА: Ожидание аутентификации...</span>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="screen-footer">
+                    <footer class="screen-footer">
                         <div class="footer-grid">
                             <div class="grid-cell">
                                 <span class="cell-label">СТАТУС:</span>
@@ -103,47 +117,47 @@
                             </div>
                         </div>
                         
-                        <button id="login-btn" class="access-button">
+                        <button id="login-btn" class="access-button" aria-label="Подключиться к системе">
                             <div class="button-inner">
-                                <i class="fas fa-terminal"></i>
+                                <i class="fas fa-terminal" aria-hidden="true"></i>
                                 <span>ПОДКЛЮЧИТЬСЯ</span>
-                                <div class="button-pulse"></div>
+                                <div class="button-pulse" aria-hidden="true"></div>
                             </div>
                         </button>
                         
-                        <div id="login-error" class="error-display">
-                            <i class="fas fa-exclamation-circle"></i>
+                        <div id="login-error" class="error-display" role="alert" aria-live="assertive" hidden>
+                            <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
                             <span class="error-text"></span>
                         </div>
-                    </div>
+                    </footer>
                 </div>
             </div>
-        </div>
+        </section>
         
-        <div class="zone-footer">
+        <footer class="zone-footer" role="contentinfo">
             <div class="footer-info">
                 <span>КУРАЦИЯ EOD v2.7.4</span>
-                <span class="sep">|</span>
+                <span class="sep" aria-hidden="true">|</span>
                 <span>БАЗА: ОПЕРАТИВНА</span>
-                <span class="sep">|</span>
-                <span>ВРЕМЯ: <span id="sync-time">--:--:--</span></span>
+                <span class="sep" aria-hidden="true">|</span>
+                <span>ВРЕМЯ: <time id="sync-time">--:--:--</time></span>
             </div>
-        </div>
-    </div>
+        </footer>
+    </main>
 
-    <!-- Основной интерфейс -->
-    <div id="terminal" class="zone-interface" style="display: none;">
+    <!-- Основной интерфейс (скрыт по умолчанию) -->
+    <div id="terminal" class="zone-interface" hidden aria-label="Основной интерфейс системы">
         <!-- Боковая панель -->
-        <div id="sidebar" class="zone-sidebar">
+        <aside id="sidebar" class="zone-sidebar" aria-label="Панель пользователя и навигации">
             <div class="sidebar-header">
                 <div class="header-panel">
-                    <div class="panel-glow"></div>
-                    <div class="user-terminal">
+                    <div class="panel-glow" aria-hidden="true"></div>
+                    <section class="user-terminal" aria-label="Информация о пользователе">
                         <div class="terminal-display">
                             <div class="display-line">
-                                <span class="prompt">$</span>
+                                <span class="prompt" aria-hidden="true">$</span>
                                 <span class="command">user.status</span>
-                                <span class="cursor blink">█</span>
+                                <span class="cursor blink" aria-hidden="true">█</span>
                             </div>
                             <div class="display-line">
                                 <span class="output">> ID: <span id="current-username" class="highlight">NULL</span></span>
@@ -155,51 +169,51 @@
                                 <span class="output">> SID: <span id="current-static-id" class="highlight">XXXX-XXXX-XXXX</span></span>
                             </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div>
             
-            <div class="navigation-panel">
-                <div class="panel-header">
-                    <div class="header-icon">
+            <nav class="navigation-panel" aria-label="Основная навигация">
+                <header class="panel-header">
+                    <div class="header-icon" aria-hidden="true">
                         <i class="fas fa-sitemap"></i>
                     </div>
-                    <span>МОДУЛИ</span>
+                    <h3>МОДУЛИ</h3>
                     <div class="header-status">
-                        <div class="status-led active"></div>
+                        <div class="status-led active" aria-hidden="true"></div>
                         <span>ОНЛАЙН</span>
                     </div>
-                </div>
+                </header>
                 
                 <div class="module-grid">
-                    <nav class="nav-menu" id="nav-menu">
-                        <!-- Навигация через JS -->
-                    </nav>
+                    <ul class="nav-menu" id="nav-menu" role="menu">
+                        <!-- Навигация будет добавлена через JS -->
+                    </ul>
                 </div>
-            </div>
+            </nav>
             
             <div class="session-panel">
-                <div class="panel-header">
-                    <i class="fas fa-history"></i>
-                    <span>СЕССИЯ</span>
-                </div>
-                <button id="logout-btn" class="session-button">
+                <header class="panel-header">
+                    <i class="fas fa-history" aria-hidden="true"></i>
+                    <h3>СЕССИЯ</h3>
+                </header>
+                <button id="logout-btn" class="session-button" aria-label="Выйти из системы">
                     <div class="button-core">
-                        <i class="fas fa-power-off"></i>
+                        <i class="fas fa-power-off" aria-hidden="true"></i>
                         <span>ВЫЙТИ</span>
                     </div>
                 </button>
             </div>
-        </div>
+        </aside>
 
         <!-- Основной контент -->
-        <div id="content" class="zone-content">
-            <div class="content-header">
+        <main id="content" class="zone-content" role="main">
+            <header class="content-header">
                 <div class="header-main">
                     <div class="title-container">
-                        <div class="title-glow"></div>
+                        <div class="title-glow" aria-hidden="true"></div>
                         <h2 id="content-title">
-                            <span class="title-prefix">//</span>
+                            <span class="title-prefix" aria-hidden="true">//</span>
                             <span class="title-text">ЦЕНТРАЛЬНЫЙ КОНТРОЛЬ</span>
                         </h2>
                         <div class="title-sub">
@@ -208,9 +222,9 @@
                         </div>
                     </div>
                     
-                    <div class="header-stats">
+                    <div class="header-stats" role="status" aria-live="polite">
                         <div class="stat-card">
-                            <div class="stat-icon">
+                            <div class="stat-icon" aria-hidden="true">
                                 <i class="fas fa-database"></i>
                             </div>
                             <div class="stat-info">
@@ -219,7 +233,7 @@
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">
+                            <div class="stat-icon" aria-hidden="true">
                                 <i class="fas fa-users"></i>
                             </div>
                             <div class="stat-info">
@@ -228,7 +242,7 @@
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon">
+                            <div class="stat-icon" aria-hidden="true">
                                 <i class="fas fa-shield-alt"></i>
                             </div>
                             <div class="stat-info">
@@ -240,31 +254,31 @@
                 </div>
                 
                 <div class="header-meta">
-                    <div class="meta-grid">
+                    <dl class="meta-grid">
                         <div class="meta-item">
-                            <span class="meta-label">ВРЕМЯ:</span>
-                            <span class="meta-value" id="current-time">00:00:00</span>
+                            <dt class="meta-label">ВРЕМЯ:</dt>
+                            <dd class="meta-value"><time id="current-time">00:00:00</time></dd>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">ДАТА:</span>
-                            <span class="meta-value" id="current-date">--/--/----</span>
+                            <dt class="meta-label">ДАТА:</dt>
+                            <dd class="meta-value"><time id="current-date">--/--/----</time></dd>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">ВЕРСИЯ:</span>
-                            <span class="meta-value">2.7.4</span>
+                            <dt class="meta-label">ВЕРСИЯ:</dt>
+                            <dd class="meta-value">2.7.4</dd>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">СТАТУС:</span>
-                            <span class="meta-value operational">НОРМА</span>
+                            <dt class="meta-label">СТАТУС:</dt>
+                            <dd class="meta-value operational">НОРМА</dd>
                         </div>
-                    </div>
+                    </dl>
                 </div>
-            </div>
+            </header>
             
-            <div class="content-body" id="content-body">
-                <!-- Контент через JS -->
+            <section class="content-body" id="content-body" aria-live="polite">
+                <!-- Контент будет загружен через JS -->
                 <div class="system-init">
-                    <div class="init-loader">
+                    <div class="init-loader" aria-label="Загрузка системы" aria-busy="true">
                         <div class="loader-core"></div>
                         <div class="loader-ring"></div>
                         <div class="loader-ring delay-1"></div>
@@ -276,37 +290,37 @@
                         <span class="init-line blink">ГОТОВ</span>
                     </div>
                 </div>
-            </div>
+            </section>
             
-            <div class="content-footer">
+            <footer class="content-footer" role="contentinfo">
                 <div class="footer-left">
-                    <div class="transmission-log">
+                    <div class="transmission-log" role="log" aria-live="polite">
                         <div class="log-line">
-                            <span class="log-time">[<span id="log-time">00:00:00</span>]</span>
+                            <span class="log-time">[<time id="log-time">00:00:00</time>]</span>
                             <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ОЖИДАНИЕ КОМАНД</span></span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="footer-right">
-                    <div class="command-prompt">
+                    <div class="command-prompt" aria-label="Командная строка">
                         <span class="prompt-symbol">></span>
                         <div class="prompt-input">
                             <span class="input-text">ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
+            </footer>
+        </main>
     </div>
 
-    <!-- Скрипты -->
+    <!-- Firebase и скрипты -->
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
     <script src="firebase.js"></script>
     <script src="app.js"></script>
     
-    <!-- Инициализация времени -->
+    <!-- Инициализация времени (оптимизировано) -->
     <script>
         function updateTime() {
             const now = new Date();
@@ -321,21 +335,43 @@
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
+            }).replace(/\./g, '/');
+            
+            // Обновляем все элементы времени
+            document.querySelectorAll('time').forEach(el => {
+                if (el.id === 'sync-time' || el.id === 'current-time' || el.id === 'log-time') {
+                    el.textContent = timeString;
+                    el.dateTime = now.toISOString();
+                } else if (el.id === 'current-date') {
+                    el.textContent = dateString;
+                    el.dateTime = now.toISOString();
+                }
             });
             
-            const syncElement = document.getElementById('sync-time');
-            const timeElement = document.getElementById('current-time');
-            const dateElement = document.getElementById('current-date');
-            const logTimeElement = document.getElementById('log-time');
+            // Для элементов без тега time
+            const elements = {
+                'sync-time': timeString,
+                'current-time': timeString,
+                'current-date': dateString,
+                'log-time': timeString
+            };
             
-            if (syncElement) syncElement.textContent = timeString;
-            if (timeElement) timeElement.textContent = timeString;
-            if (dateElement) dateElement.textContent = dateString;
-            if (logTimeElement) logTimeElement.textContent = timeString;
+            for (const [id, value] of Object.entries(elements)) {
+                const el = document.getElementById(id);
+                if (el && !(el instanceof HTMLTimeElement)) {
+                    el.textContent = value;
+                }
+            }
         }
         
-        setInterval(updateTime, 1000);
+        // Обновляем время сразу и каждую секунду
         updateTime();
+        setInterval(updateTime, 1000);
+        
+        // Плавное появление интерфейса
+        window.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('loaded');
+        });
     </script>
 </body>
 </html>

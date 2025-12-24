@@ -2317,6 +2317,7 @@ function renderWebhookManager() {
 }
 
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
+/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
 function changeMessageType() {
     const type = document.getElementById('message-type').value;
     
@@ -2337,13 +2338,12 @@ function changeMessageType() {
 }
 
 function loadTemplate(templateType) {
-    function loadTemplate(templateType) {
     const messageContent = document.getElementById('message-content');
     const embedTitle = document.getElementById('embed-title');
     const embedDescription = document.getElementById('embed-description');
     const embedColor = document.getElementById('embed-color');
     const embedAuthor = document.getElementById('embed-author');
-    const embedContent = document.getElementById('embed-content'); // Новое поле!
+    const embedContent = document.getElementById('embed-content');
     
     switch(templateType) {
         case 'report':
@@ -2386,8 +2386,8 @@ function loadTemplate(templateType) {
             changeMessageType();
             break;
     }
-}
-    
+}  // ← ЗАКРЫВАЮЩАЯ ФИГУРНАЯ СКОБКА ДЛЯ loadTemplate
+
 function saveWebhook() {
     const urlInput = document.getElementById('webhook-url');
     const nameInput = document.getElementById('webhook-name');
@@ -2486,7 +2486,7 @@ function testWebhook() {
         embeds: [{
             title: "✅ ТЕСТ ВЕБХУКА",
             description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
-            color: 5793266, // HEX: #5865F2 в десятичном
+            color: 5793266,
             timestamp: new Date().toISOString(),
             footer: {
                 text: "Система вебхуков | Версия 1.5"
@@ -2526,7 +2526,7 @@ function sendDiscordMessage() {
             const embedColor = document.getElementById('embed-color').value.trim();
             const embedAuthor = document.getElementById('embed-author').value.trim();
             const embedThumbnail = document.getElementById('embed-thumbnail').value.trim();
-            const embedContent = document.getElementById('embed-content').value.trim(); // Новое поле!
+            const embedContent = document.getElementById('embed-content').value.trim();
             
             if (!embedDescription) {
                 showNotification('Введите описание embed', 'error');
@@ -2556,7 +2556,6 @@ function sendDiscordMessage() {
             }
             try {
                 payload = JSON.parse(customJson);
-                // Добавляем имя и аватар если их нет
                 if (!payload.username) payload.username = DISCORD_WEBHOOK_NAME;
                 if (!payload.avatar_url) payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
             } catch (e) {
@@ -2569,9 +2568,8 @@ function sendDiscordMessage() {
         case 'ban':
         case 'user_join':
         case 'admin_alert':
-            // Используем шаблоны
             loadTemplate(type);
-            sendDiscordMessage(); // Рекурсивный вызов с заполненными данными
+            sendDiscordMessage();
             return;
     }
     
@@ -2581,7 +2579,6 @@ function sendDiscordMessage() {
 function sendDiscordWebhook(url, payload, isTest = false) {
     showNotification('Отправка сообщения в Discord...', 'info');
     
-    // Добавляем имя и аватарку если они не указаны в payload
     if (!payload.username) {
         payload.username = DISCORD_WEBHOOK_NAME;
     }
@@ -2602,7 +2599,6 @@ function sendDiscordWebhook(url, payload, isTest = false) {
             showNotification(message, 'success');
             addWebhookHistory(isTest ? 'Тест вебхука' : 'Отправлено сообщение', 'success');
             
-            // Записываем в историю
             const historyEntry = {
                 type: isTest ? 'test' : 'message',
                 timestamp: new Date().toLocaleString(),
@@ -2615,7 +2611,6 @@ function sendDiscordWebhook(url, payload, isTest = false) {
             
             renderWebhookHistory();
             
-            // Сохраняем в базу
             db.ref('mlk_webhooks').push(historyEntry);
         } else {
             return response.text().then(text => {

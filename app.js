@@ -149,12 +149,23 @@ function loadData(callback) {
         const data = snapshot.val() || {};
         whitelist = Object.keys(data).map(key => ({...data[key], id: key}));
         
-        return db.ref('mlk_passwords').once('value');  // <-- ДОБАВИТЬ ЭТО
+        return db.ref('mlk_passwords').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
         passwords = data || {};
         
-        return db.ref('mlk_bans').once('value');  // <-- ДОБАВИТЬ ЭТО
+        // Проверяем наличие всех необходимых паролей
+        if (!passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
+            console.log("Не все пароли найдены, создаем недостающие...");
+            return createOrUpdatePasswords().then(() => {
+                return db.ref('mlk_passwords').once('value'); // Перезагружаем пароли
+            }).then(snapshot => {
+                passwords = snapshot.val() || {};
+                return db.ref('mlk_bans').once('value');
+            });
+        }
+        
+        return db.ref('mlk_bans').once('value');
     }).then(snapshot => {
         const data = snapshot.val() || {};
         bans = Object.keys(data).map(key => ({...data[key], id: key}));
@@ -178,13 +189,6 @@ function loadData(callback) {
         webhooks = Object.keys(data).map(key => ({...data[key], id: key}));
         webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         
-        // Проверка дефолтных паролей
-        if (!passwords.curator || !passwords.admin || !passwords.special) {
-            return createDefaultPasswords().then(() => {
-                if (callback) callback();
-            });
-        }
-        
         if (whitelist.length === 0) {
             return addProtectedUsersToWhitelist().then(() => {
                 if (callback) callback();
@@ -198,18 +202,44 @@ function loadData(callback) {
     });
 }
 
-/* ===== СОЗДАНИЕ ДЕФОЛТНЫХ КОДОВ ===== */
-function createDefaultPasswords() {
+/* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
+function createOrUpdatePasswords() {
     const defaultPasswords = {
         curator: "123",
-        senior: "SENIOR123",
+        senior: "SENIOR123", // НОВЫЙ ПАРОЛЬ ДЛЯ СТАРШЕГО КУРАТОРА
         admin: "EOD",
-        special: "HASKIKGOADFSKL" 
+        special: "HASKIKGOADFSKL"
     };
     
-    return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
-        console.log("Созданы коды доступа по умолчанию");
-        passwords = defaultPasswords;
+    // Загружаем существующие пароли
+    return db.ref('mlk_passwords').once('value').then(snapshot => {
+        const existingPasswords = snapshot.val() || {};
+        
+        // Объединяем существующие пароли с дефолтными
+        const updatedPasswords = {
+            ...defaultPasswords,
+            ...existingPasswords // Существующие пароли имеют приоритет
+        };
+        
+        // Убедимся, что все необходимые пароли есть
+        if (!updatedPasswords.senior) {
+            updatedPasswords.senior = defaultPasswords.senior;
+        }
+        
+        // Сохраняем обновленные пароли в базу
+        return db.ref('mlk_passwords').set(updatedPasswords).then(() => {
+            console.log("Пароли созданы/обновлены в базе данных");
+            passwords = updatedPasswords;
+            return updatedPasswords;
+        });
+    }).catch(error => {
+        console.error("Ошибка при создании паролей:", error);
+        // Если ошибка, пробуем просто создать новые
+        return db.ref('mlk_passwords').set(defaultPasswords).then(() => {
+            console.log("Созданы новые пароли в базе данных");
+            passwords = defaultPasswords;
+            return defaultPasswords;
+        });
     });
 }
 
@@ -255,6 +285,15 @@ function changePassword(type, newPassword) {
     return db.ref('mlk_passwords').update(updates).then(() => {
         passwords[type] = newPassword.trim();
         showNotification(`Код доступа изменен`, "success");
+        
+        // Логируем изменение пароля
+        const logData = {
+            type: type,
+            changedBy: CURRENT_USER,
+            changedAt: new Date().toLocaleString()
+        };
+        db.ref('mlk_password_logs').push(logData);
+        
         return true;
     }).catch(error => {
         showNotification("Ошибка изменения кода: " + error.message, "error");
@@ -262,295 +301,265 @@ function changePassword(type, newPassword) {
     });
 }
 
-/* ===== СИСТЕМА БАНОВ ===== */
-function checkIfBanned(username) {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) return { banned: false };
+/* ===== ЛОГИКА ВХОДА С ПРОВЕРКОЙ БАНОВ И STATIC ID ===== */
+function login(){
+    const input = document.getElementById("password").value.trim();
+    const usernameInput = document.getElementById("username");
+    const username = usernameInput ? usernameInput.value.trim() : "";
     
-    // Ищем активный бан по Static ID
-    const activeBan = bans.find(ban => ban.staticId === user.staticId && !ban.unbanned);
-    return activeBan ? { banned: true, ...activeBan } : { banned: false };
-}
-
-function banUser(username, reason) {
-    // Проверка прав (минимум СТАРШИЙ КУРАТОР)
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав доступа", "error");
-        return Promise.reject();
-    }
-
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) {
-        showNotification("Сталкер не найден в базе", "error");
-        return Promise.reject();
-    }
-
-    if (PROTECTED_USERS.includes(user.username)) {
-        showNotification("Ошибка: Попытка блокировки создателя", "error");
-        return Promise.reject();
-    }
-
-    const banData = {
-        username: user.username,
-        staticId: user.staticId,
-        reason: reason,
-        bannedBy: CURRENT_USER,
-        bannedDate: new Date().toLocaleString(),
-        unbanned: false
-    };
-
-    return db.ref('mlk_bans').push(banData).then(() => {
-        loadData(() => {
-            showNotification(`Объект ${username} заблокирован`, "success");
-            renderBanInterface();
-        });
-        return true;
-    });
-}
-
-function banByStaticId(staticId, reason) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав доступа", "error");
-        return Promise.reject();
-    }
-
-    const user = users.find(u => u.staticId === staticId);
-    if (!user) {
-        showNotification("Пользователь с таким Static ID не найден", "error");
-        return Promise.reject();
-    }
-
-    if (PROTECTED_USERS.includes(user.username)) {
-        showNotification("Ошибка: Попытка блокировки создателя", "error");
-        return Promise.reject();
-    }
-
-    const banData = {
-        username: user.username,
-        staticId: staticId,
-        reason: reason,
-        bannedBy: CURRENT_USER,
-        bannedDate: new Date().toLocaleString(),
-        unbanned: false
-    };
-
-    return db.ref('mlk_bans').push(banData).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${user.username} заблокирован`, "success");
-            renderBanInterface();
-        });
-        return true;
-    });
-}
-
-function unbanByStaticId(staticId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав доступа", "error");
-        return Promise.reject();
-    }
-
-    const ban = bans.find(b => b.staticId === staticId && !b.unbanned);
-    if (!ban) {
-        showNotification("Активный бан не найден", "error");
-        return Promise.reject();
-    }
-
-    return db.ref('mlk_bans/' + ban.id).update({ unbanned: true }).then(() => {
-        loadData(() => {
-            showNotification("Доступ восстановлен", "success");
-            renderBanInterface();
-        });
-        return true;
-    });
-}
-
-function promoteByStaticId(staticId, rank) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        showNotification("Недостаточно прав доступа", "error");
-        return Promise.reject();
-    }
-
-    const user = users.find(u => u.staticId === staticId);
-    if (!user) {
-        showNotification("Пользователь не найден", "error");
-        return Promise.reject();
-    }
-
-    if (PROTECTED_USERS.includes(user.username)) {
-        showNotification("Нельзя изменять права защищенного пользователя", "error");
-        return Promise.reject();
-    }
-
-    return db.ref('mlk_users/' + user.id).update({
-        role: rank.name,
-        rank: rank.level
-    }).then(() => {
-        loadData(() => {
-            showNotification(`Пользователь ${user.username} повышен до ${rank.name}`, "success");
-            renderUsers();
-            renderBanInterface();
-        });
-        return true;
-    });
-}
-
-/* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С STATIC ID ===== */
-window.banByStaticId = function(staticId) {
-    const reason = prompt("Введите причину бана:");
-    if (reason && reason.trim()) {
-        banByStaticId(staticId, reason.trim());
-    }
-};
-
-window.unbanByStaticId = function(staticId) {
-    unbanByStaticId(staticId);
-};
-
-window.promoteToAdminByStaticId = function(staticId) {
-    if (confirm("Повысить пользователя до администратора?")) {
-        promoteByStaticId(staticId, RANKS.ADMIN);
-    }
-};
-
-window.promoteToSeniorByStaticId = function(staticId) {
-    if (confirm("Повысить пользователя до старшего куратора?")) {
-        promoteByStaticId(staticId, RANKS.SENIOR_CURATOR);
-    }
-};
-
-window.demoteToCuratorByStaticId = function(staticId) {
-    if (confirm("Понизить пользователя до куратора?")) {
-        promoteByStaticId(staticId, RANKS.CURATOR);
-    }
-};
-
-/* ===== ИНТЕРФЕЙС БАНОВ ===== */
-function renderBanInterface() {
-    const content = document.getElementById("content-body");
-    if (!content) return;
+    const errorElement = document.getElementById("login-error");
+    if (errorElement) errorElement.textContent = "";
     
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
-        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>';
+    if (!username) {
+        showLoginError("ВВЕДИТЕ ПСЕВДОНИМ");
         return;
     }
     
-    const activeBans = bans.filter(ban => !ban.unbanned);
+    const banCheck = checkIfBanned(username);
+    if (banCheck.banned) {
+        showBannedScreen(banCheck);
+        return;
+    }
+    
+    // Загружаем пароли из БД
+    db.ref('mlk_passwords').once('value').then(snapshot => {
+        const passwords = snapshot.val() || {};
+        
+        const curatorHash = simpleHash(passwords.curator || "123");
+        const seniorHash = simpleHash(passwords.senior || "SENIOR123"); // НОВЫЙ ХЕШ ДЛЯ СТАРШЕГО КУРАТОРА
+        const adminHash = simpleHash(passwords.admin || "EOD");
+        const specialHash = simpleHash(passwords.special || "HASKIKGOADFSKL");
+        
+        const existingUser = users.find(user => 
+            user.username.toLowerCase() === username.toLowerCase()
+        );
+        
+        /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
+        const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === username.toLowerCase()
+        );
+
+        if (isProtectedUser) {
+            if (input === passwords.special) {
+                if (!existingUser) {
+                    const staticId = generateStaticId(username);
+                    const newUser = {
+                        username: username,
+                        staticId: staticId,
+                        role: CREATOR_RANK.name,
+                        rank: CREATOR_RANK.level,
+                        registrationDate: new Date().toLocaleString(),
+                        lastLogin: new Date().toLocaleString()
+                    };
+                    
+                    db.ref('mlk_users').push(newUser).then(() => {
+                        loadData(() => {
+                            CURRENT_ROLE = CREATOR_RANK.name;
+                            CURRENT_USER = username;
+                            CURRENT_RANK = CREATOR_RANK;
+                            CURRENT_STATIC_ID = staticId;
+                            completeLogin();
+                        });
+                    });
+                } else {
+                    db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                    
+                    CURRENT_ROLE = CREATOR_RANK.name;
+                    CURRENT_USER = username;
+                    CURRENT_RANK = CREATOR_RANK;
+                    CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(username);
+                    completeLogin();
+                }
+                return;
+            } else {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
+            }
+        }
+        
+        /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
+        if (!existingUser) {
+            let userRank = RANKS.CURATOR;
+            
+            // Проверяем пароль старшего куратора
+            if (simpleHash(input) === seniorHash) {
+                const isInWhitelist = whitelist.some(user => 
+                    user.username.toLowerCase() === username.toLowerCase()
+                );
+                
+                if (!isInWhitelist) {
+                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
+                    return;
+                }
+                userRank = RANKS.SENIOR_CURATOR;
+            }
+            // Проверяем пароль администратора
+            else if (simpleHash(input) === adminHash) {
+                const isInWhitelist = whitelist.some(user => 
+                    user.username.toLowerCase() === username.toLowerCase()
+                );
+                
+                if (!isInWhitelist) {
+                    showLoginError("ДОСТУП ЗАПРЕЩЕН");
+                    return;
+                }
+                userRank = RANKS.ADMIN;
+            } 
+            // Проверяем пароль куратора
+            else if (simpleHash(input) === curatorHash) {
+                userRank = RANKS.CURATOR;
+            } else {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
+            }
+            
+            const staticId = generateStaticId(username);
+            const newUser = {
+                username: username,
+                staticId: staticId,
+                role: userRank.name,
+                rank: userRank.level,
+                registrationDate: new Date().toLocaleString(),
+                lastLogin: new Date().toLocaleString()
+            };
+            
+            db.ref('mlk_users').push(newUser).then(() => {
+                loadData(() => {
+                    CURRENT_ROLE = userRank.name;
+                    CURRENT_USER = username;
+                    CURRENT_RANK = userRank;
+                    CURRENT_STATIC_ID = staticId;
+                    completeLogin();
+                });
+            });
+            return;
+        }
+        
+        /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
+        else {
+            let isValidPassword = false;
+            let userRank = RANKS.CURATOR;
+            
+            // Определяем текущий ранг пользователя
+            if (existingUser.role === RANKS.ADMIN.name) {
+                userRank = RANKS.ADMIN;
+            } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
+                userRank = RANKS.SENIOR_CURATOR;
+            } else {
+                userRank = RANKS.CURATOR;
+            }
+            
+            const inputHash = simpleHash(input);
+            
+            // Проверяем пароль в зависимости от ранга
+            if (userRank.level >= RANKS.ADMIN.level && inputHash === adminHash) {
+                isValidPassword = true;
+            } else if (userRank.level >= RANKS.SENIOR_CURATOR.level && inputHash === seniorHash) {
+                isValidPassword = true;
+            } else if (inputHash === curatorHash) {
+                isValidPassword = true;
+            }
+            
+            if (!isValidPassword) {
+                showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
+                return;
+            }
+            
+            db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+            
+            CURRENT_ROLE = userRank.name;
+            CURRENT_USER = username;
+            CURRENT_RANK = userRank;
+            CURRENT_STATIC_ID = existingUser.staticId;
+            completeLogin();
+        }
+    }).catch(error => {
+        console.error("Ошибка загрузки паролей:", error);
+        showLoginError("ОШИБКА СИСТЕМЫ");
+    });
+}
+
+/* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
+function renderPasswords() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
     
     content.innerHTML = `
         <div class="form-container">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-ban"></i> СИСТЕМА БАНОВ
+                <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
             </h2>
             
             <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                УПРАВЛЕНИЕ БЛОКИРОВКАМИ ПОЛЬЗОВАТЕЛЕЙ<br>
-                <span style="color: #c0b070;">ЗАБАНЕННЫЕ ПОЛЬЗОВАТЕЛЫ НЕ МОГУТ ВОЙТИ В СИСТЕМУ</span>
+                ИЗМЕНЕНИЕ КОДОВ ДОСТУПА В СИСТЕМУ<br>
+                <span style="color: #c0b070;">ИЗМЕНЕНИЯ ВСТУПАЮТ В СИЛУ НЕМЕДЛЕННО</span>
             </p>
             
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #b43c3c;">
-                <div class="card-icon" style="color: #b43c3c;"><i class="fas fa-user-slash"></i></div>
-                <h4 style="color: #b43c3c; margin-bottom: 15px;">ДОБАВИТЬ БАН</h4>
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label class="form-label">ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
-                        <input type="text" id="ban-username" class="form-input" 
-                               placeholder="ВВЕДИТЕ ПСЕВДОНИМ ДЛЯ БАНА">
-                    </div>
-                    <div>
-                        <label class="form-label">ПРИЧИНА БАНА</label>
-                        <textarea id="ban-reason" class="form-textarea" rows="4" 
-                                  placeholder="УКАЖИТЕ ПРИЧИНУ БЛОКИРОВКИ..."></textarea>
-                    </div>
-                    <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c;">
-                        <i class="fas fa-ban"></i> ЗАБАНИТЬ
-                    </button>
-                </div>
-            </div>
-
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #8cb43c;">
-                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-id-card"></i></div>
-                <h4 style="color: #8cb43c; margin-bottom: 15px;">БАН ПО STATIC ID</h4>
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label class="form-label">STATIC ID</label>
-                        <input type="text" id="ban-staticid" class="form-input" 
-                               placeholder="ВВЕДИТЕ STATIC ID ДЛЯ БАНА"
-                               style="font-family: 'Courier New', monospace;">
-                    </div>
-                    <div>
-                        <label class="form-label">ПРИЧИНА БАНА</label>
-                        <textarea id="ban-reason-static" class="form-textarea" rows="4" 
-                                  placeholder="УКАЖИТЕ ПРИЧИНУ БЛОКИРОВКИ..."></textarea>
-                    </div>
-                    <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #8cb43c;">
-                        <i class="fas fa-ban"></i> ЗАБАНИТЬ ПО ID
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-users"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ КУРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="curator-password" class="form-input" 
+                           value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('curator')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
                     </button>
                 </div>
             </div>
             
-            <div style="margin-bottom: 30px;">
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> АКТИВНЫЕ БАНЫ
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${activeBans.length})</span>
-                </h4>
-                
-                ${activeBans.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(180, 60, 60, 0.5); border: 1px dashed rgba(180, 60, 60, 0.3); border-radius: 2px;">
-                        <i class="fas fa-user-check" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>АКТИВНЫЕ БАНЫ ОТСУТСТВУЮТ</h4>
-                        <p>ВСЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП</p>
-                    </div>
-                ` : `
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                <th>STATIC ID</th>
-                                <th>ПРИЧИНА</th>
-                                <th>ЗАБАНИЛ</th>
-                                <th>ДАТА БАНА</th>
-                                <th>ДЕЙСТВИЯ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bans-table-body">
-                        </tbody>
-                    </table>
-                `}
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-star"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="senior-password" class="form-input" 
+                           value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('senior')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
             </div>
             
-            <div>
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-history"></i> ИСТОРИЯ БАНОВ
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${bans.length})</span>
-                </h4>
-                
-                ${bans.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
-                        <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>ИСТОРИЯ БАНОВ ПУСТА</h4>
-                        <p>БАНЫ ЕЩЕ НЕ ВЫДАВАЛИСЬ</p>
-                    </div>
-                ` : `
-                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #4a4a3a;">
-                        <table class="data-table">
-                            <thead style="position: sticky; top: 0;">
-                                <tr>
-                                    <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                    <th>STATIC ID</th>
-                                    <th>ПРИЧИНА</th>
-                                    <th>СТАТУС</th>
-                                    <th>ДАТА</th>
-                                </tr>
-                            </thead>
-                            <tbody id="bans-history-body">
-                            </tbody>
-                        </table>
-                    </div>
-                `}
+            <div class="zone-card" style="margin-bottom: 25px;">
+                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="admin-password" class="form-input" 
+                           value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД">
+                    <button onclick="updatePassword('admin')" class="btn-primary">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
+            </div>
+            
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
+                <p style="color: #8f9779; margin-bottom: 15px;">
+                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ
+                </p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="special-password" class="form-input" 
+                           value="${passwords.special || ''}" placeholder="НОВЫЙ КОД"
+                           style="border-color: #c0b070;">
+                    <button onclick="updatePassword('special')" class="btn-primary" 
+                            style="border-color: #c0b070;">
+                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                    </button>
+                </div>
             </div>
         </div>
     `;
-    
+}
+
     if (activeBans.length > 0) {
         renderBansTable(activeBans);
     }
@@ -2710,5 +2719,6 @@ function renderWebhookHistory() {
 
 
 /* ===== КОНЕЦ ФУНКЦИЙ ДЛЯ ВЕБХУКОВ ===== */
+
 
 

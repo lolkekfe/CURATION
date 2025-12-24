@@ -449,8 +449,6 @@ function loadData(callback) {
 
         console.log("Система безопасности инициализирована");
 
-if (callback) callback();
- 
         if (whitelist.length === 0) {
             return addProtectedUsersToWhitelist().then(() => {
                 if (callback) callback();
@@ -861,6 +859,7 @@ function renderBansHistory() {
         const bannedDate = ban.bannedDate || "Неизвестно";
         const unbannedDate = ban.unbannedDate || "";
         
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td style="color: ${isActive ? '#b43c3c' : '#8f9779'}">
                 <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username}
@@ -1483,14 +1482,15 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
-            if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-            addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
-            addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
-            addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
-            addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
-            addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats); // НОВАЯ КНОПКА
-            addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
-        }
+    
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
+        addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
+        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
+        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
+        addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats); // НОВАЯ КНОПКА
+        addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
+    }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -2989,7 +2989,7 @@ function loadTemplate(templateType) {
             changeMessageType();
             break;
     }
-}  // ← ЗАКРЫВАЮЩАЯ ФИГУРНАЯ СКОБКА ДЛЯ loadTemplate
+}
 
 function saveWebhook() {
     const urlInput = document.getElementById('webhook-url');
@@ -3295,6 +3295,8 @@ function renderWebhookHistory() {
         
         historyDiv.appendChild(div);
     });
+}
+
 /* ===== ВАЛИДАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ ===== */
 document.addEventListener('DOMContentLoaded', function() {
     // Добавляем валидацию в реальном времени
@@ -3353,7 +3355,7 @@ function updateInputValidation(input, validation) {
         error.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${validation.message}`;
         wrapper.appendChild(error);
     }
-} // <-- ЗАКРЫВАЮЩАЯ СКОБКА ДЛЯ updateInputValidation
+}
 
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С IP МОНИТОРИНГОМ ===== */
 window.investigateIP = function(ip) {
@@ -3440,7 +3442,3 @@ window.exportIPData = function() {
         showNotification("Данные IP экспортированы в CSV", "success");
     });
 }
-
-// ===== КОНЕЦ ФУНКЦИЙ =====
-
-}); // <-- ЭТА СКОБКА ЗАКРЫВАЕТ document.addEventListener('DOMContentLoaded', function()

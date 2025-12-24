@@ -1002,7 +1002,6 @@ window.demoteToCuratorByStaticId = function(staticId) {
     });
 }
 
-/* ===== ЛОГИКА ВХОДА ===== */
 window.login = async function() {
     const usernameInput = document.getElementById("username").value.trim();
     const passwordInput = document.getElementById("password").value.trim();
@@ -1024,8 +1023,8 @@ window.login = async function() {
         return;
     }
     
-    // Проверка IP блокировки
     try {
+        // Проверка IP блокировки
         const userIP = await getUserIP();
         if (userIP !== "unknown") {
             const ipLockStatus = isIPLocked(userIP);
@@ -1034,33 +1033,30 @@ window.login = async function() {
                 return;
             }
         }
-    } catch (error) {
-        console.error("Ошибка проверки IP блокировки:", error);
-    }
-    
-    // Проверка на бан
-    const banCheck = checkIfBanned(usernameInput);
-    if (banCheck.banned) {
-        showBannedScreen(banCheck);
-        return;
-    }
-    
-    // Проверка ограничения по IP для новых пользователей
-    const existingUser = users.find(user => 
-        user.username.toLowerCase() === usernameInput.toLowerCase()
-    );
-    
-    if (!existingUser) {
-        const ipCheck = await checkIPLimit(usernameInput);
-        if (!ipCheck.allowed) {
-            showLoginError(ipCheck.message);
+        
+        // Проверка на бан
+        const banCheck = checkIfBanned(usernameInput);
+        if (banCheck.banned) {
+            showBannedScreen(banCheck);
             return;
         }
-    }
-    
-    // Загружаем пароли из БД
-    db.ref('mlk_passwords').once('value').then(async snapshot => {
-        const passwords = snapshot.val() || {};
+        
+        // Проверка ограничения по IP для новых пользователей
+        const existingUser = users.find(user => 
+            user.username.toLowerCase() === usernameInput.toLowerCase()
+        );
+        
+        if (!existingUser) {
+            const ipCheck = await checkIPLimit(usernameInput);
+            if (!ipCheck.allowed) {
+                showLoginError(ipCheck.message);
+                return;
+            }
+        }
+        
+        // Загружаем пароли из БД
+        const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
+        const passwords = passwordsSnapshot.val() || {};
         
         /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
         const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
@@ -1091,16 +1087,14 @@ window.login = async function() {
                     await db.ref('mlk_users').push(newUser);
                     await registerIP(usernameInput, staticId);
                     
+                    // Сбрасываем счетчик попыток
+                    trackLoginAttempt(userIP, true);
+                    
                     loadData(() => {
                         CURRENT_ROLE = CREATOR_RANK.name;
                         CURRENT_USER = usernameInput;
                         CURRENT_RANK = CREATOR_RANK;
                         CURRENT_STATIC_ID = staticId;
-                        
-                        // Сбрасываем счетчик попыток
-                        const userIP = await getUserIP();
-                        trackLoginAttempt(userIP, true);
-                        
                         completeLogin();
                     });
                 } else {
@@ -1113,14 +1107,11 @@ window.login = async function() {
                     CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(usernameInput);
                     
                     // Сбрасываем счетчик попыток
-                    const userIP = await getUserIP();
                     trackLoginAttempt(userIP, true);
-                    
                     completeLogin();
                 }
                 return;
             } else {
-                const userIP = await getUserIP();
                 trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
@@ -1143,7 +1134,6 @@ window.login = async function() {
                 );
                 
                 if (!isInWhitelist) {
-                    const userIP = await getUserIP();
                     trackLoginAttempt(userIP, false);
                     showLoginError("ДОСТУП ЗАПРЕЩЕН");
                     return;
@@ -1156,7 +1146,6 @@ window.login = async function() {
                 );
                 
                 if (!isInWhitelist) {
-                    const userIP = await getUserIP();
                     trackLoginAttempt(userIP, false);
                     showLoginError("ДОСТУП ЗАПРЕЩЕН");
                     return;
@@ -1169,7 +1158,6 @@ window.login = async function() {
             }
             
             if (!isValidPassword) {
-                const userIP = await getUserIP();
                 trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
@@ -1202,10 +1190,7 @@ window.login = async function() {
                 CURRENT_RANK = userRank;
                 CURRENT_STATIC_ID = staticId;
                 
-                // Сбрасываем счетчик попыток
-                const userIP = await getUserIP();
                 trackLoginAttempt(userIP, true);
-                
                 completeLogin();
             });
             return;
@@ -1235,7 +1220,6 @@ window.login = async function() {
             }
             
             if (!isValidPassword) {
-                const userIP = await getUserIP();
                 trackLoginAttempt(userIP, false);
                 showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА");
                 return;
@@ -1249,16 +1233,13 @@ window.login = async function() {
             CURRENT_RANK = userRank;
             CURRENT_STATIC_ID = existingUser.staticId;
             
-            // Сбрасываем счетчик попыток
-            const userIP = await getUserIP();
             trackLoginAttempt(userIP, true);
-            
             completeLogin();
         }
-    }).catch(error => {
-        console.error("Ошибка загрузки паролей:", error);
+    } catch (error) {
+        console.error("Ошибка входа:", error);
         showLoginError("ОШИБКА СИСТЕМЫ");
-    });
+    }
 }
     
 /* ===== ЭКРАН БАНА ===== */
@@ -3462,3 +3443,4 @@ window.exportIPData = function() {
         showNotification("Данные IP экспортированы в CSV", "success");
     });
 }
+

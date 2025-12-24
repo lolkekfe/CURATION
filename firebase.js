@@ -1,3 +1,4 @@
+// Инициализация Firebase с обновленными настройками
 const firebaseConfig = {
   apiKey: "AIzaSyCGqNn_jx13SKHBYMZLhUJ7nEbK32vAJx4",
   authDomain: "curatorterminal.firebaseapp.com",
@@ -9,5 +10,16 @@ const firebaseConfig = {
   measurementId: "G-X0N5JT0K8D"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+// Убедитесь, что Firebase не инициализирован повторно
+try {
+  if (!firebase.apps.length) {
+    const app = firebase.initializeApp(firebaseConfig);
+  } else {
+    firebase.app(); // если уже инициализирован
+  }
+} catch (error) {
+  console.error("Ошибка инициализации Firebase:", error);
+}
+
+// Глобальные ссылки для удобства
 const db = firebase.database();

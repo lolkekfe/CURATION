@@ -51,11 +51,23 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
-/* ===== АДАПТИВНОСТЬ ИНТЕРФЕЙСА И СКРОЛЛ ===== */
+/* ===== СИСТЕМА ПАГИНАЦИИ И ПРОКРУТКИ ===== */
+const PAGINATION_CONFIG = {
+    itemsPerPage: 15,
+    visiblePages: 5,
+    maxScrollHeight: 600
+};
+
+let currentPage = 1;
+let totalPages = 1;
+let currentScrollPosition = {};
+
+/* ===== УЛУЧШЕННАЯ АДАПТИВНОСТЬ И СКРОЛЛ ===== */
 function adjustInterfaceHeights() {
     const loginScreen = document.getElementById('login-screen');
     const terminal = document.getElementById('terminal');
     const contentBody = document.getElementById('content-body');
+    const sidebar = document.querySelector('.zone-sidebar');
     
     // Настраиваем высоту для всех скроллируемых контейнеров
     const scrollableContainers = document.querySelectorAll('.scrollable-container');
@@ -65,48 +77,405 @@ function adjustInterfaceHeights() {
         if (parent) {
             const parentHeight = parent.clientHeight;
             const padding = 20;
-            container.style.maxHeight = (parentHeight - padding) + 'px';
+            const maxHeight = Math.min(parentHeight - padding, PAGINATION_CONFIG.maxScrollHeight);
+            container.style.maxHeight = maxHeight + 'px';
+            
+            // Сохраняем позицию скролла при перезагрузке
+            const containerId = container.id || container.className;
+            if (currentScrollPosition[containerId]) {
+                container.scrollTop = currentScrollPosition[containerId];
+            }
         }
     });
     
-    // Настраиваем высоту экрана входа
-    if (loginScreen && loginScreen.style.display !== 'none') {
-        const windowHeight = window.innerHeight;
-        const header = document.querySelector('.zone-header');
-        const footer = document.querySelector('.zone-footer');
+    // Настраиваем высоту основного контента
+    if (contentBody && terminal) {
+        const terminalHeight = terminal.clientHeight;
+        const header = document.querySelector('.content-header');
+        const footer = document.querySelector('.content-footer');
         
         if (header && footer) {
             const headerHeight = header.offsetHeight;
             const footerHeight = footer.offsetHeight;
-            const terminalScreen = document.querySelector('.terminal-screen .screen-content');
+            const availableHeight = terminalHeight - headerHeight - footerHeight - 40;
             
-            if (terminalScreen) {
-                const maxHeight = windowHeight - headerHeight - footerHeight - 100;
-                terminalScreen.style.maxHeight = Math.min(maxHeight, 500) + 'px';
-            }
+            contentBody.style.minHeight = Math.max(availableHeight, 400) + 'px';
+            contentBody.style.maxHeight = availableHeight + 'px';
+            contentBody.style.overflowY = 'auto';
         }
     }
     
-    // Проверяем скролл после настройки высоты
-    setTimeout(setupAutoScroll, 100);
+    // Настраиваем высоту сайдбара
+    if (sidebar) {
+        const windowHeight = window.innerHeight;
+        sidebar.style.maxHeight = (windowHeight - 100) + 'px';
+        sidebar.style.overflowY = 'auto';
+    }
 }
 
-/* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ ===== */
+/* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ И СОХРАНЕНИЕ ПОЗИЦИИ ===== */
 function setupAutoScroll() {
-    // Проверяем все контейнеры на переполнение
     const scrollableContainers = document.querySelectorAll('.scrollable-container');
     
     scrollableContainers.forEach(container => {
-        // Проверяем, есть ли переполнение по вертикали
         const hasVerticalScroll = container.scrollHeight > container.clientHeight;
         
         if (hasVerticalScroll) {
-            // Добавляем индикатор, если нужно
-            container.style.paddingRight = '15px'; // Даем место для скроллбара
+            container.style.paddingRight = '15px';
+            
+            // Сохраняем позицию скролла при прокрутке
+            container.addEventListener('scroll', function() {
+                const containerId = this.id || this.className;
+                currentScrollPosition[containerId] = this.scrollTop;
+            });
         } else {
             container.style.paddingRight = '10px';
         }
     });
+    
+    // Добавляем стили для лучшего скролла
+    addScrollStyles();
+}
+
+/* ===== ДОБАВЛЕНИЕ CSS СТИЛЕЙ ДЛЯ ПРОКРУТКИ ===== */
+function addScrollStyles() {
+    if (!document.querySelector('#scroll-styles')) {
+        const style = document.createElement('style');
+        style.id = 'scroll-styles';
+        style.textContent = `
+            /* Основные стили скролла */
+            .scrollable-container {
+                overflow-y: auto;
+                overflow-x: hidden;
+                scrollbar-width: thin;
+                scrollbar-color: #4a4a3a #1e201c;
+                padding-right: 10px;
+            }
+            
+            .scrollable-container::-webkit-scrollbar {
+                width: 8px;
+            }
+            
+            .scrollable-container::-webkit-scrollbar-track {
+                background: #1e201c;
+                border-radius: 4px;
+            }
+            
+            .scrollable-container::-webkit-scrollbar-thumb {
+                background: #4a4a3a;
+                border-radius: 4px;
+            }
+            
+            .scrollable-container::-webkit-scrollbar-thumb:hover {
+                background: #5a5a4a;
+            }
+            
+            /* Стили для таблиц с фиксированными заголовками */
+            .table-container thead {
+                position: sticky;
+                top: 0;
+                background: #1e201c;
+                z-index: 10;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            }
+            
+            /* Стили для формы отчета с прокруткой */
+            .report-form-scrollable {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+            }
+            
+            .report-creation-container {
+                flex: 1;
+                overflow-y: auto;
+                padding-right: 10px;
+            }
+            
+            /* Стили для основного контента */
+            .form-container.with-scroll {
+                display: flex;
+                flex-direction: column;
+                height: 100%;
+                overflow: hidden;
+            }
+            
+            .form-container.with-scroll > .table-container {
+                flex: 1;
+                min-height: 0;
+            }
+            
+            /* Стили для кнопок быстрой прокрутки */
+            .scroll-btn {
+                width: 40px;
+                height: 40px;
+                background: rgba(30, 32, 28, 0.9);
+                border: 1px solid #4a4a3a;
+                color: #8f9779;
+                border-radius: 50%;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.2rem;
+                transition: all 0.3s;
+                position: fixed;
+                z-index: 1000;
+            }
+            
+            .scroll-btn:hover {
+                background: rgba(192, 176, 112, 0.2);
+                border-color: #c0b070;
+                color: #c0b070;
+                transform: scale(1.1);
+            }
+            
+            #scroll-to-top {
+                bottom: 70px;
+                right: 20px;
+            }
+            
+            #scroll-to-bottom {
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            /* Пагинация */
+            .pagination-container {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 20px;
+                gap: 5px;
+                flex-wrap: wrap;
+                padding: 10px;
+                background: rgba(30, 32, 28, 0.5);
+                border-radius: 4px;
+            }
+            
+            .pagination-btn {
+                padding: 5px 12px;
+                background: rgba(40, 42, 36, 0.8);
+                border: 1px solid #4a4a3a;
+                color: #8f9779;
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: all 0.2s;
+                border-radius: 3px;
+                min-width: 36px;
+            }
+            
+            .pagination-btn:hover {
+                background: rgba(60, 62, 56, 0.8);
+                border-color: #8f9779;
+                color: #c0b070;
+            }
+            
+            .pagination-btn.active {
+                background: rgba(192, 176, 112, 0.2);
+                border-color: #c0b070;
+                color: #c0b070;
+                font-weight: bold;
+            }
+            
+            .pagination-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            
+            .page-info {
+                color: #8f9779;
+                font-size: 0.9rem;
+                margin-left: 15px;
+            }
+            
+            .items-per-page-selector {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-left: auto;
+                color: #8f9779;
+                font-size: 0.9rem;
+            }
+            
+            .items-per-page-selector select {
+                background: rgba(40, 42, 36, 0.8);
+                border: 1px solid #4a4a3a;
+                color: #8f9779;
+                padding: 3px 8px;
+                border-radius: 3px;
+            }
+            
+            /* Индикатор прокрутки */
+            .scroll-indicator {
+                position: absolute;
+                right: 5px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #4a4a3a;
+                font-size: 0.8rem;
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/* ===== КНОПКИ БЫСТРОЙ ПРОКРУТКИ ===== */
+function addScrollButtons() {
+    if (!document.getElementById('scroll-buttons')) {
+        const scrollButtonsHTML = `
+            <div id="scroll-buttons">
+                <button id="scroll-to-top" class="scroll-btn" style="display: none;">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button id="scroll-to-bottom" class="scroll-btn">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', scrollButtonsHTML);
+        
+        // Обработчики событий
+        document.getElementById('scroll-to-top').addEventListener('click', scrollToTop);
+        document.getElementById('scroll-to-bottom').addEventListener('click', scrollToBottom);
+        
+        // Показываем/скрываем кнопки при прокрутке
+        window.addEventListener('scroll', handleScroll);
+    }
+}
+
+function scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function scrollToBottom() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function handleScroll() {
+    const scrollTopBtn = document.getElementById('scroll-to-top');
+    const scrollBottomBtn = document.getElementById('scroll-to-bottom');
+    
+    if (scrollTopBtn) {
+        if (window.scrollY > 200) {
+            scrollTopBtn.style.display = 'flex';
+        } else {
+            scrollTopBtn.style.display = 'none';
+        }
+    }
+    
+    if (scrollBottomBtn) {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.body.scrollHeight;
+        
+        if (window.scrollY + windowHeight >= documentHeight - 100) {
+            scrollBottomBtn.style.display = 'none';
+        } else {
+            scrollBottomBtn.style.display = 'flex';
+        }
+    }
+}
+
+/* ===== ФУНКЦИЯ ДЛЯ РЕНДЕРИНГА ПАГИНАЦИИ ===== */
+function renderPagination(containerId, currentPage, totalPages, callback) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    let paginationHTML = `
+        <div class="pagination-container">
+    `;
+    
+    // Кнопка "Назад"
+    if (currentPage > 1) {
+        paginationHTML += `
+            <button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        `;
+    }
+    
+    // Номера страниц
+    const startPage = Math.max(1, currentPage - Math.floor(PAGINATION_CONFIG.visiblePages / 2));
+    const endPage = Math.min(totalPages, startPage + PAGINATION_CONFIG.visiblePages - 1);
+    
+    if (startPage > 1) {
+        paginationHTML += `
+            <button onclick="${callback}(1)" class="pagination-btn">1</button>
+            ${startPage > 2 ? '<span style="color: #8f9779;">...</span>' : ''}
+        `;
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <button onclick="${callback}(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">
+                ${i}
+            </button>
+        `;
+    }
+    
+    if (endPage < totalPages) {
+        paginationHTML += `
+            ${endPage < totalPages - 1 ? '<span style="color: #8f9779;">...</span>' : ''}
+            <button onclick="${callback}(${totalPages})" class="pagination-btn">${totalPages}</button>
+        `;
+    }
+    
+    // Кнопка "Вперед"
+    if (currentPage < totalPages) {
+        paginationHTML += `
+            <button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+    }
+    
+    // Информация о странице
+    paginationHTML += `
+        <div class="page-info">
+            Страница ${currentPage} из ${totalPages}
+        </div>
+        
+        <div class="items-per-page-selector">
+            <span>На странице:</span>
+            <select onchange="changeItemsPerPage('${callback}', this.value)">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="15" selected>15</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+    </div>
+    `;
+    
+    container.innerHTML = paginationHTML;
+    
+    // Устанавливаем выбранное значение
+    const select = container.querySelector('select');
+    if (select) {
+        select.value = PAGINATION_CONFIG.itemsPerPage;
+    }
+}
+
+/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
+function changeItemsPerPage(callback, value) {
+    PAGINATION_CONFIG.itemsPerPage = parseInt(value);
+    
+    // Вызываем callback функцию для перерисовки с новой пагинацией
+    if (callback === 'renderReportsWithPagination') {
+        renderReportsWithPagination(1);
+    } else if (callback === 'renderUsersWithPagination') {
+        renderUsersWithPagination(1);
+    } else if (callback === 'renderMLKListPaginated') {
+        renderMLKListPaginated(1);
+    } else if (callback === 'renderWhitelistWithPagination') {
+        renderWhitelistWithPagination(1);
+    } else if (callback === 'renderBansWithPagination') {
+        renderBansWithPagination(1);
+    }
 }
 
 // Инициализация скроллбаров после загрузки
@@ -115,6 +484,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         setupAutoScroll();
         adjustInterfaceHeights();
+        addScrollButtons();
     }, 500);
     
     // Обновляем при изменении размера окна
@@ -154,13 +524,11 @@ function generateStrongPassword() {
 /* ===== ПРОВЕРКА И ПОЛУЧЕНИЕ IP АДРЕСА ===== */
 async function getUserIP() {
     try {
-        // Используем сервис для получения IP
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         return data.ip;
     } catch (error) {
         console.error("Ошибка получения IP:", error);
-        // Резервный метод через WebRTC (только для локальной сети)
         return new Promise((resolve) => {
             const pc = new RTCPeerConnection({iceServers: [{urls: "stun:stun.l.google.com:19302"}]});
             pc.createDataChannel("");
@@ -185,7 +553,6 @@ async function checkIPLimit(username) {
         const userIP = await getUserIP();
         if (userIP === "unknown") return { allowed: true, ip: userIP };
         
-        // Проверяем, есть ли уже пользователь с таким IP
         const ipSnapshot = await db.ref('mlk_ip_tracking').once('value');
         const ipData = ipSnapshot.val() || {};
         
@@ -222,7 +589,6 @@ async function registerIP(username, staticId) {
         
         await db.ref('mlk_ip_tracking').push(ipRecord);
         
-        // Также обновляем запись пользователя
         const usersSnapshot = await db.ref('mlk_users').once('value');
         const usersData = usersSnapshot.val() || {};
         
@@ -290,7 +656,6 @@ function trackLoginAttempt(ip, success = false) {
         }
     }
     
-    // Очистка старых записей (старше 24 часов)
     for (const ipKey in loginAttempts) {
         if (now - loginAttempts[ipKey].lastAttempt > 24 * 60 * 60 * 1000) {
             delete loginAttempts[ipKey];
@@ -312,25 +677,21 @@ function isIPLocked(ip) {
 
 /* ===== ВАЛИДАЦИЯ ПОЛЬЗОВАТЕЛЬСКОГО ВВОДА ===== */
 function validateUsername(username) {
-    // Проверка на undefined или null
     if (!username) {
         return { valid: false, message: "Имя пользователя не указано" };
     }
     
     const trimmedUsername = username.trim();
     
-    // Проверка длины
     if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
         return { valid: false, message: "Имя пользователя должно быть от 3 до 20 символов" };
     }
     
-    // Проверка символов (только буквы, цифры, подчеркивание)
     const usernameRegex = /^[a-zA-Zа-яА-Я0-9_]+$/;
     if (!usernameRegex.test(trimmedUsername)) {
         return { valid: false, message: "Имя пользователя может содержать только буквы, цифры и подчеркивание" };
     }
     
-    // Запрещенные имена
     const forbiddenNames = ['admin', 'root', 'system', 'administrator', 'модератор', 'куратор'];
     if (forbiddenNames.includes(trimmedUsername.toLowerCase())) {
         return { valid: false, message: "Это имя пользователя запрещено" };
@@ -340,12 +701,10 @@ function validateUsername(username) {
 }
 
 function validatePassword(password) {
-    // Проверка на undefined или null
     if (!password) {
         return { valid: false, message: "Пароль не указан" };
     }
     
-    // Только минимальная длина
     if (password.length < 3) {
         return { valid: false, message: "Пароль должен содержать минимум 3 символа" };
     }
@@ -370,7 +729,7 @@ function restoreSession() {
     try {
         const session = JSON.parse(savedSession);
         const currentTime = new Date().getTime();
-        const maxAge = 8 * 60 * 60 * 1000; // 8 часов
+        const maxAge = 8 * 60 * 60 * 1000;
         
         if (currentTime - session.timestamp > maxAge) {
             localStorage.removeItem('mlk_session');
@@ -409,7 +768,7 @@ window.deleteReport = function(id) {
     }
     
     if(confirm("Удалить отчет?")) {
-        db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReports));
+        db.ref('mlk_reports/' + id + '/deleted').set(true).then(() => loadReports(renderReportsWithPagination));
     }
 }
 
@@ -421,7 +780,7 @@ window.confirmReport = function(id) {
     
     if(confirm("Подтвердить отчет?")) {
         db.ref('mlk_reports/' + id + '/confirmed').set(true).then(() => {
-            loadReports(renderReports);
+            loadReports(renderReportsWithPagination);
             showNotification("Отчет подтвержден", "success");
         });
     }
@@ -439,18 +798,15 @@ function simpleHash(str){
 
 /* ===== ПРОВЕРКА ПАРОЛЯ С ШИФРОВАНИЕМ ===== */
 async function verifyPassword(inputPassword, storedPassword) {
-    // Если пароль хранится как строка (старый формат)
     if (typeof storedPassword === 'string') {
         return inputPassword === storedPassword;
     }
     
-    // Если пароль хранится как объект с хешем и солью (новый формат)
     if (storedPassword && storedPassword.hash && storedPassword.salt) {
         const inputHash = await hashPassword(inputPassword, storedPassword.salt);
         return inputHash === storedPassword.hash;
     }
     
-    // Если есть поле plain (для обратной совместимости)
     if (storedPassword && storedPassword.plain) {
         return inputPassword === storedPassword.plain;
     }
@@ -493,11 +849,10 @@ function loadData(callback) {
         const data = snapshot.val() || {};
         passwords = data || {};
         
-        // Проверяем наличие всех необходимых паролей
         if (!passwords.junior || !passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) {
             console.log("Не все пароли найдены, создаем недостающие...");
             return createOrUpdatePasswords().then(() => {
-                return db.ref('mlk_passwords').once('value'); // Перезагружаем пароли
+                return db.ref('mlk_passwords').once('value');
             }).then(snapshot => {
                 passwords = snapshot.val() || {};
                 return db.ref('mlk_bans').once('value');
@@ -519,7 +874,6 @@ function loadData(callback) {
             };
         });
         
-        // Загружаем вебхуки
         return db.ref('mlk_settings/webhook_url').once('value');
     }).then(snapshot => {
         DISCORD_WEBHOOK_URL = snapshot.val() || null;
@@ -561,7 +915,6 @@ async function createOrUpdatePasswords() {
         special: "special"
     };
     
-    // Создаем хешированные пароли
     const hashedPasswords = {};
     
     for (const [key, plainPassword] of Object.entries(newPasswords)) {
@@ -570,7 +923,7 @@ async function createOrUpdatePasswords() {
         hashedPasswords[key] = {
             hash: hash,
             salt: salt,
-            plain: plainPassword  // Храним также в открытом виде для обратной совместимости
+            plain: plainPassword
         };
     }
     
@@ -613,7 +966,6 @@ async function changePassword(type, newPassword) {
         return Promise.reject("Пустой пароль");
     }
     
-    // Создаем хешированный пароль
     const salt = generateSalt();
     const hash = await hashPassword(newPassword, salt);
     
@@ -621,12 +973,11 @@ async function changePassword(type, newPassword) {
         [type]: {
             hash: hash,
             salt: salt,
-            plain: newPassword  // Для обратной совместимости
+            plain: newPassword
         }
     };
     
     return db.ref('mlk_passwords').update(updateData).then(() => {
-        // Обновляем локальную переменную
         passwords[type] = {
             hash: hash,
             salt: salt,
@@ -635,7 +986,6 @@ async function changePassword(type, newPassword) {
         
         showNotification(`Код доступа изменен`, "success");
         
-        // Логируем изменение пароля
         const logData = {
             type: type,
             changedBy: CURRENT_USER,
@@ -652,36 +1002,29 @@ async function changePassword(type, newPassword) {
 
 /* ===== СИСТЕМА БАНОВ ===== */
 function checkIfBanned(username) {
-    // Проверяем, передан ли username
     if (!username || typeof username !== 'string' || username.trim() === '') {
         return { banned: false };
     }
     
-    // Приводим к нижнему регистру для сравнения
     const usernameLower = username.toLowerCase().trim();
     
-    // Ищем пользователя (используем trim для сравнения)
     const user = users.find(u => {
         if (!u || !u.username || typeof u.username !== 'string') return false;
         return u.username.toLowerCase().trim() === usernameLower;
     });
     
     if (!user) {
-        // Пользователь не найден - не забанен
         return { banned: false };
     }
     
-    // Ищем активный бан
     const activeBan = bans.find(ban => {
         if (!ban) return false;
         
-        // Проверяем по username (с учетом регистра)
         const banUsername = ban.username && typeof ban.username === 'string' 
             ? ban.username.toLowerCase().trim() 
             : '';
         const banUsernameMatch = banUsername === usernameLower;
         
-        // Проверяем по staticId
         const staticIdMatch = ban.staticId && user.staticId && ban.staticId === user.staticId;
         
         return (banUsernameMatch || staticIdMatch) && !ban.unbanned;
@@ -716,7 +1059,7 @@ window.unbanByStaticId = async function(staticId) {
         unbannedDate: new Date().toLocaleString()
     }).then(() => {
         loadData(() => {
-            if (window.renderBanInterface) window.renderBanInterface();
+            renderBansWithPagination(1);
             showNotification("Пользователь разбанен", "success");
         });
         return true;
@@ -727,7 +1070,6 @@ window.unbanByStaticId = async function(staticId) {
 }
 
 async function banUser(username, reason) {
-    // Проверяем права
     if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
         showNotification("Недостаточно прав для выдачи бана", "error");
         return false;
@@ -739,7 +1081,6 @@ async function banUser(username, reason) {
         return false;
     }
     
-    // Проверяем, является ли пользователь защищенным
     const isProtected = PROTECTED_USERS.some(protectedUser => 
         protectedUser.toLowerCase() === username.toLowerCase()
     );
@@ -749,7 +1090,6 @@ async function banUser(username, reason) {
         return false;
     }
     
-    // Проверяем, не забанен ли уже
     const existingBan = bans.find(ban => 
         (ban.username.toLowerCase() === username.toLowerCase() || ban.staticId === user.staticId) && 
         !ban.unbanned
@@ -771,8 +1111,8 @@ async function banUser(username, reason) {
     
     return db.ref('mlk_bans').push(banData).then(() => {
         loadData(() => {
-            if (window.renderBanInterface) window.renderBanInterface();
-            if (window.renderUsers) window.renderUsers();
+            renderBansWithPagination(1);
+            renderUsersWithPagination(1);
             showNotification(`Пользователь ${username} забанен`, "success");
         });
         return true;
@@ -788,7 +1128,6 @@ const PROTECTED_USERS = ["Tihiy"];
 /* ===== СПЕЦИАЛЬНЫЙ ДОСТУП ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
 function checkSpecialAccess(username, password) {
     return new Promise((resolve) => {
-        // Проверяем, передан ли username
         if (!username || !password) {
             resolve({ access: false });
             return;
@@ -805,7 +1144,6 @@ function checkSpecialAccess(username, password) {
                 return;
             }
             
-            // Проверяем, является ли пользователь защищенным
             const isProtected = PROTECTED_USERS.some(protectedUser => {
                 if (!protectedUser) return false;
                 return protectedUser.toLowerCase().trim() === usernameLower;
@@ -822,8 +1160,8 @@ function checkSpecialAccess(username, password) {
     });
 }
 
-/* ===== ИНТЕРФЕЙС УПРАВЛЕНИЯ БАНАМИ ===== */
-window.renderBanInterface = function() {
+/* ===== ИНТЕРФЕЙС УПРАВЛЕНИЯ БАНАМИ С ПАГИНАЦИЕЙ ===== */
+window.renderBansWithPagination = function(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -832,10 +1170,21 @@ window.renderBanInterface = function() {
         return;
     }
     
+    currentPage = page;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
     const activeBans = bans.filter(ban => !ban.unbanned);
+    const paginatedActiveBans = activeBans.slice(startIndex, endIndex);
+    const activeBansTotalPages = Math.ceil(activeBans.length / itemsPerPage);
+    
+    const allBans = bans;
+    const paginatedAllBans = allBans.slice(startIndex, endIndex);
+    const allBansTotalPages = Math.ceil(allBans.length / itemsPerPage);
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container with-scroll">
             <h2 style="color: #b43c3c; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
             </h2>
@@ -847,10 +1196,10 @@ window.renderBanInterface = function() {
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div>
                         <label class="form-label">БАН ПО ИМЕНИ ПОЛЬЗОВАТЕЛЯ</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя" style="flex: 2;">
-                            <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана" style="flex: 3;">
-                            <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя" style="flex: 2; min-width: 200px;">
+                            <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана" style="flex: 3; min-width: 200px;">
+                            <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;">
                                 <i class="fas fa-ban"></i> ЗАБАНИТЬ
                             </button>
                         </div>
@@ -858,10 +1207,10 @@ window.renderBanInterface = function() {
                     
                     <div>
                         <label class="form-label">БАН ПО STATIC ID</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" style="font-family: 'Courier New', monospace; flex: 2;">
-                            <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана" style="flex: 3;">
-                            <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" style="font-family: 'Courier New', monospace; flex: 2; min-width: 200px;">
+                            <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана" style="flex: 3; min-width: 200px;">
+                            <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;">
                                 <i class="fas fa-id-card"></i> БАН ПО ID
                             </button>
                         </div>
@@ -923,19 +1272,24 @@ window.renderBanInterface = function() {
                     </div>
                 </div>
             </div>
+            
+            <div id="bans-pagination-container"></div>
         </div>
     `;
     
     if (activeBans.length > 0) {
-        renderBansTable(activeBans);
+        renderBansTablePaginated(paginatedActiveBans);
+        renderPagination('bans-pagination-container', currentPage, activeBansTotalPages, 'renderBansWithPagination');
     }
     
     if (bans.length > 0) {
-        renderBansHistory();
+        renderBansHistoryPaginated(paginatedAllBans);
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
-function renderBansTable(activeBans) {
+function renderBansTablePaginated(activeBans) {
     const tableBody = document.getElementById("bans-table-body");
     if (!tableBody) return;
     
@@ -965,7 +1319,7 @@ function renderBansTable(activeBans) {
     });
 }
 
-function renderBansHistory() {
+function renderBansHistoryPaginated(bans) {
     const tableBody = document.getElementById("bans-history-body");
     if (!tableBody) return;
     
@@ -1071,7 +1425,7 @@ window.promoteToAdminByStaticId = function(staticId) {
         rank: RANKS.ADMIN.level
     }).then(() => {
         loadData(() => {
-            renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь повышен до администратора", "success");
         });
     }).catch(error => {
@@ -1098,7 +1452,7 @@ window.promoteToSeniorByStaticId = function(staticId) {
         rank: RANKS.SENIOR_CURATOR.level
     }).then(() => {
         loadData(() => {
-            renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь повышен до старшего куратора", "success");
         });
     }).catch(error => {
@@ -1120,7 +1474,6 @@ window.promoteToCuratorByStaticId = function(staticId) {
         return;
     }
     
-    // Проверяем, не является ли пользователь уже куратором или выше
     if (user.rank >= RANKS.CURATOR.level) {
         showNotification("Пользователь уже имеет ранг куратора или выше", "warning");
         return;
@@ -1131,7 +1484,7 @@ window.promoteToCuratorByStaticId = function(staticId) {
         rank: RANKS.CURATOR.level
     }).then(() => {
         loadData(() => {
-            if (window.renderUsers) window.renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь повышен до куратора", "success");
         });
     }).catch(error => {
@@ -1151,7 +1504,6 @@ window.demoteToCuratorByStaticId = function(staticId) {
         return;
     }
     
-    // Проверяем, что пользователь имеет ранг выше куратора
     if (user.rank <= RANKS.CURATOR.level) {
         showNotification("Пользователь уже имеет ранг куратора или ниже", "warning");
         return;
@@ -1164,7 +1516,7 @@ window.demoteToCuratorByStaticId = function(staticId) {
         rank: RANKS.CURATOR.level
     }).then(() => {
         loadData(() => {
-            if (window.renderUsers) window.renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь понижен до куратора", "success");
         });
     }).catch(error => {
@@ -1172,7 +1524,6 @@ window.demoteToCuratorByStaticId = function(staticId) {
     });
 }
 
-/* ===== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ НАЗНАЧЕНИЯ КУРАТОРОМ ===== */
 window.setToCuratorByStaticId = function(staticId) {
     if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
         showNotification("Только старший куратор или выше может назначать кураторов", "error");
@@ -1204,7 +1555,7 @@ window.setToCuratorByStaticId = function(staticId) {
         rank: RANKS.CURATOR.level
     }).then(() => {
         loadData(() => {
-            if (window.renderUsers) window.renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь назначен куратором", "success");
         });
     }).catch(error => {
@@ -1231,7 +1582,7 @@ window.demoteToJuniorByStaticId = function(staticId) {
         rank: RANKS.JUNIOR_CURATOR.level
     }).then(() => {
         loadData(() => {
-            renderUsers();
+            renderUsersWithPagination(1);
             showNotification("Пользователь понижен до младшего куратора", "success");
         });
     }).catch(error => {
@@ -1246,14 +1597,12 @@ window.login = async function() {
     
     if (errorElement) errorElement.textContent = "";
     
-    // Валидация имени пользователя
     const usernameValidation = validateUsername(usernameInput);
     if (!usernameValidation.valid) {
         showLoginError(usernameValidation.message);
         return;
     }
     
-    // Валидация пароля
     const passwordValidation = validatePassword(passwordInput);
     if (!passwordValidation.valid) {
         showLoginError(passwordValidation.message);
@@ -1261,17 +1610,14 @@ window.login = async function() {
     }
     
     try {
-        // Проверка IP блокировки
         const userIP = await getUserIP();
         if (userIP !== "unknown") {
-            // Проверка локальной блокировки
             const ipLockStatus = isIPLocked(userIP);
             if (ipLockStatus) {
                 showLoginError(ipLockStatus);
                 return;
             }
             
-            // Проверка IP бана в базе данных
             const ipBanCheck = await checkIPBan(userIP);
             if (ipBanCheck.banned) {
                 showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`);
@@ -1279,24 +1625,19 @@ window.login = async function() {
             }
         }
         
-        // Проверка на бан пользователя
         const banCheck = checkIfBanned(usernameInput);
         if (banCheck.banned) {
             showBannedScreen(banCheck);
             return;
         }
         
-        
-        // Проверка ограничения по IP для новых пользователей
         const existingUser = users.find(user => 
             user.username.toLowerCase() === usernameInput.toLowerCase()
         );
         
-        // Загружаем пароли из БД
         const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
         const passwords = passwordsSnapshot.val() || {};
         
-        /* === ПРОВЕРКА СПЕЦИАЛЬНОГО ДОСТУПА ДЛЯ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ === */
         const isProtectedUser = PROTECTED_USERS.some(protectedUser => 
             protectedUser.toLowerCase() === usernameInput.toLowerCase()
         );
@@ -1325,7 +1666,6 @@ window.login = async function() {
                     await db.ref('mlk_users').push(newUser);
                     await registerIP(usernameInput, staticId);
                     
-                    // Загружаем обновленные данные
                     await new Promise(resolve => loadData(resolve));
                     
                     CURRENT_ROLE = CREATOR_RANK.name;
@@ -1333,7 +1673,6 @@ window.login = async function() {
                     CURRENT_RANK = CREATOR_RANK;
                     CURRENT_STATIC_ID = staticId;
                     
-                    // Сбрасываем счетчик попыток
                     trackLoginAttempt(userIP, true);
                     
                     completeLogin();
@@ -1346,7 +1685,6 @@ window.login = async function() {
                     CURRENT_RANK = CREATOR_RANK;
                     CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(usernameInput);
                     
-                    // Сбрасываем счетчик попыток
                     trackLoginAttempt(userIP, true);
                     completeLogin();
                 }
@@ -1358,12 +1696,10 @@ window.login = async function() {
             }
         }
         
-        /* === НОВЫЙ ПОЛЬЗОВАТЕЛЬ === */
         if (!existingUser) {
             let userRank = RANKS.JUNIOR_CURATOR;
             let isValidPassword = false;
             
-            // Проверяем пароли
             const adminValid = await verifyPassword(passwordInput, passwords.admin);
             const seniorValid = await verifyPassword(passwordInput, passwords.senior);
             const curatorValid = await verifyPassword(passwordInput, passwords.curator);
@@ -1407,7 +1743,6 @@ window.login = async function() {
                 return;
             }
             
-            // Проверка IP лимита
             const ipCheck = await checkIPLimit(usernameInput);
             if (!ipCheck.allowed) {
                 showLoginError(ipCheck.message);
@@ -1428,7 +1763,6 @@ window.login = async function() {
             await db.ref('mlk_users').push(newUser);
             await registerIP(usernameInput, staticId);
             
-            // Загружаем обновленные данные
             await new Promise(resolve => loadData(resolve));
             
             CURRENT_ROLE = userRank.name;
@@ -1441,12 +1775,10 @@ window.login = async function() {
             return;
         }
         
-        /* === СУЩЕСТВУЮЩИЙ ПОЛЬЗОВАТЕЛЬ === */
         else {
             let isValidPassword = false;
             let userRank = RANKS.JUNIOR_CURATOR;
             
-            // Определяем текущий ранг пользователя
             if (existingUser.role === RANKS.ADMIN.name) {
                 userRank = RANKS.ADMIN;
             } else if (existingUser.role === RANKS.SENIOR_CURATOR.name) {
@@ -1457,7 +1789,6 @@ window.login = async function() {
                 userRank = RANKS.JUNIOR_CURATOR;
             }
             
-            // Проверяем пароль в зависимости от ранга
             if (userRank.level >= RANKS.ADMIN.level) {
                 isValidPassword = await verifyPassword(passwordInput, passwords.admin);
             } else if (userRank.level >= RANKS.SENIOR_CURATOR.level) {
@@ -1624,14 +1955,14 @@ function completeLogin() {
     } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
         loadReports(renderMLKScreen);
     } else {
-        // Для младших кураторов
         loadReports(renderMLKScreen);
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
 /* ===== UI ИНИЦИАЛИЗАЦИЯ ===== */
 document.addEventListener('DOMContentLoaded', function() {
-    // Обновление времени
     function updateTime() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('ru-RU', {
@@ -1657,7 +1988,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTime, 1000);
     updateTime();
     
-    // Восстановление сессии или настройка входа
     if (restoreSession()) {
         loadData(() => {
             const loginScreen = document.getElementById("login-screen");
@@ -1704,7 +2034,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-/* ===== НАВИГАЦИЯ И SIDEBAR ===== */
+/* ===== НАВИГАЦИЯ И SIDEBAR С ПРОКРУТКОЙ ===== */
 function setupSidebar() {
     const sidebar = document.getElementById("sidebar");
     const navMenu = document.getElementById("nav-menu");
@@ -1732,15 +2062,15 @@ function setupSidebar() {
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-        addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
-        addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
+        addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', function() { renderReportsWithPagination(1); });
+        addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', function() { renderUsersWithPagination(1); });
     }
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', renderWhitelist);
+        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', function() { renderWhitelistWithPagination(1); });
         addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
-        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
+        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', function() { renderBansWithPagination(1); });
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
@@ -1749,6 +2079,14 @@ function setupSidebar() {
     if (logoutBtn) {
         logoutBtn.onclick = logout;
     }
+    
+    // Добавляем прокрутку к сайдбару
+    setTimeout(() => {
+        if (sidebar) {
+            sidebar.classList.add('scrollable-container');
+            adjustInterfaceHeights();
+        }
+    }, 100);
 }
 
 function addNavButton(container, icon, text, onClick) {
@@ -1769,11 +2107,15 @@ function addNavButton(container, icon, text, onClick) {
             titleElement.textContent = text;
         }
         updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
-        // Добавляем настройку высоты после загрузки контента
-        setTimeout(adjustInterfaceHeights, 100);
+        
+        setTimeout(() => {
+            adjustInterfaceHeights();
+            setupAutoScroll();
+        }, 100);
     };
     container.appendChild(button);
 }
+
 function logout() {
     CURRENT_ROLE = null;
     CURRENT_USER = null;
@@ -1911,7 +2253,6 @@ function updatePreview() {
 
 /* ===== НАСТРОЙКА ОБРАБОТЧИКОВ ДЛЯ ФОРМЫ ОТЧЕТА ===== */
 function setupReportFormHandlers() {
-    // Обработчики для категорий нарушения
     const categoryCards = document.querySelectorAll('.category-card');
     categoryCards.forEach(card => {
         card.addEventListener('click', function() {
@@ -1921,7 +2262,6 @@ function setupReportFormHandlers() {
         });
     });
 
-    // Обработчики для приоритета
     const priorityOptions = document.querySelectorAll('.priority-option');
     priorityOptions.forEach(option => {
         option.addEventListener('click', function() {
@@ -1931,7 +2271,6 @@ function setupReportFormHandlers() {
         });
     });
 
-    // Обработчики для типа нарушителя
     const tagOptions = document.querySelectorAll('.tag-option');
     tagOptions.forEach(option => {
         option.addEventListener('click', function() {
@@ -1941,13 +2280,11 @@ function setupReportFormHandlers() {
         });
     });
 
-    // Обработчики для кнопки добавления доказательств
     const addProofBtn = document.querySelector('.add-proof-btn');
     if (addProofBtn) {
         addProofBtn.addEventListener('click', addProofField);
     }
 
-    // Обработчик для удаления доказательств через делегирование
     const proofContainer = document.getElementById('proof-links-container');
     if (proofContainer) {
         proofContainer.addEventListener('click', function(event) {
@@ -1960,14 +2297,11 @@ function setupReportFormHandlers() {
         });
     }
 
-    // Инициализация счетчика символов
     updateCharCount();
-    
-    // Инициализация предпросмотра
     updatePreview();
 }
 
-/* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
+/* ===== СТРАНИЦА ОТЧЕТОВ МЛК С ПРОКРУТКОЙ ===== */
 function renderMLKForm() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -1978,7 +2312,7 @@ function renderMLKForm() {
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="report-creation-container" id="report-scroll-container" class="scrollable-container">
+            <div class="report-creation-container scrollable-container" style="flex: 1;">
                 <div class="zone-card" style="margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-user-tag"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
@@ -2149,7 +2483,6 @@ function renderMLKForm() {
         </div>
     `;
     
-    // Добавляем обработчики
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
     
     const actionTextarea = document.getElementById("mlk-action");
@@ -2165,21 +2498,23 @@ function renderMLKForm() {
         tagInput.addEventListener('input', updatePreview);
     }
     
-    // Инициализация обработчиков UI
     setupReportFormHandlers();
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
+
 window.renderMLKScreen = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     loadReports(function() {
         content.innerHTML = `
-            <div class="form-container">
+            <div class="form-container with-scroll">
                 <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
                 </h2>
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                     <div>
                         <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
                         <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
@@ -2189,227 +2524,52 @@ window.renderMLKScreen = function() {
                     </button>
                 </div>
                 
-                <div id="mlk-list" class="scrollable-container">
+                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1;">
                     <!-- Здесь будет список отчетов -->
                 </div>
+                
+                <div id="mlk-pagination-container"></div>
             </div>
         `;
-        renderMLKList();
+        
+        renderMLKListPaginated(1);
     });
 }
 
-function updateCharCount() {
-    const textarea = document.getElementById('mlk-action');
-    const counter = document.getElementById('char-count');
-    if (textarea && counter) {
-        const count = textarea.value.length;
-        counter.textContent = count;
-        counter.style.color = count > 1800 ? '#b43c3c' : count > 1500 ? '#c0b070' : '#8cb43c';
-    }
-}
-
-function addProofField() {
-    const container = document.getElementById('proof-links-container');
-    const newInput = document.createElement('div');
-    newInput.className = 'proof-link-input';
-    newInput.innerHTML = `
-        <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://...">
-        <button type="button" class="btn-secondary remove-proof-btn" onclick="removeProofField(this)">
-            <i class="fas fa-minus"></i>
-        </button>
-    `;
-    container.appendChild(newInput);
-}
-
-function removeProofField(button) {
-    const container = document.getElementById('proof-links-container');
-    if (container.children.length > 1) {
-        button.closest('.proof-link-input').remove();
-    }
-}
-
-function updatePreview() {
-    const tagInput = document.getElementById('mlk-tag');
-    const descriptionInput = document.getElementById('mlk-action');
-    const selectedCategory = document.querySelector('.category-card.active');
-    const selectedPriority = document.querySelector('.priority-option.active');
-    
-    const previewTag = document.getElementById('preview-tag');
-    const previewDescription = document.getElementById('preview-description');
-    const previewCategory = document.querySelector('.preview-category');
-    const previewPriority = document.querySelector('.preview-priority');
-    
-    if (previewTag) {
-        previewTag.textContent = tagInput.value || '[не указано]';
-    }
-    
-    if (previewDescription) {
-        previewDescription.textContent = descriptionInput.value || '[описание появится здесь]';
-    }
-    
-    if (selectedCategory && previewCategory) {
-        const categoryName = selectedCategory.querySelector('.category-name').textContent;
-        const categoryColor = selectedCategory.dataset.color;
-        previewCategory.textContent = categoryName;
-        previewCategory.style.color = categoryColor;
-    }
-    
-    if (selectedPriority && previewPriority) {
-        const priorityText = selectedPriority.querySelector('span').textContent;
-        const priorityColor = selectedPriority.querySelector('.priority-dot').style.background;
-        previewPriority.textContent = priorityText;
-        previewPriority.style.color = priorityColor;
-    }
-}
-
-function addMLKReport() {
-    const tag = document.getElementById("mlk-tag")?.value.trim() || "";
-    const action = document.getElementById("mlk-action")?.value.trim() || "";
-    const selectedCategory = document.querySelector('.category-card.active');
-    const selectedPriority = document.querySelector('.priority-option.active');
-    const selectedViolatorType = document.querySelector('.tag-option.active');
-    
-    // Собираем ссылки на доказательства
-    const proofLinks = Array.from(document.querySelectorAll('.proof-link'))
-        .map(input => input.value.trim())
-        .filter(link => link.length > 0);
-    
-    if (!tag) {
-        showNotification("Введите идентификатор нарушителя", "error");
-        return;
-    }
-    
-    if (!action) {
-        showNotification("Опишите нарушение", "error");
-        return;
-    }
-    
-    if (action.length < 20) {
-        showNotification("Описание должно содержать минимум 20 символов", "error");
-        return;
-    }
-    
-    const report = {
-        tag,
-        action,
-        category: selectedCategory ? selectedCategory.dataset.category : "other",
-        categoryName: selectedCategory ? selectedCategory.querySelector('.category-name').textContent : "Другое",
-        priority: selectedPriority ? selectedPriority.dataset.priority : "medium",
-        priorityName: selectedPriority ? selectedPriority.querySelector('span').textContent : "СРЕДНИЙ",
-        violatorType: selectedViolatorType ? selectedViolatorType.dataset.value : "player",
-        proofLinks: proofLinks,
-        author: CURRENT_USER,
-        authorStaticId: CURRENT_STATIC_ID,
-        role: CURRENT_ROLE,
-        time: new Date().toLocaleString(),
-        timestamp: Date.now(),
-        confirmed: false,
-        deleted: false
-    };
-    
-    db.ref('mlk_reports').push(report).then(() => {
-        showNotification("✅ Отчет успешно сохранен", "success");
-        
-        // Отправка в Discord вебхук, если настроен
-        if (DISCORD_WEBHOOK_URL) {
-            sendReportToDiscord(report);
-        }
-        
-        loadReports(renderMLKScreen);
-    }).catch(error => {
-        showNotification("Ошибка при сохранении: " + error.message, "error");
-    });
-}
-
-function sendReportToDiscord(report) {
-    if (!DISCORD_WEBHOOK_URL) return;
-    
-    const colorMap = {
-        'cheat': 0xb43c3c,
-        'toxic': 0xb43c3c,
-        'spam': 0xb43c3c,
-        'bug': 0xc0b070,
-        'grief': 0xc0b070,
-        'other': 0x8f9779
-    };
-    
-    const priorityColorMap = {
-        'low': 0x8cb43c,
-        'medium': 0xc0b070,
-        'high': 0xb43c3c
-    };
-    
-    const payload = {
-        username: DISCORD_WEBHOOK_NAME,
-        avatar_url: DISCORD_WEBHOOK_AVATAR,
-        embeds: [{
-            title: "📄 НОВЫЙ ОТЧЕТ МЛК",
-            description: `**Нарушитель:** \`${report.tag}\`\n**Категория:** ${report.categoryName}\n**Приоритет:** ${report.priorityName}`,
-            color: colorMap[report.category] || 0x8f9779,
-            fields: [
-                {
-                    name: "📝 Описание",
-                    value: report.action.length > 1024 ? report.action.substring(0, 1021) + "..." : report.action
-                },
-                {
-                    name: "👤 Автор отчета",
-                    value: `${report.author} (${report.role})`,
-                    inline: true
-                },
-                {
-                    name: "🕐 Время",
-                    value: report.time,
-                    inline: true
-                }
-            ],
-            footer: {
-                text: `Static ID: ${report.authorStaticId} | Система отчетов Зоны`
-            },
-            timestamp: new Date().toISOString()
-        }]
-    };
-    
-    // Добавляем ссылки на доказательства, если есть
-    if (report.proofLinks && report.proofLinks.length > 0) {
-        payload.embeds[0].fields.push({
-            name: "🔗 Доказательства",
-            value: report.proofLinks.map((link, i) => `${i+1}. ${link}`).join('\n')
-        });
-    }
-    
-    fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    }).catch(error => console.error('Discord webhook error:', error));
-}
-window.renderMLKList = function() {
+function renderMLKListPaginated(page = 1) {
     const listDiv = document.getElementById("mlk-list");
+    const paginationContainer = document.getElementById("mlk-pagination-container");
+    
     if (!listDiv) return;
     
     const filteredReports = (CURRENT_RANK.level <= RANKS.CURATOR.level)
         ? reports.filter(r => r.author === CURRENT_USER)
         : reports;
     
+    currentPage = page;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedReports = filteredReports.slice(startIndex, endIndex);
+    totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+    
     if (filteredReports.length === 0) {
         listDiv.innerHTML = `
-            <div class="empty-reports">
-                <div class="empty-icon">
+            <div class="empty-reports" style="text-align: center; padding: 40px; color: #8f9779;">
+                <div class="empty-icon" style="font-size: 2rem; margin-bottom: 10px;">
                     <i class="fas fa-inbox"></i>
                 </div>
                 <h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3>
                 <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ, НАЖАВ НА КНОПКУ "НОВЫЙ ОТЧЕТ"</p>
             </div>
         `;
+        if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
     
     listDiv.innerHTML = '';
     
-    // Сортируем по времени (новые сверху)
-    const sortedReports = [...filteredReports].sort((a, b) => {
+    const sortedReports = [...paginatedReports].sort((a, b) => {
         const timeA = a.timestamp || new Date(a.time).getTime() || 0;
         const timeB = b.timestamp || new Date(b.time).getTime() || 0;
         return timeB - timeA;
@@ -2423,7 +2583,6 @@ window.renderMLKList = function() {
         let statusClass = r.deleted ? 'status-deleted' : (r.confirmed ? 'status-confirmed' : 'status-pending');
         let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed ? 'fa-check-circle' : 'fa-clock');
         
-        // Определяем цвет категории
         const categoryColors = {
             'cheat': '#b43c3c',
             'toxic': '#b43c3c',
@@ -2435,7 +2594,6 @@ window.renderMLKList = function() {
         
         const categoryColor = categoryColors[r.category] || '#8f9779';
         
-        // Определяем цвет приоритета
         const priorityColors = {
             'low': '#8cb43c',
             'medium': '#c0b070',
@@ -2517,10 +2675,14 @@ window.renderMLKList = function() {
         `;
         listDiv.appendChild(card);
     });
+    
+    if (paginationContainer && totalPages > 1) {
+        renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
+    }
 }
-/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС ВСЕХ ОТЧЕТОВ ===== */
-/* ===== ВСЕ ОТЧЕТЫ (исправленная версия) ===== */
-function renderReports() {
+
+/* ===== ВСЕ ОТЧЕТЫ С ПАГИНАЦИЕЙ ===== */
+function renderReportsWithPagination(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
     
@@ -2529,12 +2691,19 @@ function renderReports() {
         return;
     }
     
+    currentPage = page;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedReports = reports.slice(startIndex, endIndex);
+    totalPages = Math.ceil(reports.length / itemsPerPage);
+    
     const pendingReports = reports.filter(r => !r.confirmed && !r.deleted).length;
     const confirmedReports = reports.filter(r => r.confirmed).length;
     const deletedReports = reports.filter(r => r.deleted).length;
     
     content.innerHTML = `
-        <div class="form-container with-table">
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
             </h2>
@@ -2558,7 +2727,19 @@ function renderReports() {
                 </div>
             </div>
             
-            <h4 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h4 style="color: #c0b070; margin: 0;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
+                <div class="items-per-page-selector">
+                    <span>На странице:</span>
+                    <select onchange="changeItemsPerPage('renderReportsWithPagination', this.value)">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15" selected>15</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+            </div>
             
             <div class="table-container scrollable-container" style="flex: 1;">
                 ${reports.length === 0 ? `
@@ -2583,21 +2764,28 @@ function renderReports() {
                     </table>
                 `}
             </div>
+            
+            <div id="reports-pagination-container"></div>
         </div>
     `;
     
     if (reports.length > 0) {
-        renderAllReportsTable();
+        renderAllReportsTablePaginated(paginatedReports);
+        if (totalPages > 1) {
+            renderPagination('reports-pagination-container', currentPage, totalPages, 'renderReportsWithPagination');
+        }
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
-function renderAllReportsTable() {
+function renderAllReportsTablePaginated(paginatedReports) {
     const tableBody = document.getElementById("all-reports-body");
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
-    reports.forEach(r => {
+    paginatedReports.forEach(r => {
         let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
         let statusClass = r.deleted ? "status-deleted" : (r.confirmed ? "status-confirmed" : "status-pending");
         
@@ -2631,7 +2819,129 @@ function renderAllReportsTable() {
         tableBody.appendChild(row);
     });
 }
-/* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
+
+function addMLKReport() {
+    const tag = document.getElementById("mlk-tag")?.value.trim() || "";
+    const action = document.getElementById("mlk-action")?.value.trim() || "";
+    const selectedCategory = document.querySelector('.category-card.active');
+    const selectedPriority = document.querySelector('.priority-option.active');
+    const selectedViolatorType = document.querySelector('.tag-option.active');
+    
+    const proofLinks = Array.from(document.querySelectorAll('.proof-link'))
+        .map(input => input.value.trim())
+        .filter(link => link.length > 0);
+    
+    if (!tag) {
+        showNotification("Введите идентификатор нарушителя", "error");
+        return;
+    }
+    
+    if (!action) {
+        showNotification("Опишите нарушение", "error");
+        return;
+    }
+    
+    if (action.length < 20) {
+        showNotification("Описание должно содержать минимум 20 символов", "error");
+        return;
+    }
+    
+    const report = {
+        tag,
+        action,
+        category: selectedCategory ? selectedCategory.dataset.category : "other",
+        categoryName: selectedCategory ? selectedCategory.querySelector('.category-name').textContent : "Другое",
+        priority: selectedPriority ? selectedPriority.dataset.priority : "medium",
+        priorityName: selectedPriority ? selectedPriority.querySelector('span').textContent : "СРЕДНИЙ",
+        violatorType: selectedViolatorType ? selectedViolatorType.dataset.value : "player",
+        proofLinks: proofLinks,
+        author: CURRENT_USER,
+        authorStaticId: CURRENT_STATIC_ID,
+        role: CURRENT_ROLE,
+        time: new Date().toLocaleString(),
+        timestamp: Date.now(),
+        confirmed: false,
+        deleted: false
+    };
+    
+    db.ref('mlk_reports').push(report).then(() => {
+        showNotification("✅ Отчет успешно сохранен", "success");
+        
+        if (DISCORD_WEBHOOK_URL) {
+            sendReportToDiscord(report);
+        }
+        
+        loadReports(renderMLKScreen);
+    }).catch(error => {
+        showNotification("Ошибка при сохранении: " + error.message, "error");
+    });
+}
+
+function sendReportToDiscord(report) {
+    if (!DISCORD_WEBHOOK_URL) return;
+    
+    const colorMap = {
+        'cheat': 0xb43c3c,
+        'toxic': 0xb43c3c,
+        'spam': 0xb43c3c,
+        'bug': 0xc0b070,
+        'grief': 0xc0b070,
+        'other': 0x8f9779
+    };
+    
+    const priorityColorMap = {
+        'low': 0x8cb43c,
+        'medium': 0xc0b070,
+        'high': 0xb43c3c
+    };
+    
+    const payload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        embeds: [{
+            title: "📄 НОВЫЙ ОТЧЕТ МЛК",
+            description: `**Нарушитель:** \`${report.tag}\`\n**Категория:** ${report.categoryName}\n**Приоритет:** ${report.priorityName}`,
+            color: colorMap[report.category] || 0x8f9779,
+            fields: [
+                {
+                    name: "📝 Описание",
+                    value: report.action.length > 1024 ? report.action.substring(0, 1021) + "..." : report.action
+                },
+                {
+                    name: "👤 Автор отчета",
+                    value: `${report.author} (${report.role})`,
+                    inline: true
+                },
+                {
+                    name: "🕐 Время",
+                    value: report.time,
+                    inline: true
+                }
+            ],
+            footer: {
+                text: `Static ID: ${report.authorStaticId} | Система отчетов Зоны`
+            },
+            timestamp: new Date().toISOString()
+        }]
+    };
+    
+    if (report.proofLinks && report.proofLinks.length > 0) {
+        payload.embeds[0].fields.push({
+            name: "🔗 Доказательства",
+            value: report.proofLinks.map((link, i) => `${i+1}. ${link}`).join('\n')
+        });
+    }
+    
+    fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    }).catch(error => console.error('Discord webhook error:', error));
+}
+
+/* ===== СТРАНИЦА КОДОВ ДОСТУПА С ПРОКРУТКОЙ ===== */
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -2642,12 +2952,12 @@ window.renderPasswords = function() {
     }
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
             </h2>
             
-            <div style="display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; padding-right: 10px;">
+            <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ МЛАДШИХ КУРАТОРОВ</h4>
@@ -2726,6 +3036,8 @@ window.renderPasswords = function() {
             </div>
         </div>
     `;
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
 /* ===== ПРИНУДИТЕЛЬНЫЙ СБРОС ПАРОЛЕЙ ===== */
@@ -2743,10 +3055,8 @@ window.resetAllPasswords = async function() {
         await createOrUpdatePasswords();
         showNotification("Все пароли сброшены на значения по умолчанию", "success");
         
-        // Перезагружаем данные
         await new Promise(resolve => loadData(resolve));
         
-        // Обновляем интерфейс если открыт
         if (window.renderPasswords) {
             renderPasswords();
         }
@@ -2778,86 +3088,108 @@ window.updatePassword = function(type) {
     });
 }
 
-/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС СПИСКА ДОСТУПА ===== */
-window.renderWhitelist = function() {
+/* ===== СПИСОК ДОСТУПА С ПАГИНАЦИЕЙ ===== */
+window.renderWhitelistWithPagination = function(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
     
+    currentPage = page;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedWhitelist = whitelist.slice(startIndex, endIndex);
+    totalPages = Math.ceil(whitelist.length / itemsPerPage);
+    
     content.innerHTML = `
-        <div class="form-container"
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ
+            <p style="color: #8f9779; margin-bottom: 20px; line-height: 1.6;">
+                ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ И СТАРШИЕ КУРАТОРЫ
             </p>
             
-            <div class="zone-card" style="margin-bottom: 30px; padding: 20px;">
+            <div class="zone-card" style="margin-bottom: 20px; padding: 20px;">
                 <div class="card-icon"><i class="fas fa-user-plus"></i></div>
                 <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     <input type="text" id="new-whitelist-user" class="form-input" 
-                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
-                    <button onclick="addToWhitelist()" class="btn-primary">
+                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1; min-width: 200px;">
+                    <button onclick="addToWhitelist()" class="btn-primary" style="min-width: 120px;">
                         <i class="fas fa-plus"></i> ДОБАВИТЬ
                     </button>
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> ТЕКУЩИЙ СПИСОК
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${whitelist.length})</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h4 style="color: #c0b070; margin: 0;">
+                    ТЕКУЩИЙ СПИСОК (${whitelist.length})
                 </h4>
-                
-                ${whitelist.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>СПИСОК ПУСТ</h4>
-                        <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
-                    </div>
-                ` : `
-                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                        <div style="overflow-x: auto; flex: 1;">
-                            <table class="data-table" style="min-width: 100%;">
-                                <thead style="position: sticky; top: 0; background: #1e201c;">
-                                    <tr>
-                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
-                                        <th style="min-width: 120px;">STATIC ID</th>
-                                        <th style="min-width: 120px;">ДОБАВИЛ</th>
-                                        <th style="min-width: 150px;">ДАТА ДОБАВЛЕНИЯ</th>
-                                        <th style="min-width: 100px;">СТАТУС</th>
-                                        <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="whitelist-table-body">
-                                </tbody>
-                            </table>
+                <div class="items-per-page-selector">
+                    <span>На странице:</span>
+                    <select onchange="changeItemsPerPage('renderWhitelistWithPagination', this.value)">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15" selected>15</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="table-container scrollable-container" style="flex: 1;">
+                    ${whitelist.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                            <h4 style="color: #8f9779;">СПИСОК ПУСТ</h4>
+                            <p style="color: #8f9779;">ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
                         </div>
-                    </div>
-                `}
+                    ` : `
+                        <table class="data-table" style="min-width: 100%;">
+                            <thead style="position: sticky; top: 0; background: #1e201c;">
+                                <tr>
+                                    <th style="min-width: 150px;">ПСЕВДОНИМ</th>
+                                    <th style="min-width: 120px;">STATIC ID</th>
+                                    <th style="min-width: 120px;">ДОБАВИЛ</th>
+                                    <th style="min-width: 150px;">ДАТА ДОБАВЛЕНИЯ</th>
+                                    <th style="min-width: 100px;">СТАТУС</th>
+                                    <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whitelist-table-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+                
+                <div id="whitelist-pagination-container"></div>
             </div>
         </div>
     `;
     
     if (whitelist.length > 0) {
-        renderWhitelistTable();
+        renderWhitelistTablePaginated(paginatedWhitelist);
+        if (totalPages > 1) {
+            renderPagination('whitelist-pagination-container', currentPage, totalPages, 'renderWhitelistWithPagination');
+        }
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
-function renderWhitelistTable() {
+function renderWhitelistTablePaginated(paginatedWhitelist) {
     const tableBody = document.getElementById("whitelist-table-body");
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
-    whitelist.forEach(user => {
-        const row = document.createElement('tr');
+    paginatedWhitelist.forEach(user => {
         const isProtected = PROTECTED_USERS.some(protectedUser => 
             protectedUser.toLowerCase() === user.username.toLowerCase()
         );
         
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : '#8cb43c'}">
                 <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
@@ -2919,7 +3251,7 @@ window.addToWhitelist = function() {
         isProtected: false
     }).then(() => {
         loadData(() => {
-            renderWhitelist();
+            renderWhitelistWithPagination(1);
             showNotification(`Пользователь "${username}" добавлен в список доступа`, "success");
             if (input) input.value = "";
         });
@@ -2942,7 +3274,7 @@ window.removeFromWhitelist = function(id) {
     
     db.ref('mlk_whitelist/' + id).remove().then(() => {
         loadData(() => {
-            renderWhitelist();
+            renderWhitelistWithPagination(1);
             showNotification("Пользователь удален из списка доступа", "success");
         });
     }).catch(error => {
@@ -2950,12 +3282,25 @@ window.removeFromWhitelist = function(id) {
     });
 }
 
-window.renderUsers = function() {
+/* ===== ПОЛЬЗОВАТЕЛИ С ПАГИНАЦИЕЙ ===== */
+window.renderUsersWithPagination = function(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
     
+    currentPage = page;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedUsers = users.slice(startIndex, endIndex);
+    totalPages = Math.ceil(users.length / itemsPerPage);
+    
+    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
+    const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
+    const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
+    
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ ПОЛЬЗОВАТЕЛИ
             </h2>
@@ -2968,23 +3313,36 @@ window.renderUsers = function() {
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${users.filter(u => u.role === RANKS.ADMIN.name).length}</div>
+                    <div class="card-value">${adminUsers}</div>
                     <div class="card-label">АДМИНЫ</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-star"></i></div>
-                    <div class="card-value">${users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length}</div>
+                    <div class="card-value">${seniorCurators}</div>
                     <div class="card-label">СТ.КУРАТОРЫ</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user"></i></div>
-                    <div class="card-value">${users.filter(u => u.role === RANKS.CURATOR.name).length}</div>
+                    <div class="card-value">${curators}</div>
                     <div class="card-label">КУРАТОРЫ</div>
                 </div>
             </div>
             
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h4 style="color: #c0b070; margin: 0;">СПИСОК ПОЛЬЗОВАТЕЛЕЙ (${users.length})</h4>
+                <div class="items-per-page-selector">
+                    <span>На странице:</span>
+                    <select onchange="changeItemsPerPage('renderUsersWithPagination', this.value)">
+                        <option value="5">5</option>
+                        <option value="10">10</option>
+                        <option value="15" selected>15</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
+            </div>
+            
             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                <h4 style="color: #c0b070; margin-bottom: 15px;">СПИСОК ПОЛЬЗОВАТЕЛЕЙ (${users.length})</h4>
                 <div class="table-container scrollable-container" style="flex: 1;">
                     ${users.length === 0 ? `
                         <div style="text-align: center; padding: 40px; color: #8f9779;">
@@ -3009,22 +3367,29 @@ window.renderUsers = function() {
                         </table>
                     `}
                 </div>
+                
+                <div id="users-pagination-container"></div>
             </div>
         </div>
     `;
     
     if (users.length > 0) {
-        renderUsersTable();
+        renderUsersTablePaginated(paginatedUsers);
+        if (totalPages > 1) {
+            renderPagination('users-pagination-container', currentPage, totalPages, 'renderUsersWithPagination');
+        }
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
-function renderUsersTable() {
+function renderUsersTablePaginated(paginatedUsers) {
     const tableBody = document.getElementById("users-table-body");
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
-    users.forEach(user => {
+    paginatedUsers.forEach(user => {
         const isProtected = PROTECTED_USERS.some(protectedUser => 
             protectedUser.toLowerCase() === user.username.toLowerCase()
         );
@@ -3034,7 +3399,6 @@ function renderUsersTable() {
             !ban.unbanned
         );
         
-        // Определяем ранг
         let rankBadge = '';
         let rankClass = '';
         
@@ -3077,21 +3441,21 @@ function renderUsersTable() {
                 }
             </td>
             <td>
-                <div class="action-buttons">
+                <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;">
                     ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
-                        `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c;">
+                        `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
                             <i class="fas fa-user-shield"></i> АДМ
                         </button>` : 
                         ''
                     }
                     ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                        `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c;">
+                        `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
                             <i class="fas fa-star"></i> СТ.КУР
                         </button>` : 
                         ''
                     }
                     ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                        `<button onclick="setToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c;">
+                        `<button onclick="setToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
                             <i class="fas fa-user"></i> КУР
                         </button>` : 
                         ''
@@ -3104,123 +3468,7 @@ function renderUsersTable() {
     });
 }
 
-/* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС СПИСКА ДОСТУПА ===== */
-window.renderWhitelist = function() {
-    const content = document.getElementById("content-body");
-    if (!content) return;
-    
-    content.innerHTML = `
-        <div class="form-container">
-            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-users"></i> СПИСОК ДОСТУПА
-            </h2>
-            
-            <div class="zone-card" style="margin-bottom: 20px;">
-                <div class="card-icon"><i class="fas fa-user-plus"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 10px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="new-whitelist-user" class="form-input" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
-                    <button onclick="addToWhitelist()" class="btn-primary" style="padding: 10px 20px;">
-                        <i class="fas fa-plus"></i> ДОБАВИТЬ
-                    </button>
-                </div>
-            </div>
-            
-            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ТЕКУЩИЙ СПИСОК (${whitelist.length})</h4>
-                <div class="table-container scrollable-container" style="flex: 1;">
-                    ${whitelist.length === 0 ? `
-                        <div style="text-align: center; padding: 40px; color: #8f9779;">
-                            <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                            <p>СПИСОК ПУСТ</p>
-                        </div>
-                    ` : `
-                        <table class="data-table" style="min-width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th>ПСЕВДОНИМ</th>
-                                    <th>STATIC ID</th>
-                                    <th>ДОБАВИЛ</th>
-                                    <th>ДАТА ДОБАВЛЕНИЯ</th>
-                                    <th>СТАТУС</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="whitelist-table-body">
-                            </tbody>
-                        </table>
-                    `}
-                </div>
-            </div>
-        </div>
-    `;
-    
-    if (whitelist.length > 0) {
-        renderWhitelistTable();
-    }
-}
-
-window.showBanModal = function(username) {
-    const modalHTML = `
-        <div id="ban-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000;">
-            <div style="background: rgba(30, 32, 28, 0.95); border: 1px solid #b43c3c; padding: 30px; max-width: 500px; width: 90%;">
-                <h3 style="color: #b43c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-ban"></i> БАН ПОЛЬЗОВАТЕЛЯ
-                </h3>
-                
-                <div style="margin-bottom: 20px;">
-                    <div style="color: #8f9779; margin-bottom: 10px;">ПОЛЬЗОВАТЕЛЬ:</div>
-                    <div style="color: #c0b070; font-size: 1.2rem; font-weight: 500;">${username}</div>
-                </div>
-                
-                <div style="margin-bottom: 25px;">
-                    <label class="form-label">ПРИЧИНА БАНА</label>
-                    <textarea id="modal-ban-reason" class="form-textarea" rows="4" 
-                              placeholder="УКАЖИТЕ ПРИЧИНУ БЛОКИРОВКИ..." style="width: 100%;"></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 15px; justify-content: flex-end;">
-                    <button onclick="closeBanModal()" class="btn-secondary">
-                        <i class="fas fa-times"></i> ОТМЕНА
-                    </button>
-                    <button onclick="processBan('${username}')" class="btn-primary" style="border-color: #b43c3c;">
-                        <i class="fas fa-ban"></i> ЗАБАНИТЬ
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    const modalDiv = document.createElement('div');
-    modalDiv.innerHTML = modalHTML;
-    document.body.appendChild(modalDiv);
-}
-
-window.closeBanModal = function() {
-    const modal = document.getElementById('ban-modal');
-    if (modal && modal.parentNode) {
-        modal.parentNode.removeChild(modal);
-    }
-}
-
-window.processBan = function(username) {
-    const reasonInput = document.getElementById('modal-ban-reason');
-    const reason = reasonInput ? reasonInput.value.trim() : "";
-    
-    if (!reason) {
-        showNotification("Введите причину бана", "error");
-        return;
-    }
-    
-    banUser(username, reason).then(success => {
-        if (success) {
-            closeBanModal();
-            renderUsers();
-        }
-    });
-}
-
-/* ===== СТРАНИЦА СИСТЕМЫ ===== */
+/* ===== СТРАНИЦА СИСТЕМЫ С ПРОКРУТКОЙ ===== */
 window.renderSystem = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -3235,79 +3483,83 @@ window.renderSystem = function() {
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
             </h2>
             
-            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-database"></i></div>
-                    <div class="card-value">${reports.length}</div>
-                    <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
+            <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
+                <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-database"></i></div>
+                        <div class="card-value">${reports.length}</div>
+                        <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-users"></i></div>
+                        <div class="card-value">${users.length}</div>
+                        <div class="card-label">ПОЛЬЗОВАТЕЛЕЙ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="card-value">${whitelist.length}</div>
+                        <div class="card-label">В СПИСКЕ ДОСТУПА</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-ban"></i></div>
+                        <div class="card-value">${activeBans}</div>
+                        <div class="card-label">АКТИВНЫХ БАНОВ</div>
+                    </div>
                 </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-users"></i></div>
-                    <div class="card-value">${users.length}</div>
-                    <div class="card-label">ПОЛЬЗОВАТЕЛЕЙ</div>
+                
+                <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-clock"></i></div>
+                        <div class="card-value">${pendingReports}</div>
+                        <div class="card-label">НА РАССМОТРЕНИИ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-check"></i></div>
+                        <div class="card-value">${confirmedReports}</div>
+                        <div class="card-label">ПОДТВЕРЖДЕНО</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-trash"></i></div>
+                        <div class="card-value">${deletedReports}</div>
+                        <div class="card-label">УДАЛЕНО</div>
+                    </div>
                 </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${whitelist.length}</div>
-                    <div class="card-label">В СПИСКЕ ДОСТУПА</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-ban"></i></div>
-                    <div class="card-value">${activeBans}</div>
-                    <div class="card-label">АКТИВНЫХ БАНОВ</div>
-                </div>
-            </div>
-            
-            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-clock"></i></div>
-                    <div class="card-value">${pendingReports}</div>
-                    <div class="card-label">НА РАССМОТРЕНИИ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-check"></i></div>
-                    <div class="card-value">${confirmedReports}</div>
-                    <div class="card-label">ПОДТВЕРЖДЕНО</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-trash"></i></div>
-                    <div class="card-value">${deletedReports}</div>
-                    <div class="card-label">УДАЛЕНО</div>
-                </div>
-            </div>
-            
-            <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${adminUsers}</div>
-                    <div class="card-label">АДМИНИСТРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-star"></i></div>
-                    <div class="card-value">${seniorCurators}</div>
-                    <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user"></i></div>
-                    <div class="card-value">${curators}</div>
-                    <div class="card-label">КУРАТОРЫ</div>
-                </div>
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
-                    <div class="card-value">${juniorCurators}</div>
-                    <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                
+                <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="card-value">${adminUsers}</div>
+                        <div class="card-label">АДМИНИСТРАТОРЫ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-star"></i></div>
+                        <div class="card-value">${seniorCurators}</div>
+                        <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user"></i></div>
+                        <div class="card-value">${curators}</div>
+                        <div class="card-label">КУРАТОРЫ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                        <div class="card-value">${juniorCurators}</div>
+                        <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
-/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
+/* ===== IP МОНИТОРИНГ С ПАГИНАЦИЕЙ ===== */
 window.renderIPStats = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -3321,8 +3573,15 @@ window.renderIPStats = function() {
         const ipData = snapshot.val() || {};
         const ipList = Object.keys(ipData).map(key => ({ ...ipData[key], id: key }));
         
+        const currentPage = 1;
+        const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedIPList = ipList.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(ipList.length / itemsPerPage);
+        
         content.innerHTML = `
-            <div class="form-container">
+            <div class="form-container with-scroll">
                 <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
                 </h2>
@@ -3345,16 +3604,25 @@ window.renderIPStats = function() {
                     </div>
                 </div>
                 
-                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="color: #c0b070;">ИСТОРИЯ IP АДРЕСОВ (${ipList.length})</h4>
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="exportIPData()" class="btn-primary" style="padding: 8px 15px;">
-                                <i class="fas fa-download"></i> ЭКСПОРТ
-                            </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h4 style="color: #c0b070; margin: 0;">ИСТОРИЯ IP АДРЕСОВ (${ipList.length})</h4>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button onclick="exportIPData()" class="btn-primary" style="padding: 8px 15px;">
+                            <i class="fas fa-download"></i> ЭКСПОРТ
+                        </button>
+                        <div class="items-per-page-selector">
+                            <span>На странице:</span>
+                            <select onchange="changeIPItemsPerPage(this.value)">
+                                <option value="10">10</option>
+                                <option value="15" selected>15</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
                         </div>
                     </div>
-                    
+                </div>
+                
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
                     <div class="table-container scrollable-container" style="flex: 1;">
                         ${ipList.length === 0 ? `
                             <div style="text-align: center; padding: 40px; color: #8f9779;">
@@ -3377,26 +3645,58 @@ window.renderIPStats = function() {
                             </table>
                         `}
                     </div>
+                    
+                    <div id="ip-pagination-container"></div>
                 </div>
             </div>
         `;
         
         if (ipList.length > 0) {
-            renderIPTable(ipList);
+            renderIPTablePaginated(paginatedIPList);
+            if (totalPages > 1) {
+                renderPagination('ip-pagination-container', currentPage, totalPages, 'renderIPStatsWithPagination');
+            }
+        }
+        
+        setTimeout(adjustInterfaceHeights, 100);
+    });
+}
+
+function renderIPStatsWithPagination(page = 1) {
+    db.ref('mlk_ip_tracking').once('value').then(snapshot => {
+        const ipData = snapshot.val() || {};
+        const ipList = Object.keys(ipData).map(key => ({ ...ipData[key], id: key }));
+        
+        const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const paginatedIPList = ipList.slice(startIndex, endIndex);
+        const totalPages = Math.ceil(ipList.length / itemsPerPage);
+        
+        renderIPTablePaginated(paginatedIPList);
+        
+        const paginationContainer = document.getElementById('ip-pagination-container');
+        if (paginationContainer && totalPages > 1) {
+            renderPagination('ip-pagination-container', page, totalPages, 'renderIPStatsWithPagination');
         }
     });
 }
 
-function renderIPTable(ipList) {
+function changeIPItemsPerPage(value) {
+    PAGINATION_CONFIG.itemsPerPage = parseInt(value);
+    renderIPStatsWithPagination(1);
+}
+
+function renderIPTablePaginated(ipList) {
     const tableBody = document.getElementById("ip-table-body");
     if (!tableBody) return;
     
     tableBody.innerHTML = '';
     
     ipList.forEach(record => {
-        const row = document.createElement('tr');
         const isCurrentUser = record.username === CURRENT_USER;
         
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isCurrentUser ? '#8cb43c' : '#8f9779'}">
                 <i class="fas fa-desktop" style="margin-right: 5px;"></i>
@@ -3433,14 +3733,12 @@ window.banIP = async function(ip) {
     db.ref('mlk_ip_bans').push(banData).then(() => {
         showNotification(`IP адрес ${ip} заблокирован`, "success");
         
-        // Блокируем все текущие попытки с этого IP
         loginAttempts[ip] = {
             attempts: MAX_ATTEMPTS,
-            lockedUntil: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 дней
+            lockedUntil: Date.now() + (30 * 24 * 60 * 60 * 1000),
             lastAttempt: Date.now()
         };
         
-        // Перезагружаем интерфейс
         renderIPStats();
     }).catch(error => {
         showNotification("Ошибка блокировки IP: " + error.message, "error");
@@ -3473,7 +3771,6 @@ window.unbanIP = async function(ip) {
             unbannedReason: "Разблокировка администратором"
         }).then(() => {
             showNotification(`IP адрес ${ip} разблокирован`, "success");
-            // Удаляем из локального кеша блокировок
             if (loginAttempts[ip]) {
                 delete loginAttempts[ip];
             }
@@ -3483,6 +3780,7 @@ window.unbanIP = async function(ip) {
         });
     });
 }
+
 /* ===== ФУНКЦИЯ ДЛЯ ПРОВЕРКИ IP БАНОВ ПРИ ВХОДЕ ===== */
 async function checkIPBan(ip) {
     try {
@@ -3507,6 +3805,8 @@ async function checkIPBan(ip) {
         return { banned: false };
     }
 }
+
+/* ===== DISCORD ВЕБХУКИ С ПРОКРУТКОЙ ===== */
 function renderWebhookManager() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -3517,19 +3817,17 @@ function renderWebhookManager() {
     }
     
     content.innerHTML = `
-        <div class="form-container discord-webhooks-container">
+        <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-broadcast-tower"></i> DISCORD ВЕБХУКИ
             </h2>
             
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <!-- Настройки вебхука -->
-                <div class="zone-card" style="border-color: #5865F2;">
+            <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
+                <div class="zone-card" style="border-color: #5865F2; margin-bottom: 20px;">
                     <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
                     <h4 style="color: #5865F2; margin-bottom: 10px;">НАСТРОЙКА ВЕБХУКА</h4>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px;">
-                        <!-- Поля ввода -->
                         <div>
                             <label class="form-label">URL ВЕБХУКА DISCORD</label>
                             <input type="text" id="webhook-url" class="form-input" 
@@ -3552,7 +3850,6 @@ function renderWebhookManager() {
                             </div>
                         </div>
                         
-                        <!-- Превью -->
                         <div style="display: flex; gap: 15px; align-items: center; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 4px;">
                             <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
                                  style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #5865F2;"
@@ -3563,7 +3860,6 @@ function renderWebhookManager() {
                             </div>
                         </div>
                         
-                        <!-- Кнопки -->
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c; padding: 10px 15px;">
                                 <i class="fas fa-save"></i> СОХРАНИТЬ
@@ -3578,8 +3874,7 @@ function renderWebhookManager() {
                     </div>
                 </div>
                 
-                <!-- Отправка сообщений -->
-                <div class="zone-card">
+                <div class="zone-card" style="margin-bottom: 20px;">
                     <div class="card-icon"><i class="fas fa-paper-plane"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ОТПРАВКА СООБЩЕНИЙ</h4>
                     
@@ -3601,7 +3896,6 @@ function renderWebhookManager() {
                     </div>
                 </div>
                 
-                <!-- История -->
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-history"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ОТПРАВКИ</h4>
@@ -3611,7 +3905,6 @@ function renderWebhookManager() {
         </div>
     `;
     
-    // Обновляем превью
     const avatarInput = document.getElementById('webhook-avatar');
     const avatarPreview = document.getElementById('avatar-preview');
     if (avatarInput && avatarPreview) {
@@ -3619,280 +3912,92 @@ function renderWebhookManager() {
             avatarPreview.src = this.value || 'https://cdn.discordapp.com/embed/avatars/0.png';
         });
     }
+    
+    renderWebhookHistory();
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
+
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
-function changeMessageType() {
-    const type = document.getElementById('message-type').value;
-    
-    // Скрыть все секции
-    document.querySelectorAll('.message-section').forEach(section => {
-        section.style.display = 'none';
-    });
-    
-    // Показать нужную секцию
-    if (type === 'custom') {
-        document.getElementById('custom-message').style.display = 'block';
-    } else if (type === 'embed') {
-        document.getElementById('embed-message').style.display = 'block';
-        document.getElementById('simple-message').style.display = 'block';
-    } else {
-        document.getElementById('simple-message').style.display = 'block';
-    }
-}
-
-function loadTemplate(templateType) {
-    const messageContent = document.getElementById('message-content');
-    const embedTitle = document.getElementById('embed-title');
-    const embedDescription = document.getElementById('embed-description');
-    const embedColor = document.getElementById('embed-color');
-    const embedAuthor = document.getElementById('embed-author');
-    const embedContent = document.getElementById('embed-content');
-    
-    switch(templateType) {
-        case 'report':
-            if (embedContent) embedContent.value = '🆕 НОВЫЙ ОТЧЕТ В СИСТЕМЕ';
-            if (embedTitle) embedTitle.value = 'ОТЧЕТ МЛК';
-            if (embedDescription) embedDescription.value = `**Автор:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}\n**Статус:** На рассмотрении\n\nТребуется проверка администратора.`;
-            if (embedColor) embedColor.value = '#5865F2';
-            if (embedAuthor) embedAuthor.value = 'Система отчетов Зоны';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'ban':
-            if (embedContent) embedContent.value = '🔨 ВЫДАН БАН ПОЛЬЗОВАТЕЛЮ';
-            if (embedTitle) embedTitle.value = 'БЛОКИРОВКА ПОЛЬЗОВАТЕЛЯ';
-            if (embedDescription) embedDescription.value = `**Нарушитель:** USERNAME\n**Причина:** НАРУШЕНИЕ ПРАВИЛ\n**Забанил:** ${CURRENT_USER}\n**Дата:** ${new Date().toLocaleString()}\n**Static ID:** UNKNOWN`;
-            if (embedColor) embedColor.value = '#b43c3c';
-            if (embedAuthor) embedAuthor.value = 'Система банов';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'user_join':
-            if (embedContent) embedContent.value = '👤 НОВЫЙ СТАЛКЕР В СИСТЕМЕ';
-            if (embedTitle) embedTitle.value = 'РЕГИСТРАЦИЯ';
-            if (embedDescription) embedDescription.value = `**Имя:** НОВЫЙ ПОЛЬЗОВАТЕЛЬ\n**Ранг:** КУРАТОР\n**Static ID:** GENERATED-ID\n**Дата:** ${new Date().toLocaleString()}\n**IP:** 192.168.1.1`;
-            if (embedColor) embedColor.value = '#8cb43c';
-            if (embedAuthor) embedAuthor.value = 'Система пользователей';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-            
-        case 'admin_alert':
-            if (embedContent) embedContent.value = '🚨 ВНИМАНИЕ АДМИНИСТРАТОРАМ';
-            if (embedTitle) embedTitle.value = 'ВАЖНОЕ УВЕДОМЛЕНИЕ';
-            if (embedDescription) embedDescription.value = `**От:** ${CURRENT_USER}\n**Приоритет:** ВЫСОКИЙ\n**Сообщение:** ТРЕБУЕТСЯ ВАШЕ ВНИМАНИЕ\n**Время:** ${new Date().toLocaleString()}\n**Сектор:** Припять-12`;
-            if (embedColor) embedColor.value = '#c0b070';
-            if (embedAuthor) embedAuthor.value = 'Система оповещений';
-            document.getElementById('message-type').value = 'embed';
-            changeMessageType();
-            break;
-    }
-}
-
-window.clearWebhookHistory = function() {
-    if (!confirm("Очистить историю вебхуков? Это действие нельзя отменить.")) return;
-    
-    db.ref('mlk_webhooks').remove().then(() => {
-        webhooks = [];
-        renderWebhookHistory();
-        showNotification("История вебхуков очищена", "success");
-    }).catch(error => {
-        showNotification("Ошибка очистки: " + error.message, "error");
-    });
-}
-
-function saveWebhook() {
-    const urlInput = document.getElementById('webhook-url');
-    const nameInput = document.getElementById('webhook-name');
-    const avatarInput = document.getElementById('webhook-avatar');
-    
-    const url = urlInput ? urlInput.value.trim() : '';
-    const name = nameInput ? nameInput.value.trim() : '';
-    const avatar = avatarInput ? avatarInput.value.trim() : '';
-    
-    if (!url) {
-        showNotification('Введите URL вебхука', 'error');
-        return;
-    }
-    
-    if (!url.startsWith('https://discord.com/api/webhooks/')) {
-        showNotification('Некорректный URL вебхука Discord', 'error');
-        return;
-    }
-    
-    if (!name) {
-        showNotification('Введите имя вебхука', 'error');
-        return;
-    }
-    
-    DISCORD_WEBHOOK_URL = url;
-    DISCORD_WEBHOOK_NAME = name;
-    DISCORD_WEBHOOK_AVATAR = avatar || "https://i.imgur.com/6B7zHqj.png";
-    
-    // Сохраняем все настройки в базу данных
-    const updates = {
-        'mlk_settings/webhook_url': url,
-        'mlk_settings/webhook_name': name,
-        'mlk_settings/webhook_avatar': avatar || "https://i.imgur.com/6B7zHqj.png"
-    };
-    
-    db.ref().update(updates).then(() => {
-        showNotification('Настройки вебхука сохранены', 'success');
-        addWebhookHistory('Сохранены настройки вебхука', 'success');
-        
-        // Обновляем превью
-        const avatarPreview = document.getElementById('avatar-preview');
-        if (avatarPreview) {
-            avatarPreview.src = DISCORD_WEBHOOK_AVATAR;
-        }
-    }).catch(error => {
-        showNotification('Ошибка сохранения: ' + error.message, 'error');
-    });
-}
-
-function clearWebhook() {
-    if (confirm('Очистить все настройки вебхука?')) {
-        DISCORD_WEBHOOK_URL = null;
-        DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
-        DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
-        
-        const urlInput = document.getElementById('webhook-url');
-        const nameInput = document.getElementById('webhook-name');
-        const avatarInput = document.getElementById('webhook-avatar');
-        const avatarPreview = document.getElementById('avatar-preview');
-        
-        if (urlInput) urlInput.value = '';
-        if (nameInput) nameInput.value = 'Система отчетов Зоны';
-        if (avatarInput) avatarInput.value = 'https://i.imgur.com/6B7zHqj.png';
-        if (avatarPreview) avatarPreview.src = 'https://i.imgur.com/6B7zHqj.png';
-        
-        const updates = {
-            'mlk_settings/webhook_url': null,
-            'mlk_settings/webhook_name': null,
-            'mlk_settings/webhook_avatar': null
-        };
-        
-        db.ref().update(updates).then(() => {
-            showNotification('Настройки вебхука очищены', 'success');
-            addWebhookHistory('Настройки вебхука очищены', 'info');
-        });
-    }
-}
-
-function testWebhook() {
-    const urlInput = document.getElementById('webhook-url');
-    const url = urlInput ? urlInput.value.trim() : '';
-    const nameInput = document.getElementById('webhook-name');
-    const name = nameInput ? nameInput.value.trim() : 'Система отчетов Зоны';
-    const avatarInput = document.getElementById('webhook-avatar');
-    const avatar = avatarInput ? avatarInput.value.trim() : 'https://i.imgur.com/6B7zHqj.png';
-    
-    if (!url) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const testPayload = {
-        username: name,
-        avatar_url: avatar,
-        content: null,
-        embeds: [{
-            title: "✅ ТЕСТ ВЕБХУКА",
-            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Время:** ${new Date().toLocaleString()}`,
-            color: 5793266,
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: "Система вебхуков | Версия 1.5"
-            }
-        }]
-    };
-    
-    sendDiscordWebhook(url, testPayload, true);
-}
-
-function sendDiscordMessage() {
+window.sendSimpleMessage = function() {
     if (!DISCORD_WEBHOOK_URL) {
         showNotification('Сначала настройте вебхук', 'error');
         return;
     }
     
-    const type = document.getElementById('message-type').value;
-    let payload = {};
+    const messageInput = document.getElementById('message-text');
+    const message = messageInput ? messageInput.value.trim() : '';
     
-    switch(type) {
-        case 'simple':
-            const content = document.getElementById('message-content').value.trim();
-            if (!content) {
-                showNotification('Введите текст сообщения', 'error');
-                return;
-            }
-            payload = { 
-                content,
-                username: DISCORD_WEBHOOK_NAME,
-                avatar_url: DISCORD_WEBHOOK_AVATAR
-            };
-            break;
-            
-        case 'embed':
-            const embedTitle = document.getElementById('embed-title').value.trim();
-            const embedDescription = document.getElementById('embed-description').value.trim();
-            const embedColor = document.getElementById('embed-color').value.trim();
-            const embedAuthor = document.getElementById('embed-author').value.trim();
-            const embedThumbnail = document.getElementById('embed-thumbnail').value.trim();
-            const embedContent = document.getElementById('embed-content').value.trim();
-            
-            if (!embedDescription) {
-                showNotification('Введите описание embed', 'error');
-                return;
-            }
-            
-            payload = {
-                content: embedContent || null,
-                username: DISCORD_WEBHOOK_NAME,
-                avatar_url: DISCORD_WEBHOOK_AVATAR,
-                embeds: [{
-                    title: embedTitle || undefined,
-                    description: embedDescription,
-                    color: hexToDecimal(embedColor) || 5793266,
-                    author: embedAuthor ? { name: embedAuthor } : undefined,
-                    thumbnail: embedThumbnail ? { url: embedThumbnail } : undefined,
-                    timestamp: new Date().toISOString()
-                }]
-            };
-            break;
-            
-        case 'custom':
-            const customJson = document.getElementById('custom-payload').value.trim();
-            if (!customJson) {
-                showNotification('Введите JSON payload', 'error');
-                return;
-            }
-            try {
-                payload = JSON.parse(customJson);
-                if (!payload.username) payload.username = DISCORD_WEBHOOK_NAME;
-                if (!payload.avatar_url) payload.avatar_url = DISCORD_WEBHOOK_AVATAR;
-            } catch (e) {
-                showNotification('Ошибка в JSON: ' + e.message, 'error');
-                return;
-            }
-            break;
-            
-        case 'report':
-        case 'ban':
-        case 'user_join':
-        case 'admin_alert':
-            loadTemplate(type);
-            sendDiscordMessage();
-            return;
+    if (!message) {
+        showNotification('Введите текст сообщения', 'error');
+        return;
     }
     
+    const payload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        content: message
+    };
+    
     sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
+    
+    if (messageInput) {
+        messageInput.value = '';
+    }
+}
+
+window.sendEmbedMessage = function() {
+    if (!DISCORD_WEBHOOK_URL) {
+        showNotification('Сначала настройте вебхук', 'error');
+        return;
+    }
+    
+    const messageInput = document.getElementById('message-text');
+    const colorInput = document.createElement('input');
+    colorInput.value = '#5865F2';
+    
+    const message = messageInput ? messageInput.value.trim() : '';
+    const color = colorInput.value.trim();
+    
+    if (!message) {
+        showNotification('Введите текст сообщения', 'error');
+        return;
+    }
+    
+    const payload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        embeds: [{
+            title: "📢 СООБЩЕНИЕ ИЗ СИСТЕМЫ",
+            description: message,
+            color: hexToDecimal(color) || 5793266,
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: `Отправлено через систему отчетов Зоны | Пользователь: ${CURRENT_USER}`
+            }
+        }]
+    };
+    
+    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
+    
+    if (messageInput) {
+        messageInput.value = '';
+    }
+}
+
+function hexToDecimal(hex) {
+    if (!hex) return null;
+    hex = hex.replace('#', '');
+    return parseInt(hex, 16);
 }
 
 function sendDiscordWebhook(url, payload, isTest = false) {
-    showNotification('Отправка сообщения в Discord...', 'info');
+    if (!url) {
+        showNotification('URL вебхука не настроен', 'error');
+        return;
+    }
+    
+    showNotification(isTest ? 'Отправка тестового сообщения...' : 'Отправка сообщения в Discord...', 'info');
     
     if (!payload.username) {
         payload.username = DISCORD_WEBHOOK_NAME;
@@ -3910,7 +4015,7 @@ function sendDiscordWebhook(url, payload, isTest = false) {
     })
     .then(response => {
         if (response.ok) {
-            const message = isTest ? 'Тест вебхука выполнен успешно!' : 'Сообщение отправлено в Discord!';
+            const message = isTest ? '✅ Тест вебхука выполнен успешно!' : '✅ Сообщение отправлено в Discord!';
             showNotification(message, 'success');
             addWebhookHistory(isTest ? 'Тест вебхука' : 'Отправлено сообщение', 'success');
             
@@ -3934,17 +4039,11 @@ function sendDiscordWebhook(url, payload, isTest = false) {
         }
     })
     .catch(error => {
-        const errorMessage = `Ошибка отправки: ${error.message}`;
+        const errorMessage = `❌ Ошибка отправки: ${error.message}`;
         showNotification(errorMessage, 'error');
         addWebhookHistory('Ошибка отправки', 'error');
         console.error('Discord webhook error:', error);
     });
-}
-
-function hexToDecimal(hex) {
-    if (!hex) return null;
-    hex = hex.replace('#', '');
-    return parseInt(hex, 16);
 }
 
 function addWebhookHistory(message, type) {
@@ -3973,6 +4072,10 @@ function addWebhookHistory(message, type) {
     `;
     
     historyDiv.insertBefore(entry, historyDiv.firstChild);
+    
+    if (historyDiv.children.length > 10) {
+        historyDiv.removeChild(historyDiv.lastChild);
+    }
 }
 
 function renderWebhookHistory() {
@@ -3986,8 +4089,7 @@ function renderWebhookHistory() {
     
     historyDiv.innerHTML = '';
     
-    // Берем только последние 20 записей
-    webhooks.slice(0, 20).forEach(entry => {
+    webhooks.slice(0, 10).forEach(entry => {
         const div = document.createElement('div');
         div.style.cssText = `
             padding: 10px 12px;
@@ -4025,9 +4127,123 @@ function renderWebhookHistory() {
         historyDiv.appendChild(div);
     });
 }
+
+window.testWebhook = function() {
+    const urlInput = document.getElementById('webhook-url');
+    const url = urlInput ? urlInput.value.trim() : '';
+    
+    if (!url) {
+        showNotification('Сначала настройте вебхук', 'error');
+        return;
+    }
+    
+    const testPayload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        embeds: [{
+            title: "✅ ТЕСТ ВЕБХУКА",
+            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Ранг:** ${CURRENT_RANK.name}\n**Время:** ${new Date().toLocaleString()}`,
+            color: 5793266,
+            timestamp: new Date().toISOString(),
+            footer: {
+                text: "Система вебхуков | Версия 1.5"
+            }
+        }]
+    };
+    
+    sendDiscordWebhook(url, testPayload, true);
+}
+
+window.saveWebhook = function() {
+    const urlInput = document.getElementById('webhook-url');
+    const nameInput = document.getElementById('webhook-name');
+    const avatarInput = document.getElementById('webhook-avatar');
+    
+    const url = urlInput ? urlInput.value.trim() : '';
+    const name = nameInput ? nameInput.value.trim() : '';
+    const avatar = avatarInput ? avatarInput.value.trim() : '';
+    
+    if (!url) {
+        showNotification('Введите URL вебхука', 'error');
+        return;
+    }
+    
+    if (!url.startsWith('https://discord.com/api/webhooks/')) {
+        showNotification('Некорректный URL вебхука Discord', 'error');
+        return;
+    }
+    
+    if (!name) {
+        showNotification('Введите имя вебхука', 'error');
+        return;
+    }
+    
+    DISCORD_WEBHOOK_URL = url;
+    DISCORD_WEBHOOK_NAME = name;
+    DISCORD_WEBHOOK_AVATAR = avatar || "https://i.imgur.com/6B7zHqj.png";
+    
+    const updates = {
+        'mlk_settings/webhook_url': url,
+        'mlk_settings/webhook_name': name,
+        'mlk_settings/webhook_avatar': avatar || "https://i.imgur.com/6B7zHqj.png"
+    };
+    
+    db.ref().update(updates).then(() => {
+        showNotification('Настройки вебхука сохранены', 'success');
+        addWebhookHistory('Сохранены настройки вебхука', 'success');
+        
+        const avatarPreview = document.getElementById('avatar-preview');
+        if (avatarPreview) {
+            avatarPreview.src = DISCORD_WEBHOOK_AVATAR;
+        }
+    }).catch(error => {
+        showNotification('Ошибка сохранения: ' + error.message, 'error');
+    });
+}
+
+window.clearWebhook = function() {
+    if (confirm('Очистить все настройки вебхука?')) {
+        DISCORD_WEBHOOK_URL = null;
+        DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
+        DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
+        
+        const urlInput = document.getElementById('webhook-url');
+        const nameInput = document.getElementById('webhook-name');
+        const avatarInput = document.getElementById('webhook-avatar');
+        const avatarPreview = document.getElementById('avatar-preview');
+        
+        if (urlInput) urlInput.value = '';
+        if (nameInput) nameInput.value = 'Система отчетов Зоны';
+        if (avatarInput) avatarInput.value = 'https://i.imgur.com/6B7zHqj.png';
+        if (avatarPreview) avatarPreview.src = 'https://i.imgur.com/6B7zHqj.png';
+        
+        const updates = {
+            'mlk_settings/webhook_url': null,
+            'mlk_settings/webhook_name': null,
+            'mlk_settings/webhook_avatar': null
+        };
+        
+        db.ref().update(updates).then(() => {
+            showNotification('Настройки вебхука очищены', 'success');
+            addWebhookHistory('Настройки вебхука очищены', 'info');
+        });
+    }
+}
+
+window.clearWebhookHistory = function() {
+    if (!confirm("Очистить историю вебхуков? Это действие нельзя отменить.")) return;
+    
+    db.ref('mlk_webhooks').remove().then(() => {
+        webhooks = [];
+        renderWebhookHistory();
+        showNotification("История вебхуков очищена", "success");
+    }).catch(error => {
+        showNotification("Ошибка очистки: " + error.message, "error");
+    });
+}
+
 /* ===== ВАЛИДАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ ===== */
 document.addEventListener('DOMContentLoaded', function() {
-    // Добавляем валидацию в реальном времени
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     
@@ -4057,13 +4273,11 @@ function updateInputValidation(input, validation) {
     const wrapper = input.closest('.input-wrapper');
     if (!wrapper) return;
     
-    // Удаляем старые сообщения
     const oldError = wrapper.querySelector('.validation-error');
     const oldSuccess = wrapper.querySelector('.validation-success');
     if (oldError) oldError.remove();
     if (oldSuccess) oldSuccess.remove();
     
-    // Обновляем стиль инпута
     input.classList.remove('input-valid', 'input-invalid');
     
     if (input.value.trim() === '') {
@@ -4099,30 +4313,6 @@ window.investigateIP = function(ip) {
         
         alert(`IP ${ip} используется ${usersOnIP.length} пользователями:\n\n` +
               usersOnIP.map(u => `• ${u.username} (${u.staticId})`).join('\n'));
-    });
-}
-
-window.banIP = function(ip) {
-    if (!confirm(`Заблокировать IP адрес ${ip}?\nВсе пользователи с этого IP не смогут зайти в систему.`)) {
-        return;
-    }
-    
-    const banData = {
-        ip: ip,
-        bannedBy: CURRENT_USER,
-        bannedDate: new Date().toLocaleString(),
-        reason: "Блокировка IP по решению администратора"
-    };
-    
-    db.ref('mlk_ip_bans').push(banData).then(() => {
-        showNotification(`IP адрес ${ip} заблокирован`, "success");
-        
-        // Блокируем все текущие попытки с этого IP
-        loginAttempts[ip] = {
-            attempts: MAX_ATTEMPTS,
-            lockedUntil: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 дней
-            lastAttempt: Date.now()
-        };
     });
 }
 
@@ -4169,383 +4359,26 @@ window.exportIPData = function() {
         
         showNotification("Данные IP экспортированы в CSV", "success");
     });
-
 }
 
-
-/* ===== АВТОМАТИЧЕСКАЯ РЕГУЛИРОВКА ВЫСОТЫ ===== */
-function adjustContentHeight() {
-    const contentBody = document.getElementById('content-body');
-    if (!contentBody) return;
-    
-    const header = document.querySelector('.content-header');
-    const footer = document.querySelector('.content-footer');
-    
-    if (header && footer) {
-        const headerHeight = header.offsetHeight;
-        const footerHeight = footer.offsetHeight;
-        const windowHeight = window.innerHeight;
-        const sidebar = document.querySelector('.zone-sidebar');
-        const sidebarHeight = sidebar ? sidebar.offsetHeight : 0;
-        
-        // Рассчитываем доступную высоту
-        const availableHeight = windowHeight - headerHeight - footerHeight - 40; // 40px для отступов
-        
-        // Устанавливаем минимальную высоту
-        contentBody.style.minHeight = Math.max(availableHeight, 400) + 'px';
-    }
-}
-
-// Вызываем при загрузке и изменении размера окна
-window.addEventListener('load', adjustContentHeight);
-window.addEventListener('resize', adjustContentHeight);
-
-// Также вызываем при переключении модулей
-const originalAddNavButton = addNavButton;
-window.addNavButton = function(container, icon, text, onClick) {
-    const button = originalAddNavButton(container, icon, text, function() {
-        if (onClick) onClick();
-        setTimeout(adjustContentHeight, 100); // Ждем отрисовки контента
-    });
-    return button;
-    /* ===== УПРОЩЕННЫЕ ФУНКЦИИ ОТПРАВКИ СООБЩЕНИЙ ===== */
-window.sendSimpleMessage = function() {
-    if (!DISCORD_WEBHOOK_URL) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const messageInput = document.getElementById('message-text');
-    const message = messageInput ? messageInput.value.trim() : '';
-    
-    if (!message) {
-        showNotification('Введите текст сообщения', 'error');
-        return;
-    }
-    
-    const payload = {
-        username: DISCORD_WEBHOOK_NAME,
-        avatar_url: DISCORD_WEBHOOK_AVATAR,
-        content: message
-    };
-    
-    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
-    
-    // Очищаем поле после отправки
-    if (messageInput) {
-        messageInput.value = '';
-    }
-}
-
-window.sendEmbedMessage = function() {
-    if (!DISCORD_WEBHOOK_URL) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const messageInput = document.getElementById('message-text');
-    const colorInput = document.getElementById('embed-color');
-    
-    const message = messageInput ? messageInput.value.trim() : '';
-    const color = colorInput ? colorInput.value.trim() : '#5865F2';
-    
-    if (!message) {
-        showNotification('Введите текст сообщения', 'error');
-        return;
-    }
-    
-    const payload = {
-        username: DISCORD_WEBHOOK_NAME,
-        avatar_url: DISCORD_WEBHOOK_AVATAR,
-        embeds: [{
-            title: "📢 СООБЩЕНИЕ ИЗ СИСТЕМЫ",
-            description: message,
-            color: hexToDecimal(color) || 5793266,
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: `Отправлено через систему отчетов Зоны | Пользователь: ${CURRENT_USER}`
-            }
-        }]
-    };
-    
-    sendDiscordWebhook(DISCORD_WEBHOOK_URL, payload, false);
-    
-    // Очищаем поле после отправки
-    if (messageInput) {
-        messageInput.value = '';
-    }
-}
-
-/* ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ===== */
-function hexToDecimal(hex) {
-    if (!hex) return null;
-    hex = hex.replace('#', '');
-    return parseInt(hex, 16);
-}
-
-function sendDiscordWebhook(url, payload, isTest = false) {
-    if (!url) {
-        showNotification('URL вебхука не настроен', 'error');
-        return;
-    }
-    
-    showNotification(isTest ? 'Отправка тестового сообщения...' : 'Отправка сообщения в Discord...', 'info');
-    
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    })
-    .then(response => {
-        if (response.ok) {
-            const message = isTest ? '✅ Тест вебхука выполнен успешно!' : '✅ Сообщение отправлено в Discord!';
-            showNotification(message, 'success');
-            addWebhookHistory(isTest ? 'Тест вебхука' : 'Отправлено сообщение', 'success');
-            
-            // Сохраняем в историю
-            const historyEntry = {
-                type: isTest ? 'test' : 'message',
-                timestamp: new Date().toLocaleString(),
-                user: CURRENT_USER,
-                payload: payload
-            };
-            
-            webhooks.unshift(historyEntry);
-            if (webhooks.length > 50) webhooks = webhooks.slice(0, 50);
-            
-            // Обновляем историю в интерфейсе
-            updateWebhookHistory();
-            
-            // Сохраняем в базу данных
-            db.ref('mlk_webhooks').push(historyEntry);
-        } else {
-            return response.text().then(text => {
-                throw new Error(`HTTP ${response.status}: ${text}`);
-            });
-        }
-    })
-    .catch(error => {
-        const errorMessage = `❌ Ошибка отправки: ${error.message}`;
-        showNotification(errorMessage, 'error');
-        addWebhookHistory('Ошибка отправки', 'error');
-        console.error('Discord webhook error:', error);
-    });
-}
-
-function updateWebhookHistory() {
-    const historyDiv = document.getElementById('webhook-history');
-    if (!historyDiv) return;
-    
-    if (webhooks.length === 0) {
-        historyDiv.innerHTML = '<div style="color: #6a6a5a; text-align: center; padding: 20px; font-style: italic;">Нет отправленных сообщений</div>';
-        return;
-    }
-    
-    historyDiv.innerHTML = '';
-    
-    // Берем только последние 10 записей
-    webhooks.slice(0, 10).forEach(entry => {
-        const div = document.createElement('div');
-        div.style.cssText = `
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: rgba(30, 32, 28, 0.7);
-            border: 1px solid rgba(42, 40, 31, 0.3);
-            border-radius: 4px;
-            font-size: 0.8rem;
-            color: #8f9779;
-        `;
-        
-        const time = new Date(entry.timestamp).toLocaleTimeString('ru-RU', { 
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit'
-        });
-        const date = new Date(entry.timestamp).toLocaleDateString('ru-RU');
-        
-        div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                <span style="color: ${entry.type === 'test' ? '#5865F2' : '#8cb43c'}">
-                    <i class="fas fa-${entry.type === 'test' ? 'broadcast-tower' : 'paper-plane'}"></i>
-                    ${entry.type === 'test' ? 'Тестирование' : 'Сообщение'}
-                </span>
-                <span style="color: #6a6a5a; font-size: 0.75rem;">${time}</span>
-            </div>
-            <div style="color: #c0b070; font-size: 0.75rem; margin-bottom: 3px;">
-                <i class="fas fa-user"></i> ${entry.user || 'Система'}
-            </div>
-            <div style="color: #6a6a5a; font-size: 0.7rem;">
-                ${date}
-            </div>
-        `;
-        
-        historyDiv.appendChild(div);
-    });
-}
-
-/* ===== ФУНКЦИЯ ДЛЯ ТЕСТИРОВАНИЯ ВЕБХУКА ===== */
-window.testWebhook = function() {
-    const urlInput = document.getElementById('webhook-url');
-    const url = urlInput ? urlInput.value.trim() : '';
-    
-    if (!url) {
-        showNotification('Сначала настройте вебхук', 'error');
-        return;
-    }
-    
-    const testPayload = {
-        username: DISCORD_WEBHOOK_NAME,
-        avatar_url: DISCORD_WEBHOOK_AVATAR,
-        embeds: [{
-            title: "✅ ТЕСТ ВЕБХУКА",
-            description: `Вебхук успешно настроен!\n\n**Система:** Отчеты Зоны\n**Пользователь:** ${CURRENT_USER}\n**Ранг:** ${CURRENT_RANK.name}\n**Время:** ${new Date().toLocaleString()}`,
-            color: 5793266,
-            timestamp: new Date().toISOString(),
-            footer: {
-                text: "Система вебхуков | Версия 1.5"
-            }
-        }]
-    };
-    
-    sendDiscordWebhook(url, testPayload, true);
-}
-
-/* ===== ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ НАСТРОЕК ВЕБХУКА ===== */
-window.saveWebhook = function() {
-    const urlInput = document.getElementById('webhook-url');
-    const nameInput = document.getElementById('webhook-name');
-    const avatarInput = document.getElementById('webhook-avatar');
-    
-    const url = urlInput ? urlInput.value.trim() : '';
-    const name = nameInput ? nameInput.value.trim() : '';
-    const avatar = avatarInput ? avatarInput.value.trim() : '';
-    
-    if (!url) {
-        showNotification('Введите URL вебхука', 'error');
-        return;
-    }
-    
-    if (!url.startsWith('https://discord.com/api/webhooks/')) {
-        showNotification('Некорректный URL вебхука Discord', 'error');
-        return;
-    }
-    
-    if (!name) {
-        showNotification('Введите имя вебхука', 'error');
-        return;
-    }
-    
-    DISCORD_WEBHOOK_URL = url;
-    DISCORD_WEBHOOK_NAME = name;
-    DISCORD_WEBHOOK_AVATAR = avatar || "https://i.imgur.com/6B7zHqj.png";
-    
-    // Сохраняем все настройки в базу данных
-    const updates = {
-        'mlk_settings/webhook_url': url,
-        'mlk_settings/webhook_name': name,
-        'mlk_settings/webhook_avatar': avatar || "https://i.imgur.com/6B7zHqj.png"
-    };
-    
-    db.ref().update(updates).then(() => {
-        showNotification('Настройки вебхука сохранены', 'success');
-        
-        // Обновляем превью
-        const avatarPreview = document.getElementById('avatar-preview');
-        if (avatarPreview) {
-            avatarPreview.src = DISCORD_WEBHOOK_AVATAR;
-        }
-    }).catch(error => {
-        showNotification('Ошибка сохранения: ' + error.message, 'error');
-    });
-}
-
-/* ===== ФУНКЦИЯ ДЛЯ ОЧИСТКИ НАСТРОЕК ВЕБХУКА ===== */
-window.clearWebhook = function() {
-    if (confirm('Очистить все настройки вебхука?')) {
-        DISCORD_WEBHOOK_URL = null;
-        DISCORD_WEBHOOK_NAME = "Система отчетов Зоны";
-        DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
-        
-        const urlInput = document.getElementById('webhook-url');
-        const nameInput = document.getElementById('webhook-name');
-        const avatarInput = document.getElementById('webhook-avatar');
-        const avatarPreview = document.getElementById('avatar-preview');
-        
-        if (urlInput) urlInput.value = '';
-        if (nameInput) nameInput.value = 'Система отчетов Зоны';
-        if (avatarInput) avatarInput.value = 'https://i.imgur.com/6B7zHqj.png';
-        if (avatarPreview) avatarPreview.src = 'https://i.imgur.com/6B7zHqj.png';
-        
-        const updates = {
-            'mlk_settings/webhook_url': null,
-            'mlk_settings/webhook_name': null,
-            'mlk_settings/webhook_avatar': null
-        };
-        
-        db.ref().update(updates).then(() => {
-            showNotification('Настройки вебхука очищены', 'success');
-        });
-    }
-};
-
-/* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ ===== */
-function setupAutoScroll() {
-    // Проверяем все контейнеры на переполнение
-    const scrollableContainers = document.querySelectorAll('.scrollable-container');
-    
-    scrollableContainers.forEach(container => {
-        // Проверяем, есть ли переполнение по вертикали
-        const hasVerticalScroll = container.scrollHeight > container.clientHeight;
-        
-        if (hasVerticalScroll) {
-            // Добавляем индикатор, если нужно
-            container.style.paddingRight = '15px'; // Даем место для скроллбара
-        }
-    });
-}
-
-// Вызываем при загрузке и изменении контента
-document.addEventListener('DOMContentLoaded', setupAutoScroll);
-
-// Функция для проверки конкретного контейнера
-window.checkScrollable = function(containerId) {
-    const container = document.getElementById(containerId);
-    if (container && container.scrollHeight > container.clientHeight) {
-        container.classList.add('needs-scroll');
-        return true;
-    }
-    return false;
-};
-// Инициализация скроллбаров после загрузки
-document.addEventListener('DOMContentLoaded', function() {
-    // Даем время на отрисовку контента
-    setTimeout(function() {
-        setupAutoScroll();
-        adjustInterfaceHeights();
-    }, 500);
-    
-    // Обновляем при изменении размера окна
-    window.addEventListener('resize', function() {
-        setTimeout(setupAutoScroll, 100);
-    });
-});
-
-// Функция для прокрутки вверх контейнера
-window.scrollToTop = function(containerId) {
+/* ===== ФУНКЦИИ ДЛЯ ПРОКРУТКИ КОНТЕЙНЕРОВ ===== */
+window.scrollContainerToTop = function(containerId) {
     const container = document.getElementById(containerId);
     if (container) {
         container.scrollTop = 0;
     }
 };
 
-// Функция для прокрутки вниз контейнера
-window.scrollToBottom = function(containerId) {
+window.scrollContainerToBottom = function(containerId) {
     const container = document.getElementById(containerId);
     if (container) {
         container.scrollTop = container.scrollHeight;
     }
 };
 
-}
+/* ===== ФУНКЦИЯ ДЛЯ ПЕРЕЗАГРУЗКИ НАСТРОЕК ВЫСОТЫ ===== */
+window.refreshLayout = function() {
+    adjustInterfaceHeights();
+    setupAutoScroll();
+    showNotification("Настройки высоты обновлены", "info");
+};

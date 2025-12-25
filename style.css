@@ -2636,6 +2636,54 @@ body, html {
     }
 }
 
+/* Основной контент */
+.content-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.zone-interface {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.zone-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Адаптивность для таблиц */
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 200px;
+    max-height: calc(100vh - 300px);
+}
+
+/* Для очень маленьких экранов */
+@media (max-height: 600px) {
+    .zone-interface {
+        height: 100vh;
+        min-height: 600px;
+    }
+    
+    .content-header {
+        padding: 10px 15px;
+    }
+    
+    .content-footer {
+        padding: 8px 15px;
+    }
+    
+    .sidebar-header {
+        padding: 12px 15px;
+    }
+}
 
 
 

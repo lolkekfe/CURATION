@@ -4478,6 +4478,7 @@ function adjustInterfaceHeights() {
     }
 }
 
+};
 
 
 

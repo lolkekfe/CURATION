@@ -1856,31 +1856,112 @@ function loadReports(callback) {
 
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
 function renderMLKScreen() {
-    const content = document.getElementById("content-body");
-    if (!content) return;
-    content.innerHTML = '';
+    console.log("🔄 ВЫЗВАНА renderMLKScreen");
     
-    if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
-        const btnContainer = document.createElement("div");
-        btnContainer.style.display = "flex";
-        btnContainer.style.justifyContent = "flex-end";
-        btnContainer.style.marginBottom = "20px";
-        
-        const addBtn = document.createElement("button");
-        addBtn.className = "btn-primary";
-        addBtn.innerHTML = '<i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ';
-        addBtn.onclick = renderMLKForm;
-        
-        btnContainer.appendChild(addBtn);
-        content.appendChild(btnContainer);
+    const content = document.getElementById('content-body');
+    if (!content) {
+        console.error('❌ content-body не найден');
+        showNotification('Ошибка: элемент контента не найден', 'error');
+        return;
     }
     
-    const listDiv = document.createElement("div");
-    listDiv.id = "mlk-list";
-    content.appendChild(listDiv);
+    console.log('✅ content-body найден:', content);
     
-    renderMLKList();
+    // Простой тестовый контент
+    const html = `
+        <div style="padding: 40px;">
+            <h2 style="color: #c0b070; margin-bottom: 20px; text-align: center;">
+                <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК - РАБОТАЕТ!
+            </h2>
+            
+            <div style="background: rgba(28, 26, 23, 0.9); padding: 25px; border-radius: 8px; border: 1px solid #4a4a3a; margin-bottom: 30px;">
+                <h3 style="color: #8cb43c; margin-bottom: 15px;">✅ СИСТЕМА РАБОТАЕТ КОРРЕКТНО</h3>
+                <p style="color: #8f9779; line-height: 1.6;">
+                    Функция <strong>renderMLKScreen</strong> успешно вызвана и отображает контент.
+                </p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #3a5a40;">
+                    <h4 style="color: #3a5a40; margin-bottom: 15px;"><i class="fas fa-user"></i> ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ</h4>
+                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Имя:</strong> ${CURRENT_USER || 'Неизвестно'}</p>
+                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Ранг:</strong> ${CURRENT_RANK ? CURRENT_RANK.name : 'Неизвестно'}</p>
+                    <p style="color: #8f9779;"><strong>Static ID:</strong> ${CURRENT_STATIC_ID || 'Неизвестно'}</p>
+                </div>
+                
+                <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #8b7355;">
+                    <h4 style="color: #8b7355; margin-bottom: 15px;"><i class="fas fa-database"></i> СТАТИСТИКА</h4>
+                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Всего отчетов:</strong> ${reports.length}</p>
+                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Всего пользователей:</strong> ${users.length}</p>
+                    <p style="color: #8f9779;"><strong>Активных банов:</strong> ${bans.filter(b => !b.unbanned).length}</p>
+                </div>
+            </div>
+            
+            <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #4a4a3a; margin-top: 20px;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;"><i class="fas fa-code"></i> ТЕСТОВЫЕ ФУНКЦИИ</h4>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="testFunction1()" style="padding: 10px 20px; background: #3a5a40; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-play"></i> Тест 1
+                    </button>
+                    <button onclick="testFunction2()" style="padding: 10px 20px; background: #8b7355; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-play"></i> Тест 2
+                    </button>
+                    <button onclick="showReportsList()" style="padding: 10px 20px; background: #8b4513; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        <i class="fas fa-list"></i> Показать отчеты
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 15px; background: rgba(28, 26, 23, 0.6); border-radius: 6px; border: 1px solid #4a4a3a;">
+                <p style="color: #8f9779; font-size: 0.9rem; text-align: center;">
+                    <i class="fas fa-info-circle"></i> Система: Курация EOD v2.7.4 | Время: ${new Date().toLocaleTimeString()}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    console.log('✅ Устанавливаем HTML в content-body');
+    content.innerHTML = html;
+    console.log('✅ HTML установлен, длина: ' + html.length + ' символов');
 }
+
+// Добавь эти тестовые функции в конец файла (перед последней фигурной скобкой)
+window.testFunction1 = function() {
+    alert('✅ Тестовая функция 1 работает!');
+    console.log('✅ testFunction1 вызвана');
+};
+
+window.testFunction2 = function() {
+    alert('✅ Тестовая функция 2 работает!');
+    console.log('✅ testFunction2 вызвана');
+};
+
+window.showReportsList = function() {
+    const content = document.getElementById('content-body');
+    if (!content) return;
+    
+    let reportsHtml = '<h3 style="color: #c0b070; margin-bottom: 15px;">Список отчетов:</h3>';
+    
+    if (reports.length === 0) {
+        reportsHtml += '<p style="color: #8f9779;">Нет отчетов</p>';
+    } else {
+        reportsHtml += '<div style="max-height: 300px; overflow-y: auto;">';
+        reports.forEach((report, index) => {
+            reportsHtml += `
+                <div style="background: rgba(28, 26, 23, 0.7); padding: 15px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #4a4a3a;">
+                    <p style="color: #8f9779; margin: 0;"><strong>#${index + 1}:</strong> ${report.tag || 'Без тега'} - ${report.author || 'Неизвестно'}</p>
+                </div>
+            `;
+        });
+        reportsHtml += '</div>';
+    }
+    
+    content.innerHTML += `
+        <div style="margin-top: 20px; padding: 20px; background: rgba(40, 42, 36, 0.8); border-radius: 6px; border: 1px solid #4a4a3a;">
+            ${reportsHtml}
+        </div>
+    `;
+};
 
 function renderMLKForm() {
     const content = document.getElementById("content-body");
@@ -3876,6 +3957,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

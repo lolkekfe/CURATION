@@ -1025,13 +1025,92 @@ window.promoteToCuratorByStaticId = function(staticId) {
         return;
     }
     
+    // Проверяем, не является ли пользователь уже куратором или выше
+    if (user.rank >= RANKS.CURATOR.level) {
+        showNotification("Пользователь уже имеет ранг куратора или выше", "warning");
+        return;
+    }
+    
     db.ref('mlk_users/' + user.id).update({
         role: RANKS.CURATOR.name,
         rank: RANKS.CURATOR.level
     }).then(() => {
         loadData(() => {
-            renderUsers();
+            if (window.renderUsers) window.renderUsers();
             showNotification("Пользователь повышен до куратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+window.demoteToCuratorByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только администратор может понижать до куратора", "error");
+        return;
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    // Проверяем, что пользователь имеет ранг выше куратора
+    if (user.rank <= RANKS.CURATOR.level) {
+        showNotification("Пользователь уже имеет ранг куратора или ниже", "warning");
+        return;
+    }
+    
+    if (!confirm(`Понизить пользователя ${user.username} до куратора?`)) return;
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.CURATOR.name,
+        rank: RANKS.CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            if (window.renderUsers) window.renderUsers();
+            showNotification("Пользователь понижен до куратора", "success");
+        });
+    }).catch(error => {
+        showNotification("Ошибка: " + error.message, "error");
+    });
+}
+
+/* ===== УНИВЕРСАЛЬНАЯ ФУНКЦИЯ ДЛЯ НАЗНАЧЕНИЯ КУРАТОРОМ ===== */
+window.setToCuratorByStaticId = function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только старший куратор или выше может назначать кураторов", "error");
+        return;
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) {
+        showNotification("Пользователь не найден", "error");
+        return;
+    }
+    
+    if (user.rank === RANKS.CURATOR.level) {
+        showNotification("Пользователь уже является куратором", "info");
+        return;
+    }
+    
+    let message = `Назначить пользователя ${user.username} куратором?`;
+    if (user.rank > RANKS.CURATOR.level) {
+        message = `Понизить пользователя ${user.username} до куратора?`;
+    } else if (user.rank < RANKS.CURATOR.level) {
+        message = `Повысить пользователя ${user.username} до куратора?`;
+    }
+    
+    if (!confirm(message)) return;
+    
+    db.ref('mlk_users/' + user.id).update({
+        role: RANKS.CURATOR.name,
+        rank: RANKS.CURATOR.level
+    }).then(() => {
+        loadData(() => {
+            if (window.renderUsers) window.renderUsers();
+            showNotification("Пользователь назначен куратором", "success");
         });
     }).catch(error => {
         showNotification("Ошибка: " + error.message, "error");
@@ -2770,6 +2849,12 @@ function renderUsersTable() {
                         </button>` : 
                         ''
                     }
+                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
+                        `<button onclick="setToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c;">
+                            <i class="fas fa-user"></i> КУР
+                        </button>` : 
+                        ''
+                    }
                 </div>
             </td>
         `;
@@ -4166,6 +4251,7 @@ window.clearWebhook = function() {
 
 // ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
 } // <-- Закрывающая скобка;
+
 
 
 

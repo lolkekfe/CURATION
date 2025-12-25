@@ -1597,10 +1597,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* ===== НАВИГАЦИЯ И SIDEBAR ===== */
 function setupSidebar() {
+    console.log("=== setupSidebar START ===");
+    console.log("CURRENT_USER:", CURRENT_USER);
+    console.log("CURRENT_RANK:", CURRENT_RANK);
+    
     const sidebar = document.getElementById("sidebar");
     const navMenu = document.getElementById("nav-menu");
     
-    if (!sidebar || !navMenu) return;
+    console.log("sidebar element:", sidebar);
+    console.log("navMenu element:", navMenu);
+    
+    if (!sidebar || !navMenu) {
+        console.error("ERROR: Sidebar or navMenu not found!");
+        return;
+    }
     
     navMenu.innerHTML = '';
     
@@ -1620,13 +1630,15 @@ function setupSidebar() {
         staticIdElement.textContent = CURRENT_STATIC_ID;
     }
     
-    // Добавляем первую кнопку всегда
+    // Всегда добавляем первую кнопку
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
+    console.log("Added ОТЧЕТЫ МЛК button");
     
-    // Остальные кнопки в зависимости от прав
+    // Проверяем права и добавляем остальные кнопки
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
+        console.log("Added buttons for SENIOR_CURATOR");
     }
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
@@ -1636,49 +1648,25 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
+        console.log("Added buttons for ADMIN");
     }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.onclick = logout;
+        console.log("Logout button setup");
     }
-}
-function addNavButton(container, icon, text, onClick) {
-    const button = document.createElement('button');
-    button.className = 'nav-button';
-    button.innerHTML = `
-        <i class="${icon}"></i>
-        <span>${text}</span>
-    `;
-    button.onclick = function() {
-        // Удаляем активный класс у всех кнопок
-        document.querySelectorAll('.nav-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        // Добавляем активный класс текущей кнопке
-        button.classList.add('active');
-        
-        // Вызываем функцию отображения контента
-        onClick();
-        
-        // Обновляем заголовок
-        const titleElement = document.getElementById('content-title');
-        if (titleElement) {
-            // Находим элемент с классом title-text внутри заголовка
-            const titleText = titleElement.querySelector('.title-text');
-            if (titleText) {
-                titleText.textContent = text;
-            }
+    
+    // Сразу показываем первую страницу
+    setTimeout(() => {
+        const firstButton = document.querySelector('.nav-button');
+        if (firstButton) {
+            console.log("Clicking first button automatically...");
+            firstButton.click();
         }
-        
-        const moduleElement = document.getElementById('module-name');
-        if (moduleElement) {
-            moduleElement.textContent = text;
-        }
-        
-        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
-    };
-    container.appendChild(button);
+    }, 100);
+    
+    console.log("=== setupSidebar END ===");
 }
 
 function logout() {
@@ -3773,6 +3761,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

@@ -4375,11 +4375,66 @@ window.clearWebhook = function() {
     }
 };
 
-// ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
-} // <-- Закрывающая скобка;
+/* ===== АДАПТИВНОСТЬ ИНТЕРФЕЙСА ===== */
+function adjustInterfaceHeights() {
+    const loginScreen = document.getElementById('login-screen');
+    const terminal = document.getElementById('terminal');
+    const contentBody = document.getElementById('content-body');
+    
+    // Настраиваем высоту экрана входа
+    if (loginScreen && loginScreen.style.display !== 'none') {
+        const windowHeight = window.innerHeight;
+        const header = document.querySelector('.zone-header');
+        const footer = document.querySelector('.zone-footer');
+        
+        if (header && footer) {
+            const headerHeight = header.offsetHeight;
+            const footerHeight = footer.offsetHeight;
+            const terminalScreen = document.querySelector('.terminal-screen');
+            
+            if (terminalScreen) {
+                const maxHeight = windowHeight - headerHeight - footerHeight - 80;
+                terminalScreen.style.maxHeight = Math.min(maxHeight, 600) + 'px';
+            }
+        }
+    }
+    
+    // Настраиваем высоту для формы отчета
+    if (contentBody && contentBody.innerHTML.includes('report-creation-container')) {
+        const reportContainer = document.getElementById('report-scroll-container');
+        const formContainer = document.querySelector('.form-container');
+        
+        if (reportContainer && formContainer) {
+            const header = document.querySelector('.content-header');
+            const footer = document.querySelector('.content-footer');
+            const windowHeight = window.innerHeight;
+            
+            if (header && footer) {
+                const headerHeight = header.offsetHeight;
+                const footerHeight = footer.offsetHeight;
+                const maxHeight = windowHeight - headerHeight - footerHeight - 40;
+                
+                reportContainer.style.maxHeight = Math.max(maxHeight, 300) + 'px';
+            }
+        }
+    }
+}
 
+// Вызываем при загрузке и изменении размера
+window.addEventListener('load', adjustInterfaceHeights);
+window.addEventListener('resize', adjustInterfaceHeights);
 
+// Также вызываем при переключении модулей
+const originalAddNavButton = addNavButton;
+window.addNavButton = function(container, icon, text, onClick) {
+    const button = originalAddNavButton(container, icon, text, function() {
+        if (onClick) onClick();
+        setTimeout(adjustInterfaceHeights, 100);
+    });
+    return button;
+};
 
+}
 
 
 

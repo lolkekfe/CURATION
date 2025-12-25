@@ -51,100 +51,6 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
-/* ===== ИСПРАВЛЕННЫЙ CSS ДЛЯ ТАБЛИЦ ===== */
-const fixCSS = `
-    /* Исправление для таблиц: убираем лишние стили, которые ломают таблицы */
-    .data-table {
-        border-collapse: collapse !important;
-        width: 100% !important;
-        border: 1px solid #4a4a3a !important;
-        background: rgba(30, 32, 28, 0.9) !important;
-        table-layout: auto !important;
-    }
-    
-    .data-table th,
-    .data-table td {
-        border: 1px solid #4a4a3a !important;
-        padding: 8px 12px !important;
-        vertical-align: top !important;
-        text-align: left !important;
-        display: table-cell !important;
-    }
-    
-    .data-table th {
-        background: linear-gradient(to right, #2a2c28, #3a3c38) !important;
-        color: #c0b070 !important;
-        padding: 12px 15px !important;
-        border-bottom: 2px solid #4a4a3a !important;
-        font-weight: 600 !important;
-        font-size: 0.9rem !important;
-        text-transform: uppercase !important;
-        letter-spacing: 0.5px !important;
-    }
-    
-    .data-table td {
-        color: #8f9779 !important;
-        font-size: 0.9rem !important;
-        vertical-align: middle !important;
-        border-top: 1px solid #4a4a3a !important;
-    }
-    
-    .data-table tr:hover {
-        background: rgba(40, 42, 36, 0.5) !important;
-    }
-    
-    /* Исправление для ячеек действий */
-    .data-table .actions {
-        white-space: nowrap !important;
-        min-width: 120px !important;
-    }
-    
-    /* Убираем лишние отступы у кнопок в таблицах */
-    .data-table .action-btn {
-        margin: 2px !important;
-        padding: 4px 8px !important;
-        font-size: 0.8rem !important;
-    }
-    
-    /* Исправляем контейнеры таблиц */
-    .table-container {
-        overflow-x: auto !important;
-        width: 100% !important;
-    }
-    
-    /* Убираем лишние стили для зон */
-    .zone-card {
-        border-radius: 4px !important;
-        border: 1px solid #4a4a3a !important;
-        padding: 15px !important;
-        background: rgba(30, 32, 28, 0.7) !important;
-        margin-bottom: 20px !important;
-        position: relative !important;
-        overflow: visible !important;
-    }
-    
-    .form-container {
-        background: rgba(30, 32, 28, 0.95) !important;
-        border: 1px solid #4a4a3a !important;
-        border-radius: 4px !important;
-        overflow: hidden !important;
-    }
-    
-    .dashboard-grid {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
-        gap: 15px !important;
-        margin-bottom: 25px !important;
-    }
-`;
-
-// Добавляем только если еще не добавлено
-if (!document.getElementById('fix-styles')) {
-    const style = document.createElement('style');
-    style.id = 'fix-styles';
-    style.textContent = fixCSS;
-    document.head.appendChild(style);
-}
 
 /* ===== УЛУЧШЕННОЕ ХЕШИРОВАНИЕ С СОЛЬЮ ===== */
 function generateSalt() {
@@ -3991,6 +3897,7 @@ window.addNavButton = function(container, icon, text, onClick) {
     });
     return button;
 };
+
 
 
 

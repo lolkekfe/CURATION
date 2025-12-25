@@ -2364,3 +2364,35 @@ body {
     background: rgba(20, 18, 15, 0.95);
     box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
+/* ===== ИСПРАВЛЕНИЯ ДЛЯ ТАБЛИЦ ===== */
+.data-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+}
+
+.data-table th,
+.data-table td {
+    border: 1px solid var(--border-dark);
+    padding: 12px 15px;
+    text-align: left;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.data-table th {
+    background: linear-gradient(to right, var(--tertiary-dark), var(--secondary-dark));
+    color: var(--text-primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.data-table tr {
+    display: table-row;
+}
+
+.table-container {
+    overflow-x: auto;
+    width: 100%;
+}
+

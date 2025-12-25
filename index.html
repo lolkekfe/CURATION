@@ -1,38 +1,345 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Curator Terminal</title>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Стили -->
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>КУРАЦИЯ EOD | Система управления</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Фон системы -->
+    <div class="zone-bg"></div>
+    <div class="corruption-overlay"></div>
+    <div class="scan-lines"></div>
+    
+    <!-- Экран входа -->
+    <div id="login-screen" class="login-container">
+        <div class="zone-header">
+            <div class="system-status">
+                <div class="status-indicator active"></div>
+                <span class="status-text">СИСТЕМА КУРАЦИИ ОНЛАЙН</span>
+                <div class="frequency-meter">
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                    <div class="frequency-bar"></div>
+                </div>
+            </div>
+            
+            <h1 class="zone-title">
+                <span class="title-part">КУРАЦИЯ</span>
+                <span class="title-part">EOD</span>
+            </h1>
+            
+            <div class="security-level">
+                <div class="security-bar">
+                    <div class="security-progress"></div>
+                </div>
+                <span class="security-text">УРОВЕНЬ ДОСТУПА: 64%</span>
+            </div>
+        </div>
+        
+        <div class="login-terminal">
+            <div class="terminal-frame">
+                <div class="frame-corner top-left"></div>
+                <div class="frame-corner top-right"></div>
+                <div class="frame-corner bottom-left"></div>
+                <div class="frame-corner bottom-right"></div>
+                
+                <div class="terminal-screen">
+                    <div class="screen-header">
+                        <div class="header-glow"></div>
+                        <span>АУТЕНТИФИКАЦИЯ</span>
+                        <span class="blink">_</span>
+                    </div>
+                    
+                    <div class="screen-content">
+                        <div class="access-line">
+                            <div class="line-number">[001]</div>
+                            <span class="prompt">> ИДЕНТИФИКАТОР:</span>
+                            <div class="input-wrapper">
+                                <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off" spellcheck="false">
+                                <div class="input-underline"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="access-line">
+                            <div class="line-number">[002]</div>
+                            <span class="prompt">> КОД ДОСТУПА:</span>
+                            <div class="input-wrapper">
+                                <input type="password" id="password" placeholder="ВВЕДИТЕ КОД" autocomplete="off" spellcheck="false">
+                                <div class="input-underline"></div>
+                                <div class="encryption-indicator">
+                                    <i class="fas fa-lock"></i>
+                                    <span>AES-256</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="system-log">
+                            <div class="log-entry">
+                                <span class="log-time">[...]</span>
+                                <span class="log-message">>> СИСТЕМА: Ожидание аутентификации...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="screen-footer">
+                        <div class="footer-grid">
+                            <div class="grid-cell">
+                                <span class="cell-label">СТАТУС:</span>
+                                <span class="cell-value standby">ГОТОВ</span>
+                            </div>
+                            <div class="grid-cell">
+                                <span class="cell-label">СЕССИЯ:</span>
+                                <span class="cell-value">#001</span>
+                            </div>
+                            <div class="grid-cell">
+                                <span class="cell-label">ВЕРСИЯ:</span>
+                                <span class="cell-value">2.7.4</span>
+                            </div>
+                        </div>
+                        
+                        <button id="login-btn" class="access-button">
+                            <div class="button-inner">
+                                <i class="fas fa-terminal"></i>
+                                <span>ПОДКЛЮЧИТЬСЯ</span>
+                                <div class="button-pulse"></div>
+                            </div>
+                        </button>
+                        
+                        <div id="login-error" class="error-display">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span class="error-text"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="zone-footer">
+            <div class="footer-info">
+                <span>КУРАЦИЯ EOD v2.7.4</span>
+                <span class="sep">|</span>
+                <span>БАЗА: ОПЕРАТИВНА</span>
+                <span class="sep">|</span>
+                <span>ВРЕМЯ: <span id="sync-time">--:--:--</span></span>
+            </div>
+        </div>
+    </div>
 
-  <!-- ================= ОСНОВНОЙ КОНТЕНТ ================= -->
+    <!-- Основной интерфейс -->
+    <div id="terminal" class="zone-interface" style="display: none;">
+        <!-- Боковая панель -->
+        <div id="sidebar" class="zone-sidebar">
+            <div class="sidebar-header">
+                <div class="header-panel">
+                    <div class="panel-glow"></div>
+                    <div class="user-terminal">
+                        <div class="terminal-display">
+                            <div class="display-line">
+                                <span class="prompt">$</span>
+                                <span class="command">user.status</span>
+                                <span class="cursor blink">█</span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">> ID: <span id="current-username" class="highlight">NULL</span></span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">> РАНГ: <span id="current-rank" class="highlight">PENDING</span></span>
+                            </div>
+                            <div class="display-line">
+                                <span class="output">> SID: <span id="current-static-id" class="highlight">XXXX-XXXX-XXXX</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="navigation-panel">
+                <div class="panel-header">
+                    <div class="header-icon">
+                        <i class="fas fa-sitemap"></i>
+                    </div>
+                    <span>МОДУЛИ</span>
+                    <div class="header-status">
+                        <div class="status-led active"></div>
+                        <span>ОНЛАЙН</span>
+                    </div>
+                </div>
+                
+                <div class="module-grid">
+                    <nav class="nav-menu" id="nav-menu">
+                        <!-- Навигация через JS -->
+                    </nav>
+                </div>
+            </div>
+            
+            <div class="session-panel">
+                <div class="panel-header">
+                    <i class="fas fa-history"></i>
+                    <span>СЕССИЯ</span>
+                </div>
+                <button id="logout-btn" class="session-button">
+                    <div class="button-core">
+                        <i class="fas fa-power-off"></i>
+                        <span>ВЫЙТИ</span>
+                    </div>
+                </button>
+            </div>
+        </div>
 
-  <div id="app">
-    <!-- Здесь твой существующий HTML-контент:
-         формы входа, панели, кнопки, таблицы и т.д.
-         Я намеренно не меняю разметку -->
-  </div>
+        <!-- Основной контент -->
+        <div id="content" class="zone-content">
+            <div class="content-header">
+                <div class="header-main">
+                    <div class="title-container">
+                        <div class="title-glow"></div>
+                        <h2 id="content-title">
+                            <span class="title-prefix">//</span>
+                            <span class="title-text">ЦЕНТРАЛЬНЫЙ КОНТРОЛЬ</span>
+                        </h2>
+                        <div class="title-sub">
+                            <span class="sub-label">МОДУЛЬ:</span>
+                            <span class="sub-value" id="module-name">ИНИЦИАЛИЗАЦИЯ</span>
+                        </div>
+                    </div>
+                    
+                    <div class="header-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">ОТЧЕТЫ</span>
+                                <span class="stat-value" id="processed-data">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">ПОЛЬЗОВАТЕЛИ</span>
+                                <span class="stat-value" id="active-users">0</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">СТАТУС</span>
+                                <span class="stat-value" id="threat-level">OK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="header-meta">
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <span class="meta-label">ВРЕМЯ:</span>
+                            <span class="meta-value" id="current-time">00:00:00</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">ДАТА:</span>
+                            <span class="meta-value" id="current-date">--/--/----</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">ВЕРСИЯ:</span>
+                            <span class="meta-value">2.7.4</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">СТАТУС:</span>
+                            <span class="meta-value operational">НОРМА</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-body" id="content-body">
+                <!-- Контент через JS -->
+                <div class="system-init">
+                    <div class="init-loader">
+                        <div class="loader-core"></div>
+                        <div class="loader-ring"></div>
+                        <div class="loader-ring delay-1"></div>
+                        <div class="loader-ring delay-2"></div>
+                    </div>
+                    <div class="init-text">
+                        <span class="init-line">ИНИЦИАЛИЗАЦИЯ...</span>
+                        <span class="init-line">ЗАГРУЗКА ДАННЫХ...</span>
+                        <span class="init-line blink">ГОТОВ</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-footer">
+                <div class="footer-left">
+                    <div class="transmission-log">
+                        <div class="log-line">
+                            <span class="log-time">[<span id="log-time">00:00:00</span>]</span>
+                            <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ОЖИДАНИЕ КОМАНД</span></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-right">
+                    <div class="command-prompt">
+                        <span class="prompt-symbol">></span>
+                        <div class="prompt-input">
+                            <span class="input-text">ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <!-- ================= FIREBASE SDK (ОБЯЗАТЕЛЬНО) ================= -->
+    <!-- Firebase SDK (ОБЯЗАТЕЛЬНО) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
-  <!-- Firebase v8 (совместим с твоим firebase.js) -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<!-- Инициализация Firebase -->
+<script src="firebase.js"></script>
 
-  <!-- ================= ИНИЦИАЛИЗАЦИЯ FIREBASE ================= -->
+<!-- Основная логика сайта -->
+<script src="app.js" defer></script>
 
-  <script src="firebase.js"></script>
-
-  <!-- ================= ОСНОВНАЯ ЛОГИКА ================= -->
-
-  <!-- defer гарантирует, что DOM уже загружен -->
-  <script src="app.js" defer></script>
-
+    <!-- Инициализация времени -->
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ru-RU', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            const dateString = now.toLocaleDateString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            
+            const syncElement = document.getElementById('sync-time');
+            const timeElement = document.getElementById('current-time');
+            const dateElement = document.getElementById('current-date');
+            const logTimeElement = document.getElementById('log-time');
+            
+            if (syncElement) syncElement.textContent = timeString;
+            if (timeElement) timeElement.textContent = timeString;
+            if (dateElement) dateElement.textContent = dateString;
+            if (logTimeElement) logTimeElement.textContent = timeString;
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
 </body>
 </html>

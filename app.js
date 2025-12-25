@@ -3959,6 +3959,35 @@ window.exportIPData = function() {
 }
 
 
+/* ===== ФУНКЦИЯ ДЛЯ ДЕБАГА ОТОБРАЖЕНИЯ ===== */
+function debugContentVisibility() {
+    const contentBody = document.getElementById('content-body');
+    if (!contentBody) {
+        console.error('❌ content-body не найден в DOM');
+        return;
+    }
+    
+    console.log('=== DEBUG CONTENT-BODY ===');
+    console.log('innerHTML длина:', contentBody.innerHTML.length);
+    console.log('Дочерние элементы:', contentBody.children.length);
+    console.log('CSS display:', getComputedStyle(contentBody).display);
+    console.log('CSS visibility:', getComputedStyle(contentBody).visibility);
+    console.log('CSS opacity:', getComputedStyle(contentBody).opacity);
+    console.log('CSS height:', getComputedStyle(contentBody).height);
+    console.log('CSS max-height:', getComputedStyle(contentBody).maxHeight);
+    console.log('=======================');
+    
+    // Принудительно показываем все дочерние элементы
+    Array.from(contentBody.children).forEach(child => {
+        child.style.display = 'block';
+        child.style.visibility = 'visible';
+        child.style.opacity = '1';
+    });
+}
+
+// Вызывайте эту функцию после рендеринга любой страницы
+// Например, в renderMLKScreen добавьте в конец:
+// debugContentVisibility();
 
 
 

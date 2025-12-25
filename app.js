@@ -3181,7 +3181,6 @@ async function checkIPBan(ip) {
         return { banned: false };
     }
 }
-/* ===== ФУНКЦИЯ ДЛЯ УПРАВЛЕНИЯ DISCORD ВЕБХУКАМИ ===== */
 function renderWebhookManager() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -3192,60 +3191,59 @@ function renderWebhookManager() {
     }
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container discord-webhooks-container">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-broadcast-tower"></i> DISCORD ВЕБХУКИ
             </h2>
             
-            <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; overflow-y: auto; padding-right: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Настройки вебхука -->
                 <div class="zone-card" style="border-color: #5865F2;">
                     <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
                     <h4 style="color: #5865F2; margin-bottom: 10px;">НАСТРОЙКА ВЕБХУКА</h4>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Поля ввода -->
                         <div>
                             <label class="form-label">URL ВЕБХУКА DISCORD</label>
                             <input type="text" id="webhook-url" class="form-input" 
                                    placeholder="https://discord.com/api/webhooks/..."
                                    value="${DISCORD_WEBHOOK_URL || ''}">
-                            <div style="font-size: 0.8rem; color: #8f9779; margin-top: 5px;">
-                                Получите URL в Discord: Настройки канала → Интеграции → Вебхуки
-                            </div>
                         </div>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
                                 <label class="form-label">ИМЯ ОТПРАВИТЕЛЯ</label>
                                 <input type="text" id="webhook-name" class="form-input" 
                                        placeholder="Имя бота"
                                        value="${DISCORD_WEBHOOK_NAME}">
                             </div>
-                            <div>
-                                <label class="form-label">URL АВАТАРКИ (опционально)</label>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label class="form-label">URL АВАТАРКИ</label>
                                 <input type="text" id="webhook-avatar" class="form-input" 
                                        placeholder="https://example.com/avatar.png"
                                        value="${DISCORD_WEBHOOK_AVATAR}">
                             </div>
                         </div>
                         
-                        <div style="display: flex; gap: 15px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a; border-radius: 4px;">
-                            <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #5865F2;">
-                                <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
-                                     style="width: 100%; height: 100%; object-fit: cover;"
-                                     onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                            </div>
+                        <!-- Превью -->
+                        <div style="display: flex; gap: 15px; align-items: center; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 4px;">
+                            <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
+                                 style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid #5865F2;"
+                                 onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
                             <div>
                                 <div style="color: #c0b070; font-weight: 500;">${DISCORD_WEBHOOK_NAME}</div>
                                 <div style="color: #8f9779; font-size: 0.9rem;">Превью отправителя</div>
                             </div>
                         </div>
                         
-                        <div style="display: flex; gap: 10px;">
+                        <!-- Кнопки -->
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c; padding: 10px 15px;">
-                                <i class="fas fa-save"></i> СОХРАНИТЬ НАСТРОЙКИ
+                                <i class="fas fa-save"></i> СОХРАНИТЬ
                             </button>
                             <button onclick="testWebhook()" class="btn-primary" style="border-color: #5865F2; padding: 10px 15px;">
-                                <i class="fas fa-broadcast-tower"></i> ТЕСТИРОВАТЬ
+                                <i class="fas fa-broadcast-tower"></i> ТЕСТ
                             </button>
                             <button onclick="clearWebhook()" class="btn-secondary" style="padding: 10px 15px;">
                                 <i class="fas fa-trash"></i> ОЧИСТИТЬ
@@ -3254,6 +3252,7 @@ function renderWebhookManager() {
                     </div>
                 </div>
                 
+                <!-- Отправка сообщений -->
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-paper-plane"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ОТПРАВКА СООБЩЕНИЙ</h4>
@@ -3262,52 +3261,39 @@ function renderWebhookManager() {
                         <div>
                             <label class="form-label">ТЕКСТ СООБЩЕНИЯ</label>
                             <textarea id="message-text" class="form-textarea" rows="4" 
-                                      placeholder="Введите текст сообщения для отправки в Discord..."></textarea>
+                                      placeholder="Введите текст сообщения..."></textarea>
                         </div>
                         
-                        <div>
-                            <label class="form-label">ЦВЕТ ВСТАВКИ (HEX)</label>
-                            <input type="text" id="embed-color" class="form-input" 
-                                   placeholder="#5865F2 (синий Discord)"
-                                   value="#5865F2">
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button onclick="sendSimpleMessage()" class="btn-primary" style="border-color: #5865F2; padding: 10px 20px;">
-                                <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ПРОСТОЕ СООБЩЕНИЕ
+                                <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ТЕКСТ
                             </button>
                             <button onclick="sendEmbedMessage()" class="btn-primary" style="border-color: #c0b070; padding: 10px 20px;">
-                                <i class="fas fa-code"></i> ОТПРАВИТЬ ВСТАВКУ (EMBED)
+                                <i class="fas fa-code"></i> ОТПРАВИТЬ ВСТАВКУ
                             </button>
                         </div>
                     </div>
                 </div>
                 
+                <!-- История -->
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-history"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ОТПРАВКИ</h4>
-                    
-                    <div id="webhook-history" style="max-height: 200px; overflow-y: auto; background: rgba(20, 18, 15, 0.5); border: 1px solid var(--border-dark); border-radius: 4px; padding: 10px;">
-                        <div style="color: #6a6a5a; text-align: center; padding: 20px; font-style: italic;">
-                            История отправленных сообщений появится здесь
-                        </div>
-                    </div>
+                    <div id="webhook-history" style="min-height: 100px; max-height: 200px; overflow-y: auto; background: rgba(20, 18, 15, 0.5); border-radius: 4px; padding: 10px;"></div>
                 </div>
             </div>
         </div>
     `;
     
-    // Обновляем превью аватарки при изменении URL
+    // Обновляем превью
     const avatarInput = document.getElementById('webhook-avatar');
     const avatarPreview = document.getElementById('avatar-preview');
-
     if (avatarInput && avatarPreview) {
         avatarInput.addEventListener('input', function() {
             avatarPreview.src = this.value || 'https://cdn.discordapp.com/embed/avatars/0.png';
         });
     }
 }
-
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С DISCORD ВЕБХУКАМИ ===== */
 function changeMessageType() {
     const type = document.getElementById('message-type').value;
@@ -4180,6 +4166,7 @@ window.clearWebhook = function() {
 
 // ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
 } // <-- Закрывающая скобка;
+
 
 
 

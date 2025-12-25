@@ -2201,182 +2201,125 @@ function showBannedScreen(banInfo) {
         </div>`;
 }
 
-// Функция для отображения ошибок входа (сверху формы)
-// Функция для отображения ошибок входа (сверху формы)
-function showLoginError(message, type = "error") {
-    console.log("Login error:", message);
-    
-    const errorElement = document.getElementById("login-error");
-    if (errorElement) {
-        // Определяем цвет и иконку в зависимости от типа
-        let borderColor = "#b43c3c";
-        let icon = "fa-exclamation-triangle";
-        let title = "ОШИБКА ВХОДА";
-        
-        if (type === "warning") {
-            borderColor = "#c0b070";
-            icon = "fa-exclamation-circle";
-            title = "ПРЕДУПРЕЖДЕНИЕ";
-        } else if (type === "info") {
-            borderColor = "#8cb43c";
-            icon = "fa-info-circle";
-            title = "ИНФОРМАЦИЯ";
-        }
-        
-        errorElement.innerHTML = `
-            <div class="login-error-box ${type}" style="border-color: ${borderColor};">
-                <i class="fas ${icon}" style="color: ${borderColor};"></i>
-                <div class="error-content">
-                    <div class="error-title">${title}</div>
-                    <div class="error-message">${message}</div>
-                </div>
-            </div>
-        `;
-        errorElement.style.display = "block";
-        
-        // Добавляем анимацию появления
-        setTimeout(() => {
-            const box = errorElement.querySelector('.login-error-box');
-            if (box) {
-                box.style.animation = "fadeIn 0.3s ease";
-            }
-        }, 10);
-        
-        // Автоматическое скрытие через разное время
-        let hideTime = 8000;
-        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
-            hideTime = 12000;
-        } else if (message.includes("НЕВЕРНЫЙ ПАРОЛЬ")) {
-            hideTime = 5000;
-        }
-        
-        setTimeout(() => {
-            if (errorElement && errorElement.style.display !== "none") {
-                errorElement.style.opacity = "0";
-                errorElement.style.transition = "opacity 0.5s ease";
-                setTimeout(() => {
-                    if (errorElement && errorElement.style.display !== "none") {
-                        errorElement.style.display = "none";
-                        errorElement.style.opacity = "1";
-                    }
-                }, 500);
-            }
-        }, hideTime);
-    }
-    
-    // Для блокировки IP показываем также всплывающее уведомление
-    if (message.includes("IP заблокирован") || message.includes("блокирован")) {
-        setTimeout(() => {
-            showNotification(message, "error");
-        }, 100);
-    }
-}
-
-// Функция для системных уведомлений (всплывающих)
-// Функция для системных уведомлений (всплывающих внизу)
+/* ===== СОВРЕМЕННЫЕ УВЕДОМЛЕНИЯ ===== */
 function showNotification(message, type = "info") {
-    // Удаляем старые уведомления
-    const oldNotifications = document.querySelectorAll('.system-notification');
-    oldNotifications.forEach(notification => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    });
+    // Создаем контейнер для уведомлений если его нет
+    let container = document.querySelector('.notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+    }
     
-    // Создаем новое уведомление
-    const notification = document.createElement('div');
-    notification.className = `system-notification ${type}`;
-    
-    // Определяем иконку и цвет
-    let icon, bgColor, textColor;
+    // Определяем иконку и заголовок в зависимости от типа
+    let icon, title;
     switch(type) {
         case 'success':
             icon = 'fa-check-circle';
-            bgColor = 'rgba(140, 180, 60, 0.95)';
-            textColor = '#1e201c';
-            break;
-        case 'warning':
-            icon = 'fa-exclamation-triangle';
-            bgColor = 'rgba(192, 176, 112, 0.95)';
-            textColor = '#1e201c';
+            title = 'УСПЕХ';
             break;
         case 'error':
             icon = 'fa-times-circle';
-            bgColor = 'rgba(180, 60, 60, 0.95)';
-            textColor = '#ffffff';
+            title = 'ОШИБКА';
+            break;
+        case 'warning':
+            icon = 'fa-exclamation-triangle';
+            title = 'ПРЕДУПРЕЖДЕНИЕ';
             break;
         default: // info
             icon = 'fa-info-circle';
-            bgColor = 'rgba(40, 42, 36, 0.95)';
-            textColor = '#c0b070';
+            title = 'ИНФОРМАЦИЯ';
     }
     
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
     notification.innerHTML = `
-        <div style="
-            background: ${bgColor};
-            border: 1px solid ${type === 'error' ? '#b43c3c' : type === 'warning' ? '#c0b070' : type === 'success' ? '#8cb43c' : '#4a4a3a'};
-            border-radius: 4px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(5px);
-            max-width: 400px;
-            min-width: 300px;
-        ">
-            <i class="fas ${icon}" style="
-                color: ${textColor};
-                font-size: 1.1rem;
-                flex-shrink: 0;
-            "></i>
-            <div style="
-                color: ${textColor};
-                font-size: 0.9rem;
-                font-weight: 500;
-                line-height: 1.4;
-                flex: 1;
-            ">${message}</div>
+        <div class="notification-header">
+            <div class="notification-icon">
+                <i class="fas ${icon}"></i>
+            </div>
+            <div class="notification-title">${title}</div>
+            <button class="notification-close" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="notification-content">${message}</div>
+        <div class="notification-progress">
+            <div class="notification-progress-bar" style="width: 100%;"></div>
         </div>
     `;
     
-    // Стили для позиционирования
-    notification.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
-        transform: translateY(100px);
-        opacity: 0;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    `;
-    
-    document.body.appendChild(notification);
+    // Добавляем в контейнер
+    container.appendChild(notification);
     
     // Показываем с анимацией
     setTimeout(() => {
-        notification.style.transform = 'translateY(0)';
-        notification.style.opacity = '1';
+        notification.classList.add('show');
+        
+        // Запускаем прогресс-бар
+        const progressBar = notification.querySelector('.notification-progress-bar');
+        if (progressBar) {
+            progressBar.style.transition = 'width 5s linear';
+            progressBar.style.width = '0%';
+        }
     }, 10);
     
-    // Определяем время отображения
-    const duration = type === 'error' ? 5000 : 
-                    type === 'warning' ? 4000 : 
-                    type === 'success' ? 3000 : 2500;
+    // Время отображения в зависимости от типа
+    const duration = {
+        'success': 4000,
+        'error': 6000,
+        'warning': 5000,
+        'info': 3500
+    }[type] || 4000;
     
     // Автоматическое скрытие
-    setTimeout(() => {
-        notification.style.transform = 'translateY(100px)';
-        notification.style.opacity = '0';
+    const hideNotification = () => {
+        notification.classList.remove('show');
+        notification.classList.add('hide');
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
-        }, 300);
-    }, duration);
+        }, 400);
+    };
+    
+    const timeoutId = setTimeout(hideNotification, duration);
+    
+    // Обработчики для закрытия
+    notification.addEventListener('mouseenter', () => {
+        clearTimeout(timeoutId);
+        const progressBar = notification.querySelector('.notification-progress-bar');
+        if (progressBar) {
+            progressBar.style.transition = 'none';
+            progressBar.style.width = '100%';
+        }
+    });
+    
+    notification.addEventListener('mouseleave', () => {
+        const newTimeoutId = setTimeout(hideNotification, 1000);
+        notification.dataset.timeoutId = newTimeoutId;
+        const progressBar = notification.querySelector('.notification-progress-bar');
+        if (progressBar) {
+            progressBar.style.transition = 'width 1s linear';
+            progressBar.style.width = '0%';
+        }
+    });
+    
+    // Ограничиваем количество уведомлений (максимум 5)
+    const notifications = container.querySelectorAll('.notification');
+    if (notifications.length > 5) {
+        const oldestNotification = notifications[0];
+        oldestNotification.classList.remove('show');
+        oldestNotification.classList.add('hide');
+        setTimeout(() => {
+            if (oldestNotification.parentNode) {
+                oldestNotification.parentNode.removeChild(oldestNotification);
+            }
+        }, 400);
+    }
+    
+    return notification;
 }
 
 /* ===== UI ИНИЦИАЛИЗАЦИЯ ===== */

@@ -900,35 +900,62 @@ function updatePreview() {
     }
 }
 
+// Обновленная функция setupReportFormHandlers
 function setupReportFormHandlers() {
-    document.querySelectorAll('.category-card').forEach(card => card.addEventListener('click', function() {
-        document.querySelectorAll('.category-card').forEach(c => c.classList.remove('active'));
-        this.classList.add('active');
-        updatePreview();
-    }));
-
-    document.querySelectorAll('.priority-option').forEach(option => option.addEventListener('click', function() {
-        document.querySelectorAll('.priority-option').forEach(o => o.classList.remove('active'));
-        this.classList.add('active');
-        updatePreview();
-    }));
-
-    document.querySelectorAll('.tag-option').forEach(option => option.addEventListener('click', function() {
-        document.querySelectorAll('.tag-option').forEach(o => o.classList.remove('active'));
-        this.classList.add('active');
-        updatePreview();
-    }));
-
-    const addProofBtn = document.querySelector('.add-proof-btn');
-    if (addProofBtn) addProofBtn.addEventListener('click', addProofField);
-
-    const proofContainer = document.getElementById('proof-links-container');
-    if (proofContainer) proofContainer.addEventListener('click', function(event) {
-        if (event.target.classList.contains('remove-proof-btn') || event.target.closest('.remove-proof-btn')) {
-            const btn = event.target.classList.contains('remove-proof-btn') ? event.target : event.target.closest('.remove-proof-btn');
-            removeProofField(btn);
-        }
+    console.log('Setting up report form handlers...');
+    
+    // Обработчики для кнопок типа нарушителя
+    document.querySelectorAll('.violator-type-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            console.log('Violator type clicked:', this.dataset.value);
+            document.querySelectorAll('.violator-type-btn').forEach(b => {
+                b.style.background = 'rgba(40, 42, 36, 0.8)';
+                b.style.border = '1px solid #4a4a3a';
+                b.style.color = '#8f9779';
+            });
+            this.style.background = 'rgba(140, 180, 60, 0.15)';
+            this.style.border = '2px solid #8cb43c';
+            this.style.color = '#8cb43c';
+            updatePreview();
+        });
     });
+
+    // Обработчики для карточек категорий
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', function() {
+            console.log('Category clicked:', this.dataset.category);
+            document.querySelectorAll('.category-card').forEach(c => {
+                c.style.background = 'rgba(40, 42, 36, 0.8)';
+                c.style.border = '1px solid #4a4a3a';
+            });
+            const color = this.dataset.color;
+            this.style.background = `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.1)`;
+            this.style.border = `2px solid ${color}`;
+            updatePreview();
+        });
+    });
+
+    // Обработчики для опций приоритета
+    document.querySelectorAll('.priority-option').forEach(option => {
+        option.addEventListener('click', function() {
+            console.log('Priority clicked:', this.dataset.priority);
+            document.querySelectorAll('.priority-option').forEach(o => {
+                o.style.background = 'rgba(40, 42, 36, 0.8)';
+                o.style.border = '1px solid #4a4a3a';
+            });
+            const priority = this.dataset.priority;
+            const color = priority === 'low' ? '#8cb43c' : priority === 'medium' ? '#c0b070' : '#b43c3c';
+            this.style.background = `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, 0.15)`;
+            this.style.border = `2px solid ${color}`;
+            updatePreview();
+        });
+    });
+
+    // Кнопка добавления доказательств - встроенный onclick
+    const addProofBtn = document.querySelector('.add-proof-btn');
+    if (addProofBtn) {
+        // Уже имеет onclick="addProofField()"
+    }
 
     updateCharCount();
     updatePreview();
@@ -939,75 +966,102 @@ window.renderMLKForm = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 10px; position: relative;">
+            <!-- ШАПКА -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(40, 42, 36, 0.7); border: 1px solid #4a4a3a; border-radius: 4px;">
                 <div>
-                    <h2 style="color: #c0b070; margin-bottom: 5px; font-family: 'Orbitron', sans-serif;">
+                    <h2 style="color: #c0b070; margin: 0 0 5px 0; font-family: 'Orbitron', sans-serif; font-size: 1.2rem;">
                         <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
                     </h2>
-                    <p style="color: #8f9779; font-size: 0.9rem; margin: 0;">ЗАПОЛНИТЕ ВСЕ ПОЛЯ ДЛЯ СОЗДАНИЯ ОТЧЕТА</p>
+                    <p style="color: #8f9779; font-size: 0.85rem; margin: 0;">ЗАПОЛНИТЕ ВСЕ ПОЛЯ ДЛЯ СОЗДАНИЯ ОТЧЕТА</p>
                 </div>
-                <button onclick="renderMLKScreen()" class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; white-space: nowrap;">
+                <button onclick="renderMLKScreen()" class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; min-width: 120px;">
                     <i class="fas fa-arrow-left"></i> НАЗАД
                 </button>
             </div>
             
-            <div id="mlk-form-scrollable" class="scrollable-container" style="flex: 1; overflow-y: auto; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px;">
-                <!-- Форма будет вставлена здесь -->
+            <!-- ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ С ФОРМОЙ -->
+            <div id="mlk-form-scrollable" class="scrollable-container" style="flex: 1; overflow-y: auto; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 15px;">
+                <!-- Форма будет загружена сюда -->
                 <div style="color: #8f9779; text-align: center; padding: 40px;">
                     <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 15px;"></i>
                     <p>Загрузка формы...</p>
                 </div>
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(40, 42, 36, 0.5); border-radius: 4px; border: 1px solid #4a4a3a;">
-                <div style="color: #8f9779; font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> Проверьте все поля перед отправкой
+            <!-- ФУТЕР С КНОПКОЙ ОТПРАВКИ -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: rgba(40, 42, 36, 0.7); border: 1px solid #4a4a3a; border-radius: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px; color: #8f9779; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Проверьте все поля перед отправкой</span>
                 </div>
-                <button id="submit-mlk-btn" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem; min-width: 180px;">
+                <button id="submit-mlk-btn" class="btn-primary" style="padding: 10px 20px; font-size: 0.95rem; min-width: 180px; font-weight: 500;">
                     <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
+                </button>
+            </div>
+            
+            <!-- КНОПКИ ПРОКРУТКИ (добавить этот блок) -->
+            <div style="position: absolute; right: 20px; top: 60%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 100;">
+                <button onclick="scrollToTop('mlk-form-scrollable')" class="scroll-btn" style="width: 36px; height: 36px; font-size: 1rem; background: rgba(30, 32, 28, 0.9); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button onclick="scrollToBottom('mlk-form-scrollable')" class="scroll-btn" style="width: 36px; height: 36px; font-size: 1rem; background: rgba(30, 32, 28, 0.9); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+                    <i class="fas fa-arrow-down"></i>
                 </button>
             </div>
         </div>
     `;
     
-    // Загружаем форму с небольшой задержкой
+    // Загружаем форму
     setTimeout(() => {
         const formContainer = document.getElementById("mlk-form-scrollable");
         if (!formContainer) return;
         
         formContainer.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 20px; padding: 5px;">
                 <!-- КАРТОЧКА 1: ИНФОРМАЦИЯ О НАРУШИТЕЛЕ -->
-                <div class="zone-card" style="border-left: 3px solid #c0b070;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-user-tag"></i></div>
-                        <h4 style="color: #c0b070; margin: 0;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
+                <div class="form-section" style="background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px; border-left: 4px solid #c0b070;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: rgba(192, 176, 112, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #c0b070;">
+                            <i class="fas fa-user-tag fa-lg"></i>
+                        </div>
+                        <div>
+                            <h3 style="color: #c0b070; margin: 0; font-size: 1.1rem;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h3>
+                            <p style="color: #8f9779; margin: 5px 0 0 0; font-size: 0.85rem;">Укажите данные нарушителя</p>
+                        </div>
                     </div>
                     
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Поле для идентификатора -->
                         <div>
                             <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
                             <div style="position: relative;">
-                                <input type="text" id="mlk-tag" class="form-input" placeholder="@никнейм / STEAM_1:0:123456 / ID игрока" style="width: 100%; padding-left: 40px;">
-                                <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;"></i>
+                                <input type="text" id="mlk-tag" class="form-input" placeholder="@никнейм / STEAM_1:0:123456 / ID игрока" style="width: 100%; padding: 12px 15px 12px 45px; font-size: 0.95rem;">
+                                <div style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;">
+                                    <i class="fas fa-user-secret fa-lg"></i>
+                                </div>
                             </div>
                         </div>
                         
+                        <!-- Выбор типа нарушителя -->
                         <div>
                             <label class="form-label">ТИП НАРУШИТЕЛЯ</label>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                <button type="button" class="tag-option active" data-value="player" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(140, 180, 60, 0.2); border: 1px solid #8cb43c; color: #8cb43c; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
-                                    <i class="fas fa-user"></i> Игрок
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+                                <button type="button" class="violator-type-btn active" data-value="player" style="flex: 1; min-width: 130px; padding: 12px; background: rgba(140, 180, 60, 0.15); border: 2px solid #8cb43c; color: #8cb43c; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <i class="fas fa-user fa-lg"></i>
+                                    <span>Игрок</span>
                                 </button>
-                                <button type="button" class="tag-option" data-value="admin" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
-                                    <i class="fas fa-user-shield"></i> Админ
+                                <button type="button" class="violator-type-btn" data-value="admin" style="flex: 1; min-width: 130px; padding: 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <i class="fas fa-user-shield fa-lg"></i>
+                                    <span>Админ</span>
                                 </button>
-                                <button type="button" class="tag-option" data-value="curator" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
-                                    <i class="fas fa-user-tie"></i> Куратор
+                                <button type="button" class="violator-type-btn" data-value="curator" style="flex: 1; min-width: 130px; padding: 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <i class="fas fa-user-tie fa-lg"></i>
+                                    <span>Куратор</span>
                                 </button>
-                                <button type="button" class="tag-option" data-value="other" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
-                                    <i class="fas fa-question"></i> Другое
+                                <button type="button" class="violator-type-btn" data-value="other" style="flex: 1; min-width: 130px; padding: 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <i class="fas fa-question fa-lg"></i>
+                                    <span>Другое</span>
                                 </button>
                             </div>
                         </div>
@@ -1015,63 +1069,79 @@ window.renderMLKForm = function() {
                 </div>
                 
                 <!-- КАРТОЧКА 2: КАТЕГОРИЯ НАРУШЕНИЯ -->
-                <div class="zone-card" style="border-left: 3px solid #c0b070;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-exclamation-triangle"></i></div>
-                        <h4 style="color: #c0b070; margin: 0;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
+                <div class="form-section" style="background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px; border-left: 4px solid #c0b070;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: rgba(192, 176, 112, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #c0b070;">
+                            <i class="fas fa-exclamation-triangle fa-lg"></i>
+                        </div>
+                        <div>
+                            <h3 style="color: #c0b070; margin: 0; font-size: 1.1rem;">КАТЕГОРИЯ НАРУШЕНИЯ</h3>
+                            <p style="color: #8f9779; margin: 5px 0 0 0; font-size: 0.85rem;">Выберите категорию и приоритет</p>
+                        </div>
                     </div>
                     
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Выбор категории -->
                         <div>
                             <label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 10px;">
-                                <div class="category-card active" data-category="cheat" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-skull-crossbones"></i></div>
-                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">ЧИТЫ</div>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; margin-top: 10px;">
+                                <div class="category-card active" data-category="cheat" data-color="#b43c3c" style="cursor: pointer; padding: 18px 12px; background: rgba(180, 60, 60, 0.1); border: 2px solid #b43c3c; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #b43c3c; margin-bottom: 10px;"><i class="fas fa-skull-crossbones"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">ЧИТЫ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Использование ПО</div>
                                 </div>
-                                <div class="category-card" data-category="toxic" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-slash"></i></div>
-                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">ТОКСИЧНОСТЬ</div>
+                                <div class="category-card" data-category="toxic" data-color="#b43c3c" style="cursor: pointer; padding: 18px 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #b43c3c; margin-bottom: 10px;"><i class="fas fa-comment-slash"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">ТОКСИЧНОСТЬ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Оскорбления</div>
                                 </div>
-                                <div class="category-card" data-category="spam" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-dots"></i></div>
-                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">СПАМ</div>
+                                <div class="category-card" data-category="spam" data-color="#b43c3c" style="cursor: pointer; padding: 18px 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #b43c3c; margin-bottom: 10px;"><i class="fas fa-comment-dots"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">СПАМ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Флуд в чате</div>
                                 </div>
-                                <div class="category-card" data-category="bug" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-bug"></i></div>
-                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 5px;">БАГИ</div>
+                                <div class="category-card" data-category="bug" data-color="#c0b070" style="cursor: pointer; padding: 18px 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #c0b070; margin-bottom: 10px;"><i class="fas fa-bug"></i></div>
+                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">БАГИ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Использование багов</div>
                                 </div>
-                                <div class="category-card" data-category="grief" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-user-slash"></i></div>
-                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 5px;">ГРИФ</div>
+                                <div class="category-card" data-category="grief" data-color="#c0b070" style="cursor: pointer; padding: 18px 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #c0b070; margin-bottom: 10px;"><i class="fas fa-user-slash"></i></div>
+                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">ГРИФ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Вредительство</div>
                                 </div>
-                                <div class="category-card" data-category="other" data-color="#8f9779" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
-                                    <div style="font-size: 1.5rem; color: #8f9779; margin-bottom: 8px;"><i class="fas fa-question-circle"></i></div>
-                                    <div style="color: #8f9779; font-weight: 500; margin-bottom: 5px;">ДРУГОЕ</div>
+                                <div class="category-card" data-category="other" data-color="#8f9779" style="cursor: pointer; padding: 18px 12px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.8rem; color: #8f9779; margin-bottom: 10px;"><i class="fas fa-question-circle"></i></div>
+                                    <div style="color: #8f9779; font-weight: 500; margin-bottom: 6px; font-size: 0.95rem;">ДРУГОЕ</div>
                                     <div style="color: #8f9779; font-size: 0.8rem;">Иные нарушения</div>
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- Выбор приоритета -->
                         <div>
                             <label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label>
                             <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
-                                <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
-                                    <div style="width: 12px; height: 12px; background: #8cb43c; border-radius: 50%;"></div>
-                                    <span style="color: #8f9779;">НИЗКИЙ</span>
+                                <div class="priority-option" data-priority="low" style="flex: 1; min-width: 140px; cursor: pointer; padding: 14px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s; display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 14px; height: 14px; background: #8cb43c; border-radius: 50%;"></div>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="color: #8f9779; font-weight: 500;">НИЗКИЙ</span>
+                                        <span style="color: #6a6a5a; font-size: 0.8rem;">Не срочно</span>
+                                    </div>
                                 </div>
-                                <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(192, 176, 112, 0.2); border: 1px solid #c0b070; border-radius: 4px; transition: all 0.2s;">
-                                    <div style="width: 12px; height: 12px; background: #c0b070; border-radius: 50%;"></div>
-                                    <span style="color: #c0b070; font-weight: 500;">СРЕДНИЙ</span>
+                                <div class="priority-option active" data-priority="medium" style="flex: 1; min-width: 140px; cursor: pointer; padding: 14px 15px; background: rgba(192, 176, 112, 0.15); border: 2px solid #c0b070; border-radius: 4px; transition: all 0.2s; display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 14px; height: 14px; background: #c0b070; border-radius: 50%;"></div>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="color: #c0b070; font-weight: 500;">СРЕДНИЙ</span>
+                                        <span style="color: #8f9779; font-size: 0.8rem;">Обычный приоритет</span>
+                                    </div>
                                 </div>
-                                <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
-                                    <div style="width: 12px; height: 12px; background: #b43c3c; border-radius: 50%;"></div>
-                                    <span style="color: #b43c3c;">ВЫСОКИЙ</span>
+                                <div class="priority-option" data-priority="high" style="flex: 1; min-width: 140px; cursor: pointer; padding: 14px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s; display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 14px; height: 14px; background: #b43c3c; border-radius: 50%;"></div>
+                                    <div style="display: flex; flex-direction: column;">
+                                        <span style="color: #b43c3c; font-weight: 500;">ВЫСОКИЙ</span>
+                                        <span style="color: #6a6a5a; font-size: 0.8rem;">Требует срочного внимания</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1079,72 +1149,110 @@ window.renderMLKForm = function() {
                 </div>
                 
                 <!-- КАРТОЧКА 3: ДЕТАЛЬНОЕ ОПИСАНИЕ -->
-                <div class="zone-card" style="border-left: 3px solid #8cb43c;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <div style="color: #8cb43c; font-size: 1.2rem;"><i class="fas fa-align-left"></i></div>
-                        <h4 style="color: #8cb43c; margin: 0;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
+                <div class="form-section" style="background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px; border-left: 4px solid #8cb43c;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: rgba(140, 180, 60, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #8cb43c;">
+                            <i class="fas fa-align-left fa-lg"></i>
+                        </div>
+                        <div>
+                            <h3 style="color: #8cb43c; margin: 0; font-size: 1.1rem;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h3>
+                            <p style="color: #8f9779; margin: 5px 0 0 0; font-size: 0.85rem;">Опишите нарушение подробно</p>
+                        </div>
                     </div>
                     
-                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Описание нарушения -->
                         <div>
                             <label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label>
                             <div style="position: relative;">
-                                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="Опишите нарушение максимально подробно... Время, место, действия нарушителя, последствия и т.д." style="width: 100%; resize: vertical; min-height: 150px;"></textarea>
-                                <div class="char-counter" style="position: absolute; bottom: 10px; right: 10px; color: #8f9779; font-size: 0.8rem; background: rgba(30, 32, 28, 0.8); padding: 2px 8px; border-radius: 3px;">
-                                    <span id="char-count">0</span>/2000 символов
+                                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="Опишите нарушение максимально подробно... Время, место, действия нарушителя, последствия и т.д." style="width: 100%; resize: vertical; min-height: 180px; padding: 15px; font-size: 0.95rem;"></textarea>
+                                <div id="char-counter" style="position: absolute; bottom: 12px; right: 12px; color: #8f9779; font-size: 0.85rem; background: rgba(30, 32, 28, 0.9); padding: 4px 10px; border-radius: 3px; border: 1px solid #4a4a3a;">
+                                    <i class="fas fa-text-height"></i> <span id="char-count">0</span>/2000 символов
                                 </div>
                             </div>
                         </div>
                         
+                        <!-- Доказательства - ИСПРАВЛЕННАЯ ВЕРСИЯ -->
                         <div>
                             <label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label>
-                            <div id="proof-links-container" style="display: flex; flex-direction: column; gap: 10px;">
+                            <div id="proof-links-container" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                                 <div class="proof-link-input" style="display: flex; gap: 10px;">
-                                    <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
-                                    <button type="button" class="btn-secondary add-proof-btn" style="padding: 8px 12px; white-space: nowrap;">
+                                    <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1; padding: 12px 15px;">
+                                    <button type="button" class="btn-secondary add-proof-btn" style="padding: 0 20px; min-width: 100px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;" onclick="addProofField()">
                                         <i class="fas fa-plus"></i> Добавить
                                     </button>
                                 </div>
                             </div>
-                            <div style="margin-top: 5px; font-size: 0.8rem; color: #8f9779;">
-                                Можно добавить ссылки на скриншоты, видео, демо-записи. Нажмите "+" чтобы добавить еще поле.
+                            <div style="margin-top: 8px; font-size: 0.85rem; color: #8f9779; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-info-circle"></i>
+                                <span>Можно добавить ссылки на скриншоты, видео, демо-записи. Нажмите "+" чтобы добавить еще поле.</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- КАРТОЧКА 4: ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР -->
-                <div class="zone-card" style="border-left: 3px solid #c0b070;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-eye"></i></div>
-                        <h4 style="color: #c0b070; margin: 0;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
+                <div class="form-section" style="background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px; border-left: 4px solid #c0b070; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                        <div style="width: 40px; height: 40px; background: rgba(192, 176, 112, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #c0b070;">
+                            <i class="fas fa-eye fa-lg"></i>
+                        </div>
+                        <div>
+                            <h3 style="color: #c0b070; margin: 0; font-size: 1.1rem;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h3>
+                            <p style="color: #8f9779; margin: 5px 0 0 0; font-size: 0.85rem;">Как будет выглядеть ваш отчет</p>
+                        </div>
                     </div>
                     
-                    <div id="report-preview" style="background: rgba(20, 18, 15, 0.8); padding: 20px; border: 1px solid #4a4a3a; border-radius: 4px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4a4a3a;">
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <span id="preview-category" style="background: rgba(180, 60, 60, 0.1); color: #b43c3c; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ЧИТЫ</span>
-                                <span id="preview-priority" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">СРЕДНИЙ</span>
+                    <div id="report-preview" style="background: rgba(20, 18, 15, 0.9); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px;">
+                        <!-- Заголовок предпросмотра -->
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #4a4a3a; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <span id="preview-category" style="background: rgba(180, 60, 60, 0.15); color: #b43c3c; padding: 8px 14px; border-radius: 4px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-tag"></i> ЧИТЫ
+                                </span>
+                                <span id="preview-priority" style="background: rgba(192, 176, 112, 0.15); color: #c0b070; padding: 8px 14px; border-radius: 4px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-flag"></i> СРЕДНИЙ
+                                </span>
                             </div>
-                            <div style="color: #8f9779; font-size: 0.8rem;">${new Date().toLocaleString()}</div>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                                <i class="fas fa-user-tag" style="color: #8f9779;"></i>
-                                <span id="preview-tag" style="color: #c0b070; font-weight: 500;">[не указано]</span>
-                            </div>
-                            <div id="preview-description" style="color: #8f9779; line-height: 1.5; min-height: 60px; padding: 10px; background: rgba(30, 32, 28, 0.5); border-radius: 4px;">
-                                [описание появится здесь]
+                            <div style="color: #8f9779; font-size: 0.85rem; background: rgba(30, 32, 28, 0.5); padding: 6px 12px; border-radius: 4px;">
+                                <i class="far fa-clock"></i> ${new Date().toLocaleString()}
                             </div>
                         </div>
                         
-                        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #4a4a3a;">
-                            <div style="color: #8f9779; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user"></i> ${CURRENT_USER}
+                        <!-- Содержимое предпросмотра -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 15px; padding: 12px; background: rgba(30, 32, 28, 0.5); border-radius: 4px;">
+                                <div style="color: #8cb43c; font-size: 1.2rem;">
+                                    <i class="fas fa-user-tag"></i>
+                                </div>
+                                <div>
+                                    <div id="preview-tag" style="color: #c0b070; font-weight: 500; font-size: 1rem;">[не указано]</div>
+                                    <div style="color: #8f9779; font-size: 0.85rem; margin-top: 3px;">Нарушитель: Игрок</div>
+                                </div>
+                            </div>
+                            
+                            <div style="background: rgba(30, 32, 28, 0.7); border-radius: 4px; padding: 15px; min-height: 80px;">
+                                <div style="color: #8f9779; font-size: 0.9rem; line-height: 1.6;" id="preview-description">
+                                    [описание появится здесь]
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Футер предпросмотра -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #4a4a3a; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px; color: #8f9779; font-size: 0.9rem;">
+                                <div style="width: 32px; height: 32px; background: rgba(192, 176, 112, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <div style="color: #c0b070; font-weight: 500;">${CURRENT_USER}</div>
+                                    <div style="color: #6a6a5a; font-size: 0.8rem;">Автор отчета</div>
+                                </div>
                             </div>
                             <div>
-                                <span style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ОЖИДАЕТ ПРОВЕРКИ</span>
+                                <span style="background: rgba(192, 176, 112, 0.15); color: #c0b070; padding: 8px 16px; border-radius: 4px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-clock"></i> ОЖИДАЕТ ПРОВЕРКИ
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -1152,17 +1260,23 @@ window.renderMLKForm = function() {
             </div>
         `;
         
-        // Инициализируем обработчики событий
+        // Назначаем обработчик кнопки отправки
         const submitBtn = document.getElementById('submit-mlk-btn');
         if (submitBtn) {
             submitBtn.onclick = addMLKReport;
         }
         
+        // ОБНОВЛЕННЫЙ ВЫЗОВ ОБРАБОТЧИКОВ - нужно дождаться рендера DOM
+        setTimeout(() => {
+            setupReportFormHandlers();
+        }, 50);
+        
+        // Инициализируем счетчик символов и предпросмотр
         const actionTextarea = document.getElementById("mlk-action");
         const tagInput = document.getElementById("mlk-tag");
         
         if (actionTextarea) {
-            actionTextarea.addEventListener('input', function(e) { 
+            actionTextarea.addEventListener('input', function() { 
                 updatePreview(); 
                 updateCharCount(); 
             });
@@ -1172,45 +1286,31 @@ window.renderMLKForm = function() {
             tagInput.addEventListener('input', updatePreview);
         }
         
-        // Инициализируем обработчики формы
-        setupReportFormHandlers();
-        
-        // Инициализируем предварительный просмотр
+        // Инициализируем предпросмотр
         updatePreview();
         updateCharCount();
         
-        // Настраиваем кнопки навигации для прокрутки
+        // Настраиваем высоту интерфейса
         setTimeout(() => {
-            const formContainer = document.getElementById("mlk-form-scrollable");
-            if (formContainer) {
-                // Добавляем кнопки прокрутки в форму
-                const scrollButtons = document.createElement('div');
-                scrollButtons.style.cssText = 'position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 100;';
-                scrollButtons.innerHTML = `
-                    <button onclick="scrollFormToTop()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-up"></i></button>
-                    <button onclick="scrollFormToBottom()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-down"></i></button>
-                `;
-                
-                const container = document.querySelector('.form-container');
-                if (container) {
-                    container.style.position = 'relative';
-                    container.appendChild(scrollButtons);
-                }
-            }
-            
             adjustInterfaceHeights();
-        }, 300);
-    }, 50);
+        }, 100);
+        
+    }, 100);
 };
 
-function scrollFormToTop() {
-    const formContainer = document.querySelector('.report-creation-container');
-    if (formContainer) formContainer.scrollTo({ top: 0, behavior: 'smooth' });
+// Функции для прокрутки
+function scrollToTop(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 }
 
-function scrollFormToBottom() {
-    const formContainer = document.querySelector('.report-creation-container');
-    if (formContainer) formContainer.scrollTo({ top: formContainer.scrollHeight, behavior: 'smooth' });
+function scrollToBottom(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+    }
 }
 
 window.renderMLKScreen = function() {

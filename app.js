@@ -981,15 +981,15 @@ window.renderMLKScreen = function() {
                         <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
                         <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
                     </div>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
                         <div class="items-per-page-selector" style="margin: 0;">
                             <span style="color: #8f9779; font-size: 0.9rem;">На странице:</span>
                             <select onchange="changeItemsPerPage('renderMLKListPaginated', this.value)">
-                                <option value="5">5</option>
-                                <option value="10">10</option>
-                                <option value="15" selected>15</option>
-                                <option value="20">20</option>
-                                <option value="30">30</option>
+                                <option value="5" ${PAGINATION_CONFIG.itemsPerPage === 5 ? 'selected' : ''}>5</option>
+                                <option value="10" ${PAGINATION_CONFIG.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                                <option value="15" ${PAGINATION_CONFIG.itemsPerPage === 15 ? 'selected' : ''}>15</option>
+                                <option value="20" ${PAGINATION_CONFIG.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                                <option value="30" ${PAGINATION_CONFIG.itemsPerPage === 30 ? 'selected' : ''}>30</option>
                             </select>
                         </div>
                         <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
@@ -998,11 +998,11 @@ window.renderMLKScreen = function() {
                     </div>
                 </div>
                 
-                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1;">
+                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1; min-height: 400px;">
                     <!-- Здесь будет список отчетов -->
                 </div>
                 
-                <div id="mlk-pagination-container"></div>
+                <div id="mlk-pagination-container" style="margin-top: 20px;"></div>
             </div>
         `;
         
@@ -1016,6 +1016,8 @@ function renderMLKListPaginated(page = 1) {
     
     if (!listDiv) return;
     
+    console.log('Rendering MLK list page:', page, 'Total reports:', reports.length);
+    
     const filteredReports = (CURRENT_RANK.level <= RANKS.CURATOR.level)
         ? reports.filter(r => r.author === CURRENT_USER)
         : reports;
@@ -1025,7 +1027,9 @@ function renderMLKListPaginated(page = 1) {
     const startIndex = (page - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const paginatedReports = filteredReports.slice(startIndex, endIndex);
-    const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredReports.length / itemsPerPage));
+    
+    console.log('Filtered reports:', filteredReports.length, 'Paginated:', paginatedReports.length, 'Total pages:', totalPages);
     
     if (filteredReports.length === 0) {
         listDiv.innerHTML = `
@@ -1041,17 +1045,24 @@ function renderMLKListPaginated(page = 1) {
         return;
     }
     
-    listDiv.innerHTML = '';
-    
+    // Сортируем отчеты по времени (новые сверху)
     const sortedReports = [...paginatedReports].sort((a, b) => {
-        const timeA = a.timestamp || new Date(a.time).getTime() || 0;
-        const timeB = b.timestamp || new Date(b.time).getTime() || 0;
+        const timeA = a.timestamp || (a.time ? new Date(a.time).getTime() : 0);
+        const timeB = b.timestamp || (b.time ? new Date(b.time).getTime() : 0);
         return timeB - timeA;
     });
+    
+    // Очищаем контейнер
+    listDiv.innerHTML = '';
+    
+    // Создаем контейнер для карточек
+    const cardsContainer = document.createElement('div');
+    cardsContainer.style.cssText = 'display: flex; flex-direction: column; gap: 15px;';
     
     sortedReports.forEach(r => {
         const card = document.createElement("div");
         card.className = "report-card-enhanced";
+        card.style.cssText = 'background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; padding: 15px; margin-bottom: 10px;';
         
         let status = r.deleted ? 'удален' : (r.confirmed ? 'подтвержден' : 'рассматривается');
         let statusClass = r.deleted ? 'status-deleted' : (r.confirmed ? 'status-confirmed' : 'status-pending');
@@ -1067,6 +1078,7 @@ function renderMLKListPaginated(page = 1) {
         };
         
         const categoryColor = categoryColors[r.category] || '#8f9779';
+        const categoryName = r.categoryName || 'Другое';
         
         const priorityColors = {
             'low': '#8cb43c',
@@ -1075,44 +1087,45 @@ function renderMLKListPaginated(page = 1) {
         };
         
         const priorityColor = priorityColors[r.priority] || '#c0b070';
+        const priorityName = r.priorityName || 'СРЕДНИЙ';
         
         card.innerHTML = `
-            <div class="report-card-header">
-                <div class="report-category-badge" style="background: ${categoryColor}20; border-left-color: ${categoryColor};">
-                    <span class="category-name" style="color: ${categoryColor};">${r.categoryName || 'Другое'}</span>
-                    <div class="report-priority" style="color: ${priorityColor};">
-                        <div class="priority-dot" style="background: ${priorityColor};"></div>
-                        ${r.priorityName || 'СРЕДНИЙ'}
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid rgba(74, 74, 58, 0.3); padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: ${categoryColor}20; border-left: 3px solid ${categoryColor}; padding: 5px 10px; border-radius: 2px;">
+                        <span style="color: ${categoryColor}; font-weight: 500; font-size: 0.9rem;">${categoryName}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px; color: ${priorityColor};">
+                        <div style="width: 8px; height: 8px; background: ${priorityColor}; border-radius: 50%;"></div>
+                        <span style="font-size: 0.85rem;">${priorityName}</span>
                     </div>
                 </div>
-                <div class="report-meta">
-                    <span class="meta-item"><i class="far fa-clock"></i> ${r.time}</span>
-                    <span class="meta-item"><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                    <span style="color: #8f9779; font-size: 0.8rem;"><i class="far fa-clock"></i> ${r.time || '—'}</span>
+                    <span style="color: #8f9779; font-size: 0.8rem;"><i class="fas fa-user"></i> ${r.author || 'неизвестно'}</span>
                 </div>
             </div>
             
-            <div class="report-card-body">
-                <div class="violator-info">
-                    <div class="violator-icon">
-                        <i class="fas fa-user-tag"></i>
-                    </div>
-                    <div class="violator-details">
-                        <h4 class="violator-tag">${r.tag || '—'}</h4>
-                        <span class="violator-type">Тип: ${r.violatorType === 'admin' ? 'Администратор' : r.violatorType === 'curator' ? 'Куратор' : 'Игрок'}</span>
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div style="color: #8f9779; font-size: 1rem;"><i class="fas fa-user-tag"></i></div>
+                    <div>
+                        <h4 style="color: #c0b070; margin: 0 0 5px 0; font-size: 1rem;">${r.tag || '—'}</h4>
+                        <span style="color: #8f9779; font-size: 0.85rem;">Тип: ${r.violatorType === 'admin' ? 'Администратор' : r.violatorType === 'curator' ? 'Куратор' : 'Игрок'}</span>
                     </div>
                 </div>
                 
-                <div class="report-description">
-                    ${r.action.replace(/\n/g, '<br>')}
+                <div style="color: #8f9779; line-height: 1.5; font-size: 0.9rem; margin-bottom: 15px; max-height: 100px; overflow: hidden; text-overflow: ellipsis;">
+                    ${(r.action || '').replace(/\n/g, '<br>')}
                 </div>
                 
                 ${r.proofLinks && r.proofLinks.length > 0 ? `
-                <div class="proof-links">
-                    <h5><i class="fas fa-link"></i> ДОКАЗАТЕЛЬСТВА</h5>
-                    <div class="links-list">
-                        ${r.proofLinks.map(link => `
-                            <a href="${link}" target="_blank" class="proof-link">
-                                <i class="fas fa-external-link-alt"></i> ${link.length > 40 ? link.substring(0, 40) + '...' : link}
+                <div style="margin-bottom: 15px;">
+                    <h5 style="color: #c0b070; font-size: 0.9rem; margin-bottom: 5px;"><i class="fas fa-link"></i> ДОКАЗАТЕЛЬСТВА</h5>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                        ${r.proofLinks.slice(0, 3).map(link => `
+                            <a href="${link}" target="_blank" style="color: #8cb43c; font-size: 0.8rem; text-decoration: none; background: rgba(140, 180, 60, 0.1); padding: 2px 8px; border-radius: 3px; display: flex; align-items: center; gap: 3px;">
+                                <i class="fas fa-external-link-alt"></i> ${link.length > 30 ? link.substring(0, 30) + '...' : link}
                             </a>
                         `).join('')}
                     </div>
@@ -1120,44 +1133,48 @@ function renderMLKListPaginated(page = 1) {
                 ` : ''}
             </div>
             
-            <div class="report-card-footer">
-                <div class="report-status ${statusClass}">
-                    <i class="fas ${statusIcon}"></i>
-                    <span>${status.toUpperCase()}</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(74, 74, 58, 0.3); padding-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="background: ${statusClass === 'status-deleted' ? 'rgba(180, 60, 60, 0.1)' : statusClass === 'status-confirmed' ? 'rgba(140, 180, 60, 0.1)' : 'rgba(192, 176, 112, 0.1)'}; color: ${statusClass === 'status-deleted' ? '#b43c3c' : statusClass === 'status-confirmed' ? '#8cb43c' : '#c0b070'}; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas ${statusIcon}"></i>
+                        <span>${status.toUpperCase()}</span>
+                    </div>
+                    ${r.authorStaticId ? `
+                    <div style="color: #8f9779; font-size: 0.8rem; display: flex; align-items: center; gap: 3px;">
+                        <i class="fas fa-id-card"></i>
+                        <span>${r.authorStaticId}</span>
+                    </div>
+                    ` : ''}
                 </div>
                 
-                <div class="report-actions">
-                    ${r.authorStaticId ? `
-                    <div class="static-id-display">
-                        <i class="fas fa-id-card"></i>
-                        <span class="static-id">${r.authorStaticId}</span>
-                    </div>
-                    ` : ''}
-                    
-                    ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
-                    <div class="admin-actions">
-                        <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
-                            <i class="fas fa-check"></i> ПОДТВЕРДИТЬ
-                        </button>
-                        <button onclick="deleteReport('${r.id}')" class="action-btn delete">
-                            <i class="fas fa-trash"></i> УДАЛИТЬ
-                        </button>
-                    </div>
-                    ` : ''}
+                ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
+                <div style="display: flex; gap: 5px;">
+                    <button onclick="confirmReport('${r.id}')" style="background: rgba(140, 180, 60, 0.2); border: 1px solid #8cb43c; color: #8cb43c; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-check"></i> Подтвердить
+                    </button>
+                    <button onclick="deleteReport('${r.id}')" style="background: rgba(180, 60, 60, 0.2); border: 1px solid #b43c3c; color: #b43c3c; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-trash"></i> Удалить
+                    </button>
                 </div>
+                ` : ''}
             </div>
         `;
-        listDiv.appendChild(card);
+        
+        cardsContainer.appendChild(card);
     });
+    
+    listDiv.appendChild(cardsContainer);
     
     // Добавляем пагинацию если есть больше одной страницы
     if (paginationContainer) {
         if (totalPages > 1) {
             renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
         } else {
-            paginationContainer.innerHTML = '';
+            paginationContainer.innerHTML = '<div style="text-align: center; color: #8f9779; padding: 10px;">Страница 1 из 1</div>';
         }
     }
+    
+    setTimeout(adjustInterfaceHeights, 100);
 }
 
 function renderReportsWithPagination(page = 1) {

@@ -1556,5 +1556,54 @@ body {
 .module-grid {
     /* Удалите если этот класс не используется */
 }
+/* ===== ИСПРАВЛЕНИЯ ДЛЯ ОТОБРАЖЕНИЯ КОНТЕНТА ===== */
+.content-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0; /* Критически важно для работы flex внутри */
+    position: relative; /* Для правильного позиционирования дочерних элементов */
+}
+
+/* Убираем стандартные стили system-init после загрузки контента */
+.content-body:not(:empty) .system-init {
+    display: none;
+}
+
+/* Гарантируем, что контент занимает всю высоту */
+.form-container, 
+.dashboard-grid, 
+.zone-card {
+    height: auto;
+    min-height: 0;
+}
+
+/* Исправляем таблицы для правильного отображения */
+.data-table {
+    width: 100%;
+    table-layout: fixed; /* Фиксированная ширина колонок */
+}
+
+.data-table th,
+.data-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Исправляем зону карточек */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    height: auto;
+}
+
+.zone-card {
+    height: auto;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
 
 

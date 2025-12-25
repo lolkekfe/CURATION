@@ -1912,3 +1912,206 @@ body {
     padding: 40px 20px;
 }
 
+
+/* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ НОВОГО МАКЕТА ===== */
+.form-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.table-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    background: rgba(20, 18, 15, 0.8);
+}
+
+.zone-card {
+    background: rgba(28, 26, 23, 0.9);
+    border: 1px solid var(--border-dark);
+    border-radius: 6px;
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.card-icon {
+    font-size: 1.5rem;
+    color: var(--accent-green);
+    margin-bottom: 10px;
+}
+
+.card-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 5px;
+}
+
+.card-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.form-input, .form-textarea {
+    width: 100%;
+    background: rgba(20, 18, 15, 0.9);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    padding: 10px;
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.form-input:focus, .form-textarea:focus {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 15px var(--glow-green);
+}
+
+.form-textarea {
+    min-height: 100px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(28, 26, 23, 0.9);
+    color: var(--text-primary);
+    border: 1px solid var(--accent-green);
+}
+
+.btn-primary:hover {
+    border-color: var(--accent-green-glow);
+    box-shadow: 0 0 15px var(--glow-green);
+}
+
+.btn-secondary {
+    background: transparent;
+    border-color: var(--border-dark);
+    color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+    border-color: var(--accent-yellow);
+    color: var(--text-primary);
+}
+
+.action-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn.confirm {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.action-btn.confirm:hover {
+    background: rgba(74, 122, 80, 0.1);
+}
+
+.action-btn.delete {
+    border-color: var(--accent-red);
+    color: var(--accent-red-glow);
+}
+
+.action-btn.delete:hover {
+    background: rgba(139, 69, 19, 0.1);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(20, 18, 15, 0.9);
+}
+
+.data-table th {
+    background: rgba(28, 26, 23, 0.95);
+    color: var(--text-primary);
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 2px solid var(--border-dark);
+    position: sticky;
+    top: 0;
+}
+
+.data-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(42, 40, 31, 0.3);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.data-table tr:hover {
+    background: rgba(74, 122, 80, 0.05);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .zone-card {
+        padding: 12px;
+    }
+    
+    .card-value {
+        font-size: 1.5rem;
+    }
+    
+    .form-input, .form-textarea {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+}

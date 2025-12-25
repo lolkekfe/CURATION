@@ -129,6 +129,23 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     if (select) select.value = PAGINATION_CONFIG.itemsPerPage;
 }
 
+/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
+function changeItemsPerPage(callback, value) { // ← ДОБАВИТЬ ЗДЕСЬ
+    PAGINATION_CONFIG.itemsPerPage = parseInt(value);
+    
+    if (callback === 'renderReportsWithPagination') {
+        renderReportsWithPagination(1);
+    } else if (callback === 'renderUsersWithPagination') {
+        renderUsersWithPagination(1);
+    } else if (callback === 'renderMLKListPaginated') {
+        renderMLKListPaginated(1);
+    } else if (callback === 'renderWhitelistWithPagination') {
+        renderWhitelistWithPagination(1);
+    } else if (callback === 'renderBansWithPagination') {
+        renderBansWithPagination(1);
+    }
+}
+
 function changeItemsPerPage(callback, value) {
     PAGINATION_CONFIG.itemsPerPage = parseInt(value);
     if (callback === 'renderReportsWithPagination') renderReportsWithPagination(1);
@@ -960,72 +977,179 @@ function scrollFormToBottom() {
 window.renderMLKScreen = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
+    
     loadReports(function() {
         content.innerHTML = `
             <div class="form-container with-scroll">
-                <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК</h2>
+                <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                    <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
+                </h2>
+                
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <div><h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3><p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p></div>
-                    <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;"><i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ</button></div>
-                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1;"></div>
-                <div id="mlk-pagination-container"></div></div>`;
+                    <div>
+                        <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
+                        <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
+                    </div>
+                    <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+                        <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
+                    </button>
+                </div>
+                
+                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1;">
+                    <!-- Здесь будет список отчетов -->
+                </div>
+                
+                <div id="mlk-pagination-container"></div>
+            </div>
+        `;
+        
         renderMLKListPaginated(1);
     });
 }
 
 function renderMLKListPaginated(page = 1) {
-    const listDiv = document.getElementById("mlk-list"), paginationContainer = document.getElementById("mlk-pagination-container");
+    const listDiv = document.getElementById("mlk-list");
+    const paginationContainer = document.getElementById("mlk-pagination-container");
+    
     if (!listDiv) return;
-    const filteredReports = (CURRENT_RANK.level <= RANKS.CURATOR.level) ? reports.filter(r => r.author === CURRENT_USER) : reports;
+    
+    const filteredReports = (CURRENT_RANK.level <= RANKS.CURATOR.level)
+        ? reports.filter(r => r.author === CURRENT_USER)
+        : reports;
+    
     currentPage = page;
-    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage, startIndex = (page - 1) * itemsPerPage, endIndex = startIndex + itemsPerPage;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
     const paginatedReports = filteredReports.slice(startIndex, endIndex);
-    totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
     
     if (filteredReports.length === 0) {
-        listDiv.innerHTML = `<div class="empty-reports" style="text-align: center; padding: 40px; color: #8f9779;"><div class="empty-icon" style="font-size: 2rem; margin-bottom: 10px;"><i class="fas fa-inbox"></i></div><h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3><p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ, НАЖАВ НА КНОПКУ "НОВЫЙ ОТЧЕТ"</p></div>`;
+        listDiv.innerHTML = `
+            <div class="empty-reports" style="text-align: center; padding: 40px; color: #8f9779;">
+                <div class="empty-icon" style="font-size: 2rem; margin-bottom: 10px;">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3>
+                <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ, НАЖАВ НА КНОПКУ "НОВЫЙ ОТЧЕТ"</p>
+            </div>
+        `;
         if (paginationContainer) paginationContainer.innerHTML = '';
         return;
     }
     
     listDiv.innerHTML = '';
-    const sortedReports = [...paginatedReports].sort((a, b) => { const timeA = a.timestamp || new Date(a.time).getTime() || 0; const timeB = b.timestamp || new Date(b.time).getTime() || 0; return timeB - timeA; });
+    
+    const sortedReports = [...paginatedReports].sort((a, b) => {
+        const timeA = a.timestamp || new Date(a.time).getTime() || 0;
+        const timeB = b.timestamp || new Date(b.time).getTime() || 0;
+        return timeB - timeA;
+    });
     
     sortedReports.forEach(r => {
         const card = document.createElement("div");
         card.className = "report-card-enhanced";
+        
         let status = r.deleted ? 'удален' : (r.confirmed ? 'подтвержден' : 'рассматривается');
         let statusClass = r.deleted ? 'status-deleted' : (r.confirmed ? 'status-confirmed' : 'status-pending');
         let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed ? 'fa-check-circle' : 'fa-clock');
-        const categoryColors = { 'cheat': '#b43c3c', 'toxic': '#b43c3c', 'spam': '#b43c3c', 'bug': '#c0b070', 'grief': '#c0b070', 'other': '#8f9779' };
+        
+        const categoryColors = {
+            'cheat': '#b43c3c',
+            'toxic': '#b43c3c',
+            'spam': '#b43c3c',
+            'bug': '#c0b070',
+            'grief': '#c0b070',
+            'other': '#8f9779'
+        };
+        
         const categoryColor = categoryColors[r.category] || '#8f9779';
-        const priorityColors = { 'low': '#8cb43c', 'medium': '#c0b070', 'high': '#b43c3c' };
+        
+        const priorityColors = {
+            'low': '#8cb43c',
+            'medium': '#c0b070',
+            'high': '#b43c3c'
+        };
+        
         const priorityColor = priorityColors[r.priority] || '#c0b070';
         
         card.innerHTML = `
             <div class="report-card-header">
                 <div class="report-category-badge" style="background: ${categoryColor}20; border-left-color: ${categoryColor};">
                     <span class="category-name" style="color: ${categoryColor};">${r.categoryName || 'Другое'}</span>
-                    <div class="report-priority" style="color: ${priorityColor};"><div class="priority-dot" style="background: ${priorityColor};"></div>${r.priorityName || 'СРЕДНИЙ'}</div>
+                    <div class="report-priority" style="color: ${priorityColor};">
+                        <div class="priority-dot" style="background: ${priorityColor};"></div>
+                        ${r.priorityName || 'СРЕДНИЙ'}
+                    </div>
                 </div>
-                <div class="report-meta"><span class="meta-item"><i class="far fa-clock"></i> ${r.time}</span><span class="meta-item"><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</span></div>
+                <div class="report-meta">
+                    <span class="meta-item"><i class="far fa-clock"></i> ${r.time}</span>
+                    <span class="meta-item"><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</span>
+                </div>
             </div>
+            
             <div class="report-card-body">
-                <div class="violator-info"><div class="violator-icon"><i class="fas fa-user-tag"></i></div><div class="violator-details"><h4 class="violator-tag">${r.tag || '—'}</h4><span class="violator-type">Тип: ${r.violatorType === 'admin' ? 'Администратор' : r.violatorType === 'curator' ? 'Куратор' : 'Игрок'}</span></div></div>
-                <div class="report-description">${r.action.replace(/\n/g, '<br>')}</div>
-                ${r.proofLinks && r.proofLinks.length > 0 ? `<div class="proof-links"><h5><i class="fas fa-link"></i> ДОКАЗАТЕЛЬСТВА</h5><div class="links-list">${r.proofLinks.map(link => `<a href="${link}" target="_blank" class="proof-link"><i class="fas fa-external-link-alt"></i> ${link.length > 40 ? link.substring(0, 40) + '...' : link}</a>`).join('')}</div></div>` : ''}
-            </div>
-            <div class="report-card-footer">
-                <div class="report-status ${statusClass}"><i class="fas ${statusIcon}"></i><span>${status.toUpperCase()}</span></div>
-                <div class="report-actions">
-                    ${r.authorStaticId ? `<div class="static-id-display"><i class="fas fa-id-card"></i><span class="static-id">${r.authorStaticId}</span></div>` : ''}
-                    ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `<div class="admin-actions"><button onclick="confirmReport('${r.id}')" class="action-btn confirm"><i class="fas fa-check"></i> ПОДТВЕРДИТЬ</button><button onclick="deleteReport('${r.id}')" class="action-btn delete"><i class="fas fa-trash"></i> УДАЛИТЬ</button></div>` : ''}
+                <div class="violator-info">
+                    <div class="violator-icon">
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="violator-details">
+                        <h4 class="violator-tag">${r.tag || '—'}</h4>
+                        <span class="violator-type">Тип: ${r.violatorType === 'admin' ? 'Администратор' : r.violatorType === 'curator' ? 'Куратор' : 'Игрок'}</span>
+                    </div>
                 </div>
-            </div>`;
+                
+                <div class="report-description">
+                    ${r.action.replace(/\n/g, '<br>')}
+                </div>
+                
+                ${r.proofLinks && r.proofLinks.length > 0 ? `
+                <div class="proof-links">
+                    <h5><i class="fas fa-link"></i> ДОКАЗАТЕЛЬСТВА</h5>
+                    <div class="links-list">
+                        ${r.proofLinks.map(link => `
+                            <a href="${link}" target="_blank" class="proof-link">
+                                <i class="fas fa-external-link-alt"></i> ${link.length > 40 ? link.substring(0, 40) + '...' : link}
+                            </a>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="report-card-footer">
+                <div class="report-status ${statusClass}">
+                    <i class="fas ${statusIcon}"></i>
+                    <span>${status.toUpperCase()}</span>
+                </div>
+                
+                <div class="report-actions">
+                    ${r.authorStaticId ? `
+                    <div class="static-id-display">
+                        <i class="fas fa-id-card"></i>
+                        <span class="static-id">${r.authorStaticId}</span>
+                    </div>
+                    ` : ''}
+                    
+                    ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
+                    <div class="admin-actions">
+                        <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
+                            <i class="fas fa-check"></i> ПОДТВЕРДИТЬ
+                        </button>
+                        <button onclick="deleteReport('${r.id}')" class="action-btn delete">
+                            <i class="fas fa-trash"></i> УДАЛИТЬ
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
         listDiv.appendChild(card);
     });
     
-    if (paginationContainer && totalPages > 1) renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
+    if (paginationContainer && totalPages > 1) {
+        renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
+    }
 }
 
 function renderReportsWithPagination(page = 1) {

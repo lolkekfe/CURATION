@@ -1707,10 +1707,11 @@ function addNavButton(container, icon, text, onClick) {
             titleElement.textContent = text;
         }
         updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
+        // Добавляем настройку высоты после загрузки контента
+        setTimeout(adjustInterfaceHeights, 100);
     };
     container.appendChild(button);
 }
-
 function logout() {
     CURRENT_ROLE = null;
     CURRENT_USER = null;
@@ -4477,21 +4478,6 @@ function adjustInterfaceHeights() {
     }
 }
 
-// Вызываем при загрузке и изменении размера
-window.addEventListener('load', adjustInterfaceHeights);
-window.addEventListener('resize', adjustInterfaceHeights);
-
-// Также вызываем при переключении модулей
-const originalAddNavButton = addNavButton;
-window.addNavButton = function(container, icon, text, onClick) {
-    const button = originalAddNavButton(container, icon, text, function() {
-        if (onClick) onClick();
-        setTimeout(adjustInterfaceHeights, 100);
-      });
-    return button;
-};
-    
-}
 
 
 

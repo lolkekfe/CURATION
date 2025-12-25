@@ -1981,6 +1981,39 @@ function setupReportFormHandlers() {
     });
 }
 
+window.renderMLKScreen = function() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    // Загружаем отчеты сначала
+    loadReports(function() {
+        content.innerHTML = `
+            <div class="form-container" style="padding: 20px;">
+                <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                    <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
+                </h2>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <div>
+                        <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif;">АРХИВ ОТЧЕТОВ</h3>
+                        <p style="color: #8f9779;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
+                    </div>
+                    <button onclick="renderMLKForm()" class="btn-primary">
+                        <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
+                    </button>
+                </div>
+                
+                <div id="mlk-list">
+                    <!-- Здесь будет список отчетов -->
+                </div>
+            </div>
+        `;
+        
+        // Теперь рендерим список отчетов
+        renderMLKList();
+    });
+}
+
 function updateCharCount() {
     const textarea = document.getElementById('mlk-action');
     const counter = document.getElementById('char-count');
@@ -2168,7 +2201,7 @@ function sendReportToDiscord(report) {
         body: JSON.stringify(payload)
     }).catch(error => console.error('Discord webhook error:', error));
 }
-function renderMLKList() {
+window.renderMLKList = function() {
     const listDiv = document.getElementById("mlk-list");
     if (!listDiv) return;
     
@@ -4156,4 +4189,5 @@ window.exportIPData = function() {
     });
 
 }
+
 

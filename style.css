@@ -1406,4 +1406,88 @@ body {
 
 .form-container > :last-child {
     margin-bottom: 0;
+
+}
+/* ===== ИСПРАВЛЕНИЕ НАВИГАЦИИ ===== */
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 0;
+}
+
+.nav-button {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 15px 20px;
+    background: rgba(28, 26, 23, 0.6);
+    border: 1px solid var(--border-dark);
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    text-decoration: none;
+}
+
+.nav-button:hover {
+    background: rgba(28, 26, 23, 0.8);
+    border-color: var(--accent-green);
+    color: var(--text-primary);
+    transform: translateX(5px);
+}
+
+.nav-button.active {
+    background: rgba(74, 122, 80, 0.1);
+    border-color: var(--accent-green);
+    color: var(--text-primary);
+    border-left: 3px solid var(--accent-green);
+}
+
+.nav-button i {
+    width: 20px;
+    text-align: center;
+    color: var(--accent-green);
+    font-size: 0.9rem;
+}
+
+.nav-button span {
+    flex: 1;
+}
+
+/* Стили для статуса в заголовке панели */
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.status-led {
+    width: 8px;
+    height: 8px;
+    background: var(--accent-green);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--accent-green-glow);
+    animation: pulse 2s infinite;
+}
+
+.status-led.active {
+    background: var(--accent-green);
+}
+
+.header-status span {
+    font-size: 0.7rem;
+    color: var(--accent-green);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Уберите лишние стили, которые могут конфликтовать */
+.module-grid {
+    /* Удалите если этот класс не используется */
 }

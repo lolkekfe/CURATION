@@ -1746,33 +1746,6 @@ function loadReports(callback) {
 }
 
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
-function renderMLKScreen() {
-    const content = document.getElementById("content-body");
-    if (!content) return;
-    content.innerHTML = '';
-    
-    if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
-        const btnContainer = document.createElement("div");
-        btnContainer.style.display = "flex";
-        btnContainer.style.justifyContent = "flex-end";
-        btnContainer.style.marginBottom = "20px";
-        
-        const addBtn = document.createElement("button");
-        addBtn.className = "btn-primary";
-        addBtn.innerHTML = '<i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ';
-        addBtn.onclick = renderMLKForm;
-        
-        btnContainer.appendChild(addBtn);
-        content.appendChild(btnContainer);
-    }
-    
-    const listDiv = document.createElement("div");
-    listDiv.id = "mlk-list";
-    content.appendChild(listDiv);
-    
-    renderMLKList();
-}
-
 function renderMLKForm() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -1780,74 +1753,421 @@ function renderMLKForm() {
     content.innerHTML = `
         <div class="form-container" style="padding: 20px;">
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-file-medical"></i> НОВЫЙ ОТЧЕТ
+                <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="form-group">
-                <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
-                <input type="text" id="mlk-tag" class="form-input" placeholder="УКАЖИТЕ ИДЕНТИФИКАТОР">
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">ОПИСАНИЕ НАРУШЕНИЯ</label>
-                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="ПОДРОБНО ОПИШИТЕ НАРУШЕНИЕ..."></textarea>
-            </div>
-            
-            <div class="form-actions">
-                <button onclick="renderMLKScreen()" class="btn-secondary">
-                    <i class="fas fa-arrow-left"></i> ОТМЕНА
-                </button>
-                <button id="submit-mlk-btn" class="btn-primary">
-                    <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
-                </button>
+            <div class="report-creation-container">
+                <div class="zone-card" style="margin-bottom: 30px;">
+                    <div class="card-icon"><i class="fas fa-user-tag"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 15px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
+                        <div style="position: relative;">
+                            <input type="text" id="mlk-tag" class="form-input" 
+                                   placeholder="@никнейм / STEAM_1:0:123456 / ID игрока"
+                                   style="padding-left: 40px;">
+                            <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--accent-green);"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ТИП НАРУШИТЕЛЯ</label>
+                        <div class="tag-selector">
+                            <button type="button" class="tag-option active" data-value="player">Игрок</button>
+                            <button type="button" class="tag-option" data-value="admin">Админ</button>
+                            <button type="button" class="tag-option" data-value="curator">Куратор</button>
+                            <button type="button" class="tag-option" data-value="other">Другое</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="zone-card" style="margin-bottom: 30px; border-color: var(--accent-yellow);">
+                    <div class="card-icon" style="color: var(--accent-yellow);"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h4 style="color: var(--accent-yellow); margin-bottom: 15px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label>
+                        <div class="category-grid" id="violation-categories">
+                            <div class="category-card" data-category="cheat" data-color="#b43c3c">
+                                <div class="category-icon">
+                                    <i class="fas fa-skull-crossbones"></i>
+                                </div>
+                                <span class="category-name">ЧИТЫ</span>
+                                <span class="category-desc">Использование ПО</span>
+                            </div>
+                            <div class="category-card" data-category="toxic" data-color="#b43c3c">
+                                <div class="category-icon">
+                                    <i class="fas fa-comment-slash"></i>
+                                </div>
+                                <span class="category-name">ТОКСИЧНОСТЬ</span>
+                                <span class="category-desc">Оскорбления</span>
+                            </div>
+                            <div class="category-card" data-category="spam" data-color="#b43c3c">
+                                <div class="category-icon">
+                                    <i class="fas fa-comment-dots"></i>
+                                </div>
+                                <span class="category-name">СПАМ</span>
+                                <span class="category-desc">Флуд в чате</span>
+                            </div>
+                            <div class="category-card" data-category="bug" data-color="#c0b070">
+                                <div class="category-icon">
+                                    <i class="fas fa-bug"></i>
+                                </div>
+                                <span class="category-name">БАГИ</span>
+                                <span class="category-desc">Использование багов</span>
+                            </div>
+                            <div class="category-card" data-category="grief" data-color="#c0b070">
+                                <div class="category-icon">
+                                    <i class="fas fa-user-slash"></i>
+                                </div>
+                                <span class="category-name">ГРИФ</span>
+                                <span class="category-desc">Вредительство</span>
+                            </div>
+                            <div class="category-card" data-category="other" data-color="#8f9779">
+                                <div class="category-icon">
+                                    <i class="fas fa-question-circle"></i>
+                                </div>
+                                <span class="category-name">ДРУГОЕ</span>
+                                <span class="category-desc">Иные нарушения</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label>
+                        <div class="priority-selector">
+                            <div class="priority-option" data-priority="low">
+                                <div class="priority-dot" style="background: #8cb43c;"></div>
+                                <span>НИЗКИЙ</span>
+                            </div>
+                            <div class="priority-option active" data-priority="medium">
+                                <div class="priority-dot" style="background: #c0b070;"></div>
+                                <span>СРЕДНИЙ</span>
+                            </div>
+                            <div class="priority-option" data-priority="high">
+                                <div class="priority-dot" style="background: #b43c3c;"></div>
+                                <span>ВЫСОКИЙ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="zone-card" style="margin-bottom: 30px; border-color: var(--accent-green);">
+                    <div class="card-icon"><i class="fas fa-align-left"></i></div>
+                    <h4 style="color: var(--accent-green); margin-bottom: 15px;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label>
+                        <div style="position: relative;">
+                            <textarea id="mlk-action" class="form-textarea" rows="8" 
+                                      placeholder="Опишите нарушение максимально подробно...
+• Время и место нарушения
+• Конкретные действия нарушителя
+• Доказательства (скриншоты, демо и т.д.)
+• Последствия нарушения"></textarea>
+                            <div class="char-counter">
+                                <span id="char-count">0</span>/2000 символов
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label>
+                        <div id="proof-links-container">
+                            <div class="proof-link-input">
+                                <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://...">
+                                <button type="button" class="btn-secondary add-proof-btn" onclick="addProofField()">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-dim);">
+                            Можно добавить ссылки на скриншоты, видео, демо-записи
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="zone-card" style="background: rgba(40, 42, 36, 0.8);">
+                    <div class="card-icon"><i class="fas fa-preview"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 15px;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
+                    
+                    <div id="report-preview" class="report-preview">
+                        <div class="preview-header">
+                            <div class="preview-badge">
+                                <span class="preview-category">ЧИТЫ</span>
+                                <span class="preview-priority" style="color: #c0b070;">СРЕДНИЙ</span>
+                            </div>
+                            <div class="preview-time">${new Date().toLocaleString()}</div>
+                        </div>
+                        <div class="preview-content">
+                            <div class="preview-violator">
+                                <i class="fas fa-user-tag"></i> <span id="preview-tag">[не указано]</span>
+                            </div>
+                            <div class="preview-description" id="preview-description">
+                                [описание появится здесь]
+                            </div>
+                        </div>
+                        <div class="preview-footer">
+                            <div class="preview-author">
+                                <i class="fas fa-user"></i> ${CURRENT_USER}
+                            </div>
+                            <div class="preview-status">
+                                <span class="status-pending">ОЖИДАЕТ ПРОВЕРКИ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions" style="margin-top: 30px;">
+                    <button onclick="renderMLKScreen()" class="btn-secondary">
+                        <i class="fas fa-arrow-left"></i> ОТМЕНА
+                    </button>
+                    <button id="submit-mlk-btn" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
+                    </button>
+                </div>
             </div>
         </div>
     `;
+    
+    // Добавляем обработчики
+    setupReportFormHandlers();
     
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
     
     const actionTextarea = document.getElementById("mlk-action");
     if (actionTextarea) {
-        actionTextarea.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                addMLKReport();
-            }
+        actionTextarea.addEventListener('input', function(e) {
+            updatePreview();
+            updateCharCount();
         });
+    }
+    
+    const tagInput = document.getElementById("mlk-tag");
+    if (tagInput) {
+        tagInput.addEventListener('input', updatePreview);
+    }
+}
+
+function setupReportFormHandlers() {
+    // Обработчики категорий
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        card.addEventListener('click', function() {
+            categoryCards.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            updatePreview();
+        });
+    });
+    
+    // Обработчики приоритета
+    const priorityOptions = document.querySelectorAll('.priority-option');
+    priorityOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            priorityOptions.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+            updatePreview();
+        });
+    });
+    
+    // Обработчики типа нарушителя
+    const tagOptions = document.querySelectorAll('.tag-option');
+    tagOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            tagOptions.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+}
+
+function updateCharCount() {
+    const textarea = document.getElementById('mlk-action');
+    const counter = document.getElementById('char-count');
+    if (textarea && counter) {
+        const count = textarea.value.length;
+        counter.textContent = count;
+        counter.style.color = count > 1800 ? '#b43c3c' : count > 1500 ? '#c0b070' : '#8cb43c';
+    }
+}
+
+function addProofField() {
+    const container = document.getElementById('proof-links-container');
+    const newInput = document.createElement('div');
+    newInput.className = 'proof-link-input';
+    newInput.innerHTML = `
+        <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://...">
+        <button type="button" class="btn-secondary remove-proof-btn" onclick="removeProofField(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newInput);
+}
+
+function removeProofField(button) {
+    const container = document.getElementById('proof-links-container');
+    if (container.children.length > 1) {
+        button.closest('.proof-link-input').remove();
+    }
+}
+
+function updatePreview() {
+    const tagInput = document.getElementById('mlk-tag');
+    const descriptionInput = document.getElementById('mlk-action');
+    const selectedCategory = document.querySelector('.category-card.active');
+    const selectedPriority = document.querySelector('.priority-option.active');
+    
+    const previewTag = document.getElementById('preview-tag');
+    const previewDescription = document.getElementById('preview-description');
+    const previewCategory = document.querySelector('.preview-category');
+    const previewPriority = document.querySelector('.preview-priority');
+    
+    if (previewTag) {
+        previewTag.textContent = tagInput.value || '[не указано]';
+    }
+    
+    if (previewDescription) {
+        previewDescription.textContent = descriptionInput.value || '[описание появится здесь]';
+    }
+    
+    if (selectedCategory && previewCategory) {
+        const categoryName = selectedCategory.querySelector('.category-name').textContent;
+        const categoryColor = selectedCategory.dataset.color;
+        previewCategory.textContent = categoryName;
+        previewCategory.style.color = categoryColor;
+    }
+    
+    if (selectedPriority && previewPriority) {
+        const priorityText = selectedPriority.querySelector('span').textContent;
+        const priorityColor = selectedPriority.querySelector('.priority-dot').style.background;
+        previewPriority.textContent = priorityText;
+        previewPriority.style.color = priorityColor;
     }
 }
 
 function addMLKReport() {
     const tag = document.getElementById("mlk-tag")?.value.trim() || "";
     const action = document.getElementById("mlk-action")?.value.trim() || "";
+    const selectedCategory = document.querySelector('.category-card.active');
+    const selectedPriority = document.querySelector('.priority-option.active');
+    const selectedViolatorType = document.querySelector('.tag-option.active');
+    
+    // Собираем ссылки на доказательства
+    const proofLinks = Array.from(document.querySelectorAll('.proof-link'))
+        .map(input => input.value.trim())
+        .filter(link => link.length > 0);
     
     if (!tag) {
         showNotification("Введите идентификатор нарушителя", "error");
         return;
     }
+    
     if (!action) {
         showNotification("Опишите нарушение", "error");
+        return;
+    }
+    
+    if (action.length < 20) {
+        showNotification("Описание должно содержать минимум 20 символов", "error");
         return;
     }
     
     const report = {
         tag,
         action,
+        category: selectedCategory ? selectedCategory.dataset.category : "other",
+        categoryName: selectedCategory ? selectedCategory.querySelector('.category-name').textContent : "Другое",
+        priority: selectedPriority ? selectedPriority.dataset.priority : "medium",
+        priorityName: selectedPriority ? selectedPriority.querySelector('span').textContent : "СРЕДНИЙ",
+        violatorType: selectedViolatorType ? selectedViolatorType.dataset.value : "player",
+        proofLinks: proofLinks,
         author: CURRENT_USER,
         authorStaticId: CURRENT_STATIC_ID,
         role: CURRENT_ROLE,
         time: new Date().toLocaleString(),
+        timestamp: Date.now(),
         confirmed: false,
         deleted: false
     };
     
     db.ref('mlk_reports').push(report).then(() => {
-        showNotification("Отчет успешно сохранен", "success");
+        showNotification("✅ Отчет успешно сохранен", "success");
+        
+        // Отправка в Discord вебхук, если настроен
+        if (DISCORD_WEBHOOK_URL) {
+            sendReportToDiscord(report);
+        }
+        
         loadReports(renderMLKScreen);
     }).catch(error => {
         showNotification("Ошибка при сохранении: " + error.message, "error");
     });
 }
 
+function sendReportToDiscord(report) {
+    if (!DISCORD_WEBHOOK_URL) return;
+    
+    const colorMap = {
+        'cheat': 0xb43c3c,
+        'toxic': 0xb43c3c,
+        'spam': 0xb43c3c,
+        'bug': 0xc0b070,
+        'grief': 0xc0b070,
+        'other': 0x8f9779
+    };
+    
+    const priorityColorMap = {
+        'low': 0x8cb43c,
+        'medium': 0xc0b070,
+        'high': 0xb43c3c
+    };
+    
+    const payload = {
+        username: DISCORD_WEBHOOK_NAME,
+        avatar_url: DISCORD_WEBHOOK_AVATAR,
+        embeds: [{
+            title: "📄 НОВЫЙ ОТЧЕТ МЛК",
+            description: `**Нарушитель:** \`${report.tag}\`\n**Категория:** ${report.categoryName}\n**Приоритет:** ${report.priorityName}`,
+            color: colorMap[report.category] || 0x8f9779,
+            fields: [
+                {
+                    name: "📝 Описание",
+                    value: report.action.length > 1024 ? report.action.substring(0, 1021) + "..." : report.action
+                },
+                {
+                    name: "👤 Автор отчета",
+                    value: `${report.author} (${report.role})`,
+                    inline: true
+                },
+                {
+                    name: "🕐 Время",
+                    value: report.time,
+                    inline: true
+                }
+            ],
+            footer: {
+                text: `Static ID: ${report.authorStaticId} | Система отчетов Зоны`
+            },
+            timestamp: new Date().toISOString()
+        }]
+    };
+    
+    // Добавляем ссылки на доказательства, если есть
+    if (report.proofLinks && report.proofLinks.length > 0) {
+        payload.embeds[0].fields.push({
+            name: "🔗 Доказательства",
+            value: report.proofLinks.map((link, i) => `${i+1}. ${link}`).join('\n')
+        });
+    }
+    
+    fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    }).catch(error => console.error('Discord webhook error:', error));
+}
 function renderMLKList() {
     const listDiv = document.getElementById("mlk-list");
     if (!listDiv) return;
@@ -1858,10 +2178,12 @@ function renderMLKList() {
     
     if (filteredReports.length === 0) {
         listDiv.innerHTML = `
-            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5);">
-                <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 20px;"></i>
+            <div class="empty-reports">
+                <div class="empty-icon">
+                    <i class="fas fa-inbox"></i>
+                </div>
                 <h3>ОТЧЕТЫ ОТСУТСТВУЮТ</h3>
-                <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ</p>
+                <p>СОЗДАЙТЕ ПЕРВЫЙ ОТЧЕТ, НАЖАВ НА КНОПКУ "НОВЫЙ ОТЧЕТ"</p>
             </div>
         `;
         return;
@@ -1869,47 +2191,111 @@ function renderMLKList() {
     
     listDiv.innerHTML = '';
     
-    filteredReports.forEach(r => {
+    // Сортируем по времени (новые сверху)
+    const sortedReports = [...filteredReports].sort((a, b) => {
+        const timeA = a.timestamp || new Date(a.time).getTime() || 0;
+        const timeB = b.timestamp || new Date(b.time).getTime() || 0;
+        return timeB - timeA;
+    });
+    
+    sortedReports.forEach(r => {
         const card = document.createElement("div");
-        card.className = "report-card";
+        card.className = "report-card-enhanced";
         
         let status = r.deleted ? 'удален' : (r.confirmed ? 'подтвержден' : 'рассматривается');
         let statusClass = r.deleted ? 'status-deleted' : (r.confirmed ? 'status-confirmed' : 'status-pending');
-        let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed ? 'fa-check' : 'fa-clock');
+        let statusIcon = r.deleted ? 'fa-trash' : (r.confirmed ? 'fa-check-circle' : 'fa-clock');
+        
+        // Определяем цвет категории
+        const categoryColors = {
+            'cheat': '#b43c3c',
+            'toxic': '#b43c3c',
+            'spam': '#b43c3c',
+            'bug': '#c0b070',
+            'grief': '#c0b070',
+            'other': '#8f9779'
+        };
+        
+        const categoryColor = categoryColors[r.category] || '#8f9779';
+        
+        // Определяем цвет приоритета
+        const priorityColors = {
+            'low': '#8cb43c',
+            'medium': '#c0b070',
+            'high': '#b43c3c'
+        };
+        
+        const priorityColor = priorityColors[r.priority] || '#c0b070';
         
         card.innerHTML = `
-            <div class="report-header">
-                <div class="report-title">
-                    <i class="fas fa-user-tag"></i> ${r.tag}
+            <div class="report-card-header">
+                <div class="report-category-badge" style="background: ${categoryColor}20; border-left-color: ${categoryColor};">
+                    <span class="category-name" style="color: ${categoryColor};">${r.categoryName || 'Другое'}</span>
+                    <div class="report-priority" style="color: ${priorityColor};">
+                        <div class="priority-dot" style="background: ${priorityColor};"></div>
+                        ${r.priorityName || 'СРЕДНИЙ'}
+                    </div>
                 </div>
                 <div class="report-meta">
-                    <span><i class="far fa-clock"></i> ${r.time}</span>
-                    <span><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</span>
-                    ${r.authorStaticId ? `<span style="font-family: 'Courier New', monospace; font-size: 0.8rem; color: #8f9779;">
-                        <i class="fas fa-id-card"></i> ${r.authorStaticId}
-                    </span>` : ''}
+                    <span class="meta-item"><i class="far fa-clock"></i> ${r.time}</span>
+                    <span class="meta-item"><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</span>
                 </div>
             </div>
             
-            <div class="report-content">
-                ${r.action}
-            </div>
-            
-            <div class="report-footer">
-                <div class="report-status ${statusClass}">
-                    <i class="fas ${statusIcon}"></i>
-                    ${status}
+            <div class="report-card-body">
+                <div class="violator-info">
+                    <div class="violator-icon">
+                        <i class="fas fa-user-tag"></i>
+                    </div>
+                    <div class="violator-details">
+                        <h4 class="violator-tag">${r.tag || '—'}</h4>
+                        <span class="violator-type">Тип: ${r.violatorType === 'admin' ? 'Администратор' : r.violatorType === 'curator' ? 'Куратор' : 'Игрок'}</span>
+                    </div>
                 </div>
-                ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
-                <div class="table-actions">
-                    <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
-                        <i class="fas fa-check"></i> ПОДТВЕРДИТЬ
-                    </button>
-                    <button onclick="deleteReport('${r.id}')" class="action-btn delete">
-                        <i class="fas fa-trash"></i> УДАЛИТЬ
-                    </button>
+                
+                <div class="report-description">
+                    ${r.action.replace(/\n/g, '<br>')}
+                </div>
+                
+                ${r.proofLinks && r.proofLinks.length > 0 ? `
+                <div class="proof-links">
+                    <h5><i class="fas fa-link"></i> ДОКАЗАТЕЛЬСТВА</h5>
+                    <div class="links-list">
+                        ${r.proofLinks.map(link => `
+                            <a href="${link}" target="_blank" class="proof-link">
+                                <i class="fas fa-external-link-alt"></i> ${link.length > 40 ? link.substring(0, 40) + '...' : link}
+                            </a>
+                        `).join('')}
+                    </div>
                 </div>
                 ` : ''}
+            </div>
+            
+            <div class="report-card-footer">
+                <div class="report-status ${statusClass}">
+                    <i class="fas ${statusIcon}"></i>
+                    <span>${status.toUpperCase()}</span>
+                </div>
+                
+                <div class="report-actions">
+                    ${r.authorStaticId ? `
+                    <div class="static-id-display">
+                        <i class="fas fa-id-card"></i>
+                        <span class="static-id">${r.authorStaticId}</span>
+                    </div>
+                    ` : ''}
+                    
+                    ${CURRENT_RANK.level >= RANKS.ADMIN.level && !r.confirmed && !r.deleted ? `
+                    <div class="admin-actions">
+                        <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
+                            <i class="fas fa-check"></i> ПОДТВЕРДИТЬ
+                        </button>
+                        <button onclick="deleteReport('${r.id}')" class="action-btn delete">
+                            <i class="fas fa-trash"></i> УДАЛИТЬ
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
             </div>
         `;
         listDiv.appendChild(card);
@@ -3770,3 +4156,4 @@ window.exportIPData = function() {
     });
 
 }
+

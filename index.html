@@ -50,76 +50,75 @@
         <div class="frame-corner bottom-right"></div>
         
         <div class="terminal-screen" style="height: auto; min-height: 400px;">
-                <div class="terminal-screen">
-                    <div class="screen-header">
-                        <div class="header-glow"></div>
-                        <span>АУТЕНТИФИКАЦИЯ</span>
-                        <span class="blink">_</span>
+            <div class="screen-header">
+                <div class="header-glow"></div>
+                <span>АУТЕНТИФИКАЦИЯ</span>
+                <span class="blink">_</span>
+            </div>
+            
+            <div class="screen-content">
+                <div class="access-line">
+                    <div class="line-number">[001]</div>
+                    <span class="prompt">> ИДЕНТИФИКАТОР:</span>
+                    <div class="input-wrapper">
+                        <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off" spellcheck="false">
+                        <div class="input-underline"></div>
                     </div>
-                    
-                    <div class="screen-content">
-                        <div class="access-line">
-                            <div class="line-number">[001]</div>
-                            <span class="prompt">> ИДЕНТИФИКАТОР:</span>
-                            <div class="input-wrapper">
-                                <input type="text" id="username" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="access-line">
-                            <div class="line-number">[002]</div>
-                            <span class="prompt">> КОД ДОСТУПА:</span>
-                            <div class="input-wrapper">
-                                <input type="password" id="password" placeholder="ВВЕДИТЕ КОД" autocomplete="off" spellcheck="false">
-                                <div class="input-underline"></div>
-                                <div class="encryption-indicator">
-                                    <i class="fas fa-lock"></i>
-                                    <span>AES-256</span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="system-log">
-                            <div class="log-entry">
-                                <span class="log-time">[...]</span>
-                                <span class="log-message">>> СИСТЕМА: Ожидание аутентификации...</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="screen-footer">
-                        <div class="footer-grid">
-                            <div class="grid-cell">
-                                <span class="cell-label">СТАТУС:</span>
-                                <span class="cell-value standby">ГОТОВ</span>
-                            </div>
-                            <div class="grid-cell">
-                                <span class="cell-label">СЕССИЯ:</span>
-                                <span class="cell-value">#001</span>
-                            </div>
-                            <div class="grid-cell">
-                                <span class="cell-label">ВЕРСИЯ:</span>
-                                <span class="cell-value">2.7.4</span>
-                            </div>
-                        </div>
-                        
-                        <button id="login-btn" class="access-button">
-                            <div class="button-inner">
-                                <i class="fas fa-terminal"></i>
-                                <span>ПОДКЛЮЧИТЬСЯ</span>
-                                <div class="button-pulse"></div>
-                            </div>
-                        </button>
-                        
-                        <div id="login-error" class="error-display">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span class="error-text"></span>
+                </div>
+                
+                <div class="access-line">
+                    <div class="line-number">[002]</div>
+                    <span class="prompt">> КОД ДОСТУПА:</span>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" placeholder="ВВЕДИТЕ КОД" autocomplete="off" spellcheck="false">
+                        <div class="input-underline"></div>
+                        <div class="encryption-indicator">
+                            <i class="fas fa-lock"></i>
+                            <span>AES-256</span>
                         </div>
                     </div>
                 </div>
+                
+                <div class="system-log">
+                    <div class="log-entry">
+                        <span class="log-time">[...]</span>
+                        <span class="log-message">>> СИСТЕМА: Ожидание аутентификации...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screen-footer">
+                <div class="footer-grid">
+                    <div class="grid-cell">
+                        <span class="cell-label">СТАТУС:</span>
+                        <span class="cell-value standby">ГОТОВ</span>
+                    </div>
+                    <div class="grid-cell">
+                        <span class="cell-label">СЕССИЯ:</span>
+                        <span class="cell-value">#001</span>
+                    </div>
+                    <div class="grid-cell">
+                        <span class="cell-label">ВЕРСИЯ:</span>
+                        <span class="cell-value">2.7.4</span>
+                    </div>
+                </div>
+                
+                <button id="login-btn" class="access-button">
+                    <div class="button-inner">
+                        <i class="fas fa-terminal"></i>
+                        <span>ПОДКЛЮЧИТЬСЯ</span>
+                        <div class="button-pulse"></div>
+                    </div>
+                </button>
+                
+                <div id="login-error" class="error-display">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span class="error-text"></span>
+                </div>
             </div>
         </div>
+    </div>
+</div>
         
         <div class="zone-footer">
             <div class="footer-info">
@@ -340,4 +339,5 @@
     </script>
 </body>
 </html>
+
 

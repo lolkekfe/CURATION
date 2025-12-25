@@ -100,22 +100,30 @@ function addScrollStyles() {
             .report-card{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;border-radius:4px;padding:15px;transition:all 0.2s;}
             .report-card:hover{border-color:#5a5a4a;background:rgba(40,42,36,0.9);}
                         /* Стили для отображения ошибок входа */
+            /* Стили для ошибок входа (над формой) */
+            #login-error {
+                position: relative;
+                z-index: 10;
+                margin: 15px 0;
+            }
+            
             .login-error-box {
-                background: rgba(180, 60, 60, 0.1);
-                border: 1px solid #b43c3c;
+                background: rgba(30, 32, 28, 0.9);
+                border: 1px solid;
                 border-radius: 4px;
                 padding: 12px 15px;
-                margin-top: 15px;
-                color: #b43c3c;
+                color: #8f9779;
                 font-size: 0.9rem;
                 display: flex;
                 align-items: flex-start;
                 gap: 10px;
                 animation: fadeIn 0.3s ease;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(5px);
             }
             
             .login-error-box i {
-                font-size: 1rem;
+                font-size: 1.1rem;
                 margin-top: 2px;
             }
             
@@ -125,36 +133,69 @@ function addScrollStyles() {
             
             .login-error-box .error-title {
                 font-weight: 500;
-                margin-bottom: 3px;
-                color: #b43c3c;
+                margin-bottom: 5px;
+                font-size: 0.95rem;
             }
             
             .login-error-box .error-message {
-                color: #d45c5c;
                 line-height: 1.4;
+                font-size: 0.85rem;
             }
             
+            /* Стили для системных уведомлений (всплывающих, внизу экрана) */
+            .notification {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                z-index: 9999;
+                padding: 12px 20px;
+                border-radius: 4px;
+                color: #1e201c;
+                font-weight: 500;
+                font-size: 0.9rem;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                transform: translateY(100px);
+                opacity: 0;
+                transition: all 0.3s ease;
+                max-width: 350px;
+                backdrop-filter: blur(5px);
+            }
+            
+            .notification.show {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            
+            .notification.info {
+                background: rgba(192, 176, 112, 0.9);
+                border: 1px solid #c0b070;
+            }
+            
+            .notification.success {
+                background: rgba(140, 180, 60, 0.9);
+                border: 1px solid #8cb43c;
+            }
+            
+            .notification.warning {
+                background: rgba(192, 176, 112, 0.9);
+                border: 1px solid #c0b070;
+            }
+            
+            .notification.error {
+                background: rgba(180, 60, 60, 0.9);
+                border: 1px solid #b43c3c;
+            }
+            
+            /* Анимации */
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
             
-            /* Стили для индикатора загрузки */
-            .login-loading {
-                display: none;
-                text-align: center;
-                padding: 10px;
-                color: #c0b070;
-            }
-            
-            .login-loading i {
-                animation: spin 1s linear infinite;
-                margin-right: 8px;
-            }
-            
-            @keyframes spin {
-                from { transform: rotate(0deg); }
-                to { transform: rotate(360deg); }
+            @keyframes slideIn {
+                from { transform: translateY(100px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+
             }
         `;
         document.head.appendChild(style);
@@ -332,26 +373,51 @@ async function updateIPActivity(username) {
 /* ===== МОНИТОРИНГ ПОПЫТОК ВХОДА ===== */
 function trackLoginAttempt(ip, success = false) {
     const now = Date.now();
-    if (!loginAttempts[ip]) loginAttempts[ip] = { attempts: 0, firstAttempt: now, lastAttempt: now, lockedUntil: 0 };
-    if (success) loginAttempts[ip].attempts = 0, loginAttempts[ip].lockedUntil = 0;
-    else {
-        loginAttempts[ip].attempts++, loginAttempts[ip].lastAttempt = now;
+    
+    if (!loginAttempts[ip]) {
+        loginAttempts[ip] = { 
+            attempts: 0, 
+            firstAttempt: now, 
+            lastAttempt: now, 
+            lockedUntil: 0 
+        };
+    }
+    
+    if (success) {
+        // Сбрасываем счетчик при успешном входе
+        loginAttempts[ip].attempts = 0;
+        loginAttempts[ip].lockedUntil = 0;
+        // Не показываем уведомление при успешном входе
+    } else {
+        // Увеличиваем счетчик неудачных попыток
+        loginAttempts[ip].attempts++;
+        loginAttempts[ip].lastAttempt = now;
+        
+        console.log(`Failed login attempt ${loginAttempts[ip].attempts} for IP ${ip}`);
+        
+        // Проверяем, достигнут ли лимит попыток
         if (loginAttempts[ip].attempts >= MAX_ATTEMPTS) {
             loginAttempts[ip].lockedUntil = now + LOCKOUT_TIME;
-            showNotification(`Слишком много попыток входа. IP заблокирован на 15 минут`, "error");
+            
+            // Показываем ОДНО сообщение о блокировке СВЕРХУ
+            const minutesLeft = Math.ceil(LOCKOUT_TIME / 60000);
+            showLoginError(`Слишком много попыток входа. Вы заблокированы на ${minutesLeft} минут.`, "error");
+            
+            // НЕ показываем системное уведомление снизу
+        } else {
+            // Для первых неудачных попыток показываем только ошибку сверху
+            // (уже показано в функции login)
+            const attemptsLeft = MAX_ATTEMPTS - loginAttempts[ip].attempts;
+            console.log(`Attempts left for IP ${ip}: ${attemptsLeft}`);
         }
     }
-    for (const ipKey in loginAttempts) if (now - loginAttempts[ipKey].lastAttempt > 24 * 60 * 60 * 1000) delete loginAttempts[ipKey];
-}
-
-function isIPLocked(ip) {
-    if (!loginAttempts[ip]) return false;
-    const now = Date.now();
-    if (loginAttempts[ip].lockedUntil > now) {
-        const minutesLeft = Math.ceil((loginAttempts[ip].lockedUntil - now) / 60000);
-        return `IP временно заблокирован. Попробуйте через ${minutesLeft} минут`;
+    
+    // Очищаем старые записи (старше 24 часов)
+    for (const ipKey in loginAttempts) {
+        if (now - loginAttempts[ipKey].lastAttempt > 24 * 60 * 60 * 1000) {
+            delete loginAttempts[ipKey];
+        }
     }
-    return false;
 }
 
 /* ===== ВАЛИДАЦИЯ ПОЛЬЗОВАТЕЛЬСКОГО ВВОДА ===== */
@@ -864,11 +930,19 @@ window.demoteToJuniorByStaticId = function(staticId) {
 }
 
 window.login = async function() {
-    const usernameInput = document.getElementById("username").value.trim();
-    const passwordInput = document.getElementById("password").value.trim();
+    const usernameInput = document.getElementById("username");
+    const passwordInput = document.getElementById("password");
+    
+    if (!usernameInput || !passwordInput) {
+        console.error("Login form elements not found");
+        return;
+    }
+    
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
     const errorElement = document.getElementById("login-error");
     const loginButton = document.getElementById("login-btn");
-    const originalButtonText = loginButton ? loginButton.innerHTML : "";
+    const originalButtonText = loginButton ? loginButton.innerHTML : "<i class=\"fas fa-sign-in-alt\"></i><span>ПОДКЛЮЧИТЬСЯ</span>";
     
     // Очищаем предыдущие ошибки
     if (errorElement) {
@@ -877,16 +951,16 @@ window.login = async function() {
     }
     
     // Валидация имени пользователя
-    const usernameValidation = validateUsername(usernameInput);
+    const usernameValidation = validateUsername(username);
     if (!usernameValidation.valid) { 
-        showLoginError(usernameValidation.message); 
+        showLoginError(usernameValidation.message, "error"); 
         return; 
     }
     
     // Валидация пароля
-    const passwordValidation = validatePassword(passwordInput);
+    const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) { 
-        showLoginError(passwordValidation.message); 
+        showLoginError(passwordValidation.message, "error"); 
         return; 
     }
     
@@ -899,13 +973,12 @@ window.login = async function() {
     try {
         // Получаем IP пользователя
         const userIP = await getUserIP();
-        console.log("User IP:", userIP);
         
         // Проверяем блокировку IP
         if (userIP !== "unknown") {
             const ipLockStatus = isIPLocked(userIP);
             if (ipLockStatus) { 
-                showLoginError(`Слишком много попыток входа. IP заблокирован. Попробуйте позже.`); 
+                showLoginError(ipLockStatus, "error");
                 resetLoginButton(loginButton, originalButtonText);
                 return; 
             }
@@ -913,14 +986,14 @@ window.login = async function() {
             // Проверяем бан IP
             const ipBanCheck = await checkIPBan(userIP);
             if (ipBanCheck.banned) { 
-                showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`); 
+                showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`, "error");
                 resetLoginButton(loginButton, originalButtonText);
                 return; 
             }
         }
         
         // Проверяем бан пользователя
-        const banCheck = checkIfBanned(usernameInput);
+        const banCheck = checkIfBanned(username);
         if (banCheck.banned) { 
             showBannedScreen(banCheck); 
             resetLoginButton(loginButton, originalButtonText);
@@ -928,10 +1001,8 @@ window.login = async function() {
         }
         
         // Ищем пользователя в базе
-        const existingUser = users.find(user => user.username.toLowerCase() === usernameInput.toLowerCase());
-        const isCreator = usernameInput.toLowerCase() === "tihiy";
-        
-        console.log("Is creator:", isCreator, "Existing user:", existingUser);
+        const existingUser = users.find(user => user.username.toLowerCase() === username.toLowerCase());
+        const isCreator = username.toLowerCase() === "tihiy";
         
         // === ОБРАБОТКА СОЗДАТЕЛЯ ===
         if (isCreator) {
@@ -940,28 +1011,25 @@ window.login = async function() {
             const passwords = passwordsSnapshot.val() || {};
             const creatorPassword = passwords.special;
             
-            console.log("Creator password exists:", !!creatorPassword);
-            
-            if (creatorPassword && await verifyPassword(passwordInput, creatorPassword)) {
+            if (creatorPassword && await verifyPassword(password, creatorPassword)) {
                 // Успешная проверка пароля создателя
                 if (!existingUser) {
                     // РЕГИСТРАЦИЯ НОВОГО СОЗДАТЕЛЯ
-                    console.log("Registering new creator...");
-                    const ipCheck = await checkIPLimit(usernameInput);
+                    const ipCheck = await checkIPLimit(username);
                     
                     if (!ipCheck.allowed) { 
-                        showLoginError(ipCheck.message); 
+                        showLoginError(ipCheck.message, "error");
                         resetLoginButton(loginButton, originalButtonText);
                         return; 
                     }
                     
                     // Генерируем данные для создателя
-                    const staticId = generateStaticId(usernameInput);
+                    const staticId = generateStaticId(username);
                     const salt = generateSalt();
-                    const passwordHash = await hashPassword(passwordInput, salt);
+                    const passwordHash = await hashPassword(password, salt);
                     
                     const newUser = { 
-                        username: usernameInput, 
+                        username: username, 
                         staticId, 
                         role: CREATOR_RANK.name, 
                         rank: CREATOR_RANK.level, 
@@ -974,14 +1042,14 @@ window.login = async function() {
                     
                     // Сохраняем в базу
                     await db.ref('mlk_users').push(newUser);
-                    await registerIP(usernameInput, staticId);
+                    await registerIP(username, staticId);
                     
                     // Обновляем данные
                     await new Promise(resolve => loadData(resolve));
                     
                     // Устанавливаем сессию
                     CURRENT_ROLE = CREATOR_RANK.name;
-                    CURRENT_USER = usernameInput;
+                    CURRENT_USER = username;
                     CURRENT_RANK = CREATOR_RANK;
                     CURRENT_STATIC_ID = staticId;
                     
@@ -994,15 +1062,13 @@ window.login = async function() {
                     
                 } else {
                     // ВХОД СУЩЕСТВУЮЩЕГО СОЗДАТЕЛЯ
-                    console.log("Logging in existing creator...");
-                    
                     // Обновляем время последнего входа
                     await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-                    await updateIPActivity(usernameInput);
+                    await updateIPActivity(username);
                     
                     // Устанавливаем сессию
                     CURRENT_ROLE = existingUser.role || CREATOR_RANK.name;
-                    CURRENT_USER = usernameInput;
+                    CURRENT_USER = username;
                     CURRENT_RANK = CREATOR_RANK;
                     CURRENT_STATIC_ID = existingUser.staticId;
                     
@@ -1018,9 +1084,8 @@ window.login = async function() {
                 
             } else {
                 // Неверный пароль для создателя
-                console.log("Invalid creator password");
                 trackLoginAttempt(userIP, false);
-                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ ДЛЯ СОЗДАТЕЛЯ");
+                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ", "error");
                 resetLoginButton(loginButton, originalButtonText);
                 return;
             }
@@ -1029,24 +1094,22 @@ window.login = async function() {
         // === ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ ===
         if (!existingUser) {
             // РЕГИСТРАЦИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ (ВСЕГДА МЛАДШИЙ КУРАТОР)
-            console.log("Registering new user...");
-            
             // Проверяем ограничение по IP
-            const ipCheck = await checkIPLimit(usernameInput);
+            const ipCheck = await checkIPLimit(username);
             if (!ipCheck.allowed) { 
-                showLoginError(ipCheck.message); 
+                showLoginError(ipCheck.message, "error");
                 resetLoginButton(loginButton, originalButtonText);
                 return; 
             }
             
             // Генерируем соль и хеш пароля
             const salt = generateSalt();
-            const passwordHash = await hashPassword(passwordInput, salt);
+            const passwordHash = await hashPassword(password, salt);
             
             // Создаем данные пользователя
-            const staticId = generateStaticId(usernameInput);
+            const staticId = generateStaticId(username);
             const newUser = { 
-                username: usernameInput, 
+                username: username, 
                 staticId, 
                 role: RANKS.JUNIOR_CURATOR.name, 
                 rank: RANKS.JUNIOR_CURATOR.level, 
@@ -1059,14 +1122,14 @@ window.login = async function() {
             
             // Сохраняем в базу
             await db.ref('mlk_users').push(newUser);
-            await registerIP(usernameInput, staticId);
+            await registerIP(username, staticId);
             
             // Обновляем данные
             await new Promise(resolve => loadData(resolve));
             
             // Устанавливаем сессию
             CURRENT_ROLE = RANKS.JUNIOR_CURATOR.name;
-            CURRENT_USER = usernameInput;
+            CURRENT_USER = username;
             CURRENT_RANK = RANKS.JUNIOR_CURATOR;
             CURRENT_STATIC_ID = staticId;
             
@@ -1079,18 +1142,14 @@ window.login = async function() {
             
         } else {
             // ВХОД СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ
-            console.log("Logging in existing user...");
-            
-            // Проверяем пароль пользователя
-            const validPassword = await verifyPassword(passwordInput, { 
+            const validPassword = await verifyPassword(password, { 
                 hash: existingUser.passwordHash, 
                 salt: existingUser.passwordSalt 
             });
             
             if (!validPassword) {
-                console.log("Invalid password for user");
                 trackLoginAttempt(userIP, false);
-                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ");
+                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ", "error");
                 resetLoginButton(loginButton, originalButtonText);
                 return;
             }
@@ -1111,11 +1170,11 @@ window.login = async function() {
             
             // Обновляем время последнего входа
             await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-            await updateIPActivity(usernameInput);
+            await updateIPActivity(username);
             
             // Устанавливаем сессию
             CURRENT_ROLE = userRank.name;
-            CURRENT_USER = usernameInput;
+            CURRENT_USER = username;
             CURRENT_RANK = userRank;
             CURRENT_STATIC_ID = existingUser.staticId;
             
@@ -1132,16 +1191,21 @@ window.login = async function() {
         
         // Определяем тип ошибки для пользователя
         let errorMessage = "ОШИБКА СИСТЕМЫ";
+        let detailedMessage = error.message;
         
-        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError")) {
-            errorMessage = "ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ ДАННЫХ. Проверьте интернет-соединение.";
+        if (error.message.includes("Failed to fetch") || error.message.includes("NetworkError") || error.message.includes("Network request failed")) {
+            errorMessage = "ОШИБКА ПОДКЛЮЧЕНИЯ К БАЗЕ ДАННЫХ";
+            detailedMessage = "Проверьте интернет-соединение и повторите попытку.";
         } else if (error.message.includes("permission denied")) {
-            errorMessage = "ОШИБКА ДОСТУПА К БАЗЕ ДАННЫХ. Обратитесь к администратору.";
+            errorMessage = "ОШИБКА ДОСТУПА К БАЗЕ ДАННЫХ";
+            detailedMessage = "Обратитесь к администратору системы.";
         } else if (error.message.includes("quota exceeded")) {
-            errorMessage = "ПРЕВЫШЕН ЛИМИТ БАЗЫ ДАННЫХ. Обратитесь к администратору.";
+            errorMessage = "ПРЕВЫШЕН ЛИМИТ БАЗЫ ДАННЫХ";
+            detailedMessage = "Обратитесь к администратору для увеличения квоты.";
         }
         
-        showLoginError(`${errorMessage}: ${error.message.substring(0, 100)}`);
+        // Показываем понятное сообщение об ошибке
+        showLoginError(`${errorMessage}: ${detailedMessage}`, "error");
         resetLoginButton(loginButton, originalButtonText);
     }
 };
@@ -1156,17 +1220,31 @@ function resetLoginButton(loginButton, originalText) {
     }
 }
 
-// Улучшенная функция отображения ошибок входа
-function showLoginError(message) {
+// Функция для отображения ошибок входа (сверху формы)
+function showLoginError(message, type = "error") {
     console.log("Login error:", message);
     
     const errorElement = document.getElementById("login-error");
     if (errorElement) {
+        // Определяем цвет в зависимости от типа ошибки
+        let borderColor = "#b43c3c";
+        let icon = "fa-exclamation-triangle";
+        
+        if (type === "warning") {
+            borderColor = "#c0b070";
+            icon = "fa-exclamation-circle";
+        } else if (type === "info") {
+            borderColor = "#8cb43c";
+            icon = "fa-info-circle";
+        }
+        
         errorElement.innerHTML = `
-            <div class="login-error-box" style="animation: fadeIn 0.3s ease;">
-                <i class="fas fa-exclamation-triangle"></i>
+            <div class="login-error-box" style="border-color: ${borderColor}; animation: fadeIn 0.3s ease;">
+                <i class="fas ${icon}" style="color: ${borderColor};"></i>
                 <div class="error-content">
-                    <div class="error-title">ОШИБКА ВХОДА</div>
+                    <div class="error-title" style="color: ${borderColor};">
+                        ${type === "error" ? "ОШИБКА ВХОДА" : type === "warning" ? "ПРЕДУПРЕЖДЕНИЕ" : "ИНФОРМАЦИЯ"}
+                    </div>
                     <div class="error-message">${message}</div>
                 </div>
             </div>
@@ -1174,7 +1252,14 @@ function showLoginError(message) {
         errorElement.style.display = "block";
         errorElement.style.opacity = "1";
         
-        // Автоматическое скрытие через 10 секунд
+        // Автоматическое скрытие через разное время в зависимости от типа ошибки
+        let hideTime = 8000;
+        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+            hideTime = 12000;
+        } else if (message.includes("НЕВЕРНЫЙ ПАРОЛЬ")) {
+            hideTime = 5000;
+        }
+        
         setTimeout(() => {
             if (errorElement && errorElement.style.display !== "none") {
                 errorElement.style.opacity = "0";
@@ -1186,92 +1271,156 @@ function showLoginError(message) {
                     }
                 }, 500);
             }
-        }, 10000);
+        }, hideTime);
     }
-    
-    // Также показываем всплывающее уведомление
-    showNotification("Ошибка входа: " + message, "error");
 }
 
-// Функция валидации имени пользователя
-function validateUsername(username) {
-    if (!username) return { valid: false, message: "Имя пользователя не указано" };
+// Функция для трекинга попыток входа
+function trackLoginAttempt(ip, success = false) {
+    const now = Date.now();
     
-    const trimmedUsername = username.trim();
-    
-    if (trimmedUsername.length < 3 || trimmedUsername.length > 20) {
-        return { valid: false, message: "Имя пользователя должно быть от 3 до 20 символов" };
+    if (!loginAttempts[ip]) {
+        loginAttempts[ip] = { 
+            attempts: 0, 
+            firstAttempt: now, 
+            lastAttempt: now, 
+            lockedUntil: 0 
+        };
     }
     
-    if (!/^[a-zA-Zа-яА-Я0-9_]+$/.test(trimmedUsername)) {
-        return { valid: false, message: "Имя пользователя может содержать только буквы, цифры и подчеркивание" };
+    if (success) {
+        // Сбрасываем счетчик при успешном входе
+        loginAttempts[ip].attempts = 0;
+        loginAttempts[ip].lockedUntil = 0;
+        console.log(`Successful login from IP ${ip}, attempts reset`);
+    } else {
+        // Увеличиваем счетчик неудачных попыток
+        loginAttempts[ip].attempts++;
+        loginAttempts[ip].lastAttempt = now;
+        
+        console.log(`Failed login attempt ${loginAttempts[ip].attempts} from IP ${ip}`);
+        
+        // Проверяем, достигнут ли лимит попыток
+        if (loginAttempts[ip].attempts >= MAX_ATTEMPTS) {
+            loginAttempts[ip].lockedUntil = now + LOCKOUT_TIME;
+            
+            // Показываем сообщение о блокировке IP
+            const minutesLeft = Math.ceil(LOCKOUT_TIME / 60000);
+            showLoginError(`Слишком много неудачных попыток входа. IP-адрес заблокирован на ${minutesLeft} минут.`, "error");
+            
+            // Записываем в лог блокировку
+            console.log(`IP ${ip} blocked for ${minutesLeft} minutes due to ${MAX_ATTEMPTS} failed attempts`);
+            
+        } else {
+            // Для первых неудачных попыток показываем только ошибку сверху
+            const attemptsLeft = MAX_ATTEMPTS - loginAttempts[ip].attempts;
+            console.log(`IP ${ip} has ${attemptsLeft} attempts left before blocking`);
+        }
     }
     
-    if (['admin', 'root', 'system', 'administrator', 'модератор', 'куратор', 'null', 'undefined'].includes(trimmedUsername.toLowerCase())) {
-        return { valid: false, message: "Это имя пользователя запрещено" };
+    // Очищаем старые записи (старше 24 часов)
+    for (const ipKey in loginAttempts) {
+        if (now - loginAttempts[ipKey].lastAttempt > 24 * 60 * 60 * 1000) {
+            console.log(`Clearing old login attempts for IP ${ipKey}`);
+            delete loginAttempts[ipKey];
+        }
     }
-    
-    return { valid: true, message: "" };
 }
 
-// Функция валидации пароля
-function validatePassword(password) {
-    if (!password) return { valid: false, message: "Пароль не указан" };
-    
-    if (password.length < 3) {
-        return { valid: false, message: "Пароль должен содержать минимум 3 символа" };
+// Функция проверки блокировки IP
+function isIPLocked(ip) {
+    if (!loginAttempts[ip]) {
+        return false;
     }
     
-    if (password.length > 100) {
-        return { valid: false, message: "Пароль слишком длинный (максимум 100 символов)" };
+    const now = Date.now();
+    
+    if (loginAttempts[ip].lockedUntil > now) {
+        const minutesLeft = Math.ceil((loginAttempts[ip].lockedUntil - now) / 60000);
+        const secondsLeft = Math.ceil((loginAttempts[ip].lockedUntil - now) / 1000);
+        
+        if (minutesLeft > 1) {
+            return `IP-адрес временно заблокирован. Попробуйте через ${minutesLeft} минут`;
+        } else {
+            return `IP-адрес временно заблокирован. Попробуйте через ${secondsLeft} секунд`;
+        }
     }
     
-    return { valid: true, message: "" };
+    return false;
 }
 
-// Добавим обработчики для очистки ошибок при изменении полей
+// Функция для завершения входа
+function completeLogin() {
+    const loginScreen = document.getElementById("login-screen");
+    const terminal = document.getElementById("terminal");
+    
+    if (loginScreen && terminal) {
+        loginScreen.style.display = "none";
+        terminal.style.display = "flex";
+        
+        // Сохраняем сессию
+        localStorage.setItem('mlk_session', JSON.stringify({
+            user: CURRENT_USER,
+            role: CURRENT_ROLE,
+            rank: CURRENT_RANK.level,
+            staticId: CURRENT_STATIC_ID,
+            timestamp: new Date().getTime()
+        }));
+        
+        // Настраиваем интерфейс
+        setupSidebar();
+        updateSystemPrompt(`ПОДКЛЮЧЕНИЕ УСПЕШНО. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
+        
+        // Загружаем данные в зависимости от ранга
+        if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+            loadReports(renderSystem);
+        } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+            loadReports(renderMLKScreen);
+        } else {
+            loadReports(renderMLKScreen);
+        }
+        
+        // Настраиваем высоту интерфейса
+        setTimeout(adjustInterfaceHeights, 100);
+    }
+}
+
+// Инициализация обработчиков событий при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
+    const loginButton = document.getElementById('login-btn');
     
-    function clearErrorOnInput(input) {
-        if (input) {
-            input.addEventListener('input', function() {
-                const errorElement = document.getElementById("login-error");
-                if (errorElement && errorElement.style.display !== "none") {
-                    errorElement.style.display = "none";
-                    errorElement.innerHTML = "";
-                }
-                
-                // Убираем красную подсветку
-                this.style.borderColor = "";
-                this.style.boxShadow = "";
-            });
-        }
-    }
-    
-    clearErrorOnInput(usernameInput);
-    clearErrorOnInput(passwordInput);
-    
-    // Добавляем подсветку невалидных полей
-    function highlightInvalidInput(input, isValid) {
-        if (input) {
-            if (!isValid) {
-                input.style.borderColor = "#b43c3c";
-                input.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
-            } else {
-                input.style.borderColor = "";
-                input.style.boxShadow = "";
+    // Очистка ошибок при вводе
+    if (usernameInput) {
+        usernameInput.addEventListener('input', function() {
+            const errorElement = document.getElementById("login-error");
+            if (errorElement && errorElement.style.display !== "none") {
+                errorElement.style.display = "none";
             }
-        }
+            this.style.borderColor = "";
+            this.style.boxShadow = "";
+        });
     }
     
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const errorElement = document.getElementById("login-error");
+            if (errorElement && errorElement.style.display !== "none") {
+                errorElement.style.display = "none";
+            }
+            this.style.borderColor = "";
+            this.style.boxShadow = "";
+        });
+    }
+    
+    // Подсветка невалидных полей
     if (usernameInput) {
         usernameInput.addEventListener('blur', function() {
             const validation = validateUsername(this.value);
-            highlightInvalidInput(this, validation.valid);
             if (!validation.valid) {
-                showLoginError(validation.message);
+                this.style.borderColor = "#b43c3c";
+                this.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
             }
         });
     }
@@ -1279,14 +1428,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (passwordInput) {
         passwordInput.addEventListener('blur', function() {
             const validation = validatePassword(this.value);
-            highlightInvalidInput(this, validation.valid);
             if (!validation.valid) {
-                showLoginError(validation.message);
+                this.style.borderColor = "#b43c3c";
+                this.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
             }
         });
     }
     
-    // Обработка нажатия Enter в полях ввода
+    // Обработка нажатия Enter
     function handleEnterKey(event) {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -1299,6 +1448,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (usernameInput) usernameInput.addEventListener('keypress', handleEnterKey);
     if (passwordInput) passwordInput.addEventListener('keypress', handleEnterKey);
+    
+    // Анимация нажатия кнопки
+    if (loginButton) {
+        loginButton.addEventListener('mousedown', function() {
+            this.style.transform = 'scale(0.98)';
+        });
+        
+        loginButton.addEventListener('mouseup', function() {
+            this.style.transform = '';
+        });
+        
+        loginButton.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    }
 });
     
 window.changeUserPassword = async function() {
@@ -1477,37 +1641,104 @@ function showBannedScreen(banInfo) {
         </div>`;
 }
 
-function showLoginError(message) {
+// Функция для отображения ошибок входа (сверху формы)
+// Функция для отображения ошибок входа (сверху формы)
+function showLoginError(message, type = "error") {
+    console.log("Login error:", message);
+    
     const errorElement = document.getElementById("login-error");
     if (errorElement) {
+        // Определяем цвет и иконку в зависимости от типа
+        let borderColor = "#b43c3c";
+        let icon = "fa-exclamation-triangle";
+        let title = "ОШИБКА ВХОДА";
+        
+        if (type === "warning") {
+            borderColor = "#c0b070";
+            icon = "fa-exclamation-circle";
+            title = "ПРЕДУПРЕЖДЕНИЕ";
+        } else if (type === "info") {
+            borderColor = "#8cb43c";
+            icon = "fa-info-circle";
+            title = "ИНФОРМАЦИЯ";
+        }
+        
         errorElement.innerHTML = `
-            <div class="login-error-box">
-                <i class="fas fa-exclamation-triangle"></i>
+            <div class="login-error-box ${type}" style="border-color: ${borderColor};">
+                <i class="fas ${icon}" style="color: ${borderColor};"></i>
                 <div class="error-content">
-                    <div class="error-title">ОШИБКА ВХОДА</div>
+                    <div class="error-title">${title}</div>
                     <div class="error-message">${message}</div>
                 </div>
             </div>
         `;
         errorElement.style.display = "block";
         
-        // Автоматическое скрытие через 10 секунд
+        // Добавляем анимацию появления
+        setTimeout(() => {
+            const box = errorElement.querySelector('.login-error-box');
+            if (box) {
+                box.style.animation = "fadeIn 0.3s ease";
+            }
+        }, 10);
+        
+        // Автоматическое скрытие через разное время
+        let hideTime = 8000;
+        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+            hideTime = 12000;
+        } else if (message.includes("НЕВЕРНЫЙ ПАРОЛЬ")) {
+            hideTime = 5000;
+        }
+        
         setTimeout(() => {
             if (errorElement && errorElement.style.display !== "none") {
                 errorElement.style.opacity = "0";
                 errorElement.style.transition = "opacity 0.5s ease";
                 setTimeout(() => {
-                    if (errorElement) {
+                    if (errorElement && errorElement.style.display !== "none") {
                         errorElement.style.display = "none";
                         errorElement.style.opacity = "1";
                     }
                 }, 500);
             }
-        }, 10000);
+        }, hideTime);
     }
     
-    // Также показываем уведомление
-    showNotification(message, "error");
+    // Для блокировки IP показываем также всплывающее уведомление
+    if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+        setTimeout(() => {
+            showNotification(message, "error");
+        }, 100);
+    }
+}
+
+// Функция для системных уведомлений (всплывающих)
+function showNotification(message, type = "info") {
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Добавляем на страницу
+    document.body.appendChild(notification);
+    
+    // Показываем с анимацией
+    setTimeout(() => notification.classList.add('show'), 10);
+    
+    // Определяем время отображения
+    const duration = type === "error" ? 5000 : 
+                    type === "warning" ? 4000 : 
+                    type === "success" ? 3000 : 2000;
+    
+    // Автоматическое скрытие
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, duration);
 }
 
 /* ===== UI ИНИЦИАЛИЗАЦИЯ ===== */

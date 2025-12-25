@@ -2924,3 +2924,168 @@ body, html {
     border-radius: 3px;
     font-size: 0.85rem;
 }
+/* Стили для ошибок входа */
+.login-error-box {
+    background: rgba(30, 32, 28, 0.95);
+    border: 1px solid #b43c3c;
+    border-radius: 4px;
+    padding: 12px 15px;
+    margin: 10px 0;
+    color: #8f9779;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    animation: fadeIn 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+.login-error-box i {
+    font-size: 1.1rem;
+    margin-top: 2px;
+    color: #b43c3c;
+}
+
+.login-error-box .error-content {
+    flex: 1;
+}
+
+.login-error-box .error-title {
+    font-weight: 500;
+    margin-bottom: 5px;
+    font-size: 0.95rem;
+    color: #b43c3c;
+}
+
+.login-error-box .error-message {
+    line-height: 1.4;
+    font-size: 0.85rem;
+    color: #d45c5c;
+}
+
+/* Для предупреждений */
+.login-error-box.warning {
+    border-color: #c0b070;
+}
+
+.login-error-box.warning i {
+    color: #c0b070;
+}
+
+.login-error-box.warning .error-title {
+    color: #c0b070;
+}
+
+.login-error-box.warning .error-message {
+    color: #e0d090;
+}
+
+/* Для информационных сообщений */
+.login-error-box.info {
+    border-color: #8cb43c;
+}
+
+.login-error-box.info i {
+    color: #8cb43c;
+}
+
+.login-error-box.info .error-title {
+    color: #8cb43c;
+}
+
+.login-error-box.info .error-message {
+    color: #a0cc60;
+}
+
+/* Анимация появления */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-10px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+/* Стили для системных уведомлений (всплывающих) */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    padding: 12px 20px;
+    border-radius: 4px;
+    color: #1e201c;
+    font-weight: 500;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 350px;
+    backdrop-filter: blur(5px);
+}
+
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.notification.info {
+    background: rgba(192, 176, 112, 0.9);
+    border: 1px solid #c0b070;
+}
+
+.notification.success {
+    background: rgba(140, 180, 60, 0.9);
+    border: 1px solid #8cb43c;
+}
+
+.notification.warning {
+    background: rgba(192, 176, 112, 0.9);
+    border: 1px solid #c0b070;
+}
+
+.notification.error {
+    background: rgba(180, 60, 60, 0.9);
+    border: 1px solid #b43c3c;
+}
+
+/* Анимация для кнопки входа при нажатии */
+.access-button:active .button-inner {
+    transform: scale(0.98);
+}
+
+.access-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.access-button:disabled .button-inner {
+    opacity: 0.7;
+}
+
+/* Стили для валидации полей ввода */
+.input-wrapper input:invalid,
+.input-wrapper input.error {
+    border-color: #b43c3c !important;
+    box-shadow: 0 0 0 2px rgba(180, 60, 60, 0.2) !important;
+}
+
+.input-wrapper input.valid {
+    border-color: #8cb43c !important;
+}
+
+/* Пульсация для кнопки при ошибке */
+@keyframes errorPulse {
+    0% { box-shadow: 0 0 0 0 rgba(180, 60, 60, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(180, 60, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(180, 60, 60, 0); }
+}
+
+.access-button.error-pulse {
+    animation: errorPulse 2s infinite;
+}

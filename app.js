@@ -2665,6 +2665,33 @@ window.renderPasswords = function() {
     `;
 }
 
+/* ===== ПРИНУДИТЕЛЬНЫЙ СБРОС ПАРОЛЕЙ ===== */
+window.resetAllPasswords = async function() {
+    if (CURRENT_RANK !== CREATOR_RANK) {
+        showNotification("Только создатель может сбрасывать все пароли", "error");
+        return;
+    }
+    
+    if (!confirm("ВНИМАНИЕ! Это сбросит ВСЕ пароли в системе. Продолжить?")) {
+        return;
+    }
+    
+    try {
+        await createOrUpdatePasswords();
+        showNotification("Все пароли сброшены на значения по умолчанию", "success");
+        
+        // Перезагружаем данные
+        await new Promise(resolve => loadData(resolve));
+        
+        // Обновляем интерфейс если открыт
+        if (window.renderPasswords) {
+            renderPasswords();
+        }
+    } catch (error) {
+        showNotification("Ошибка сброса паролей: " + error.message, "error");
+    }
+}
+
 window.updatePassword = function(type) {
     const inputId = type + "-password";
     const input = document.getElementById(inputId);
@@ -4465,6 +4492,7 @@ window.addNavButton = function(container, icon, text, onClick) {
 };
 
 }
+
 
 
 

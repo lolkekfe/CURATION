@@ -74,25 +74,35 @@ function addScrollStyles() {
     if (!document.querySelector('#scroll-styles')) {
         const style = document.createElement('style');
         style.id = 'scroll-styles';
-        style.textContent = `.scrollable-container{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#4a4a3a #1e201c;padding-right:10px}
-        .scrollable-container::-webkit-scrollbar{width:8px}.scrollable-container::-webkit-scrollbar-track{background:#1e201c;border-radius:4px}
-        .scrollable-container::-webkit-scrollbar-thumb{background:#4a4a3a;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb:hover{background:#5a5a4a}
-        .table-container thead{position:sticky;top:0;background:#1e201c;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.3)}
-        .report-form-scrollable{display:flex;flex-direction:column;height:100%}.report-creation-container{flex:1;overflow-y:auto;padding-right:10px}
-        .form-container.with-scroll{display:flex;flex-direction:column;height:100%;overflow:hidden}
-        .form-container.with-scroll>.table-container{flex:1;min-height:0}.scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}
-        .scroll-btn:hover{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;transform:scale(1.1)}#scroll-to-top{bottom:70px;right:20px}#scroll-to-bottom{bottom:20px;right:20px}
-        .pagination-container{display:flex;justify-content:center;align-items:center;margin-top:20px;gap:5px;flex-wrap:wrap;padding:10px;background:rgba(30,32,28,0.5);border-radius:4px}
-        .pagination-btn{padding:5px 12px;background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;cursor:pointer;font-size:0.9rem;transition:all 0.2s;border-radius:3px;min-width:36px}
-        .pagination-btn:hover{background:rgba(60,62,56,0.8);border-color:#8f9779;color:#c0b070}.pagination-btn.active{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;font-weight:bold}
-        .pagination-btn:disabled{opacity:0.5;cursor:not-allowed}.page-info{color:#8f9779;font-size:0.9rem;margin-left:15px}
-        .items-per-page-selector{display:flex;align-items:center;gap:10px;margin-left:auto;color:#8f9779;font-size:0.9rem}
-        .items-per-page-selector select{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;padding:3px 8px;border-radius:3px}
-        .scroll-indicator{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:#4a4a3a;font-size:0.8rem;pointer-events:none}`;
+        style.textContent = `
+            .scrollable-container{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#4a4a3a #1e201c;padding-right:10px}
+            .scrollable-container::-webkit-scrollbar{width:8px}.scrollable-container::-webkit-scrollbar-track{background:#1e201c;border-radius:4px}
+            .scrollable-container::-webkit-scrollbar-thumb{background:#4a4a3a;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb:hover{background:#5a5a4a}
+            .table-container thead{position:sticky;top:0;background:#1e201c;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.3)}
+            .report-form-scrollable{display:flex;flex-direction:column;height:100%}.report-creation-container{flex:1;overflow-y:auto;padding-right:10px}
+            .form-container.with-scroll{display:flex;flex-direction:column;height:100%;overflow:hidden}
+            .form-container.with-scroll>.table-container{flex:1;min-height:0}.scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}
+            .scroll-btn:hover{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;transform:scale(1.1)}#scroll-to-top{bottom:70px;right:20px}#scroll-to-bottom{bottom:20px;right:20px}
+            
+            /* Стили для пагинации */
+            .pagination-container{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;padding:8px;width:100%;}
+            .pagination-btn{padding:6px 12px;background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;cursor:pointer;font-size:0.85rem;transition:all 0.2s;border-radius:3px;min-width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
+            .pagination-btn:hover{background:rgba(60,62,56,0.8);border-color:#8f9779;color:#c0b070}
+            .pagination-btn.active{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;font-weight:bold}
+            .pagination-btn:disabled{opacity:0.5;cursor:not-allowed}
+            .page-info{color:#8f9779;font-size:0.85rem;margin:0 15px;white-space:nowrap;}
+            .items-per-page-selector{display:flex;align-items:center;gap:8px;color:#8f9779;font-size:0.85rem;}
+            .items-per-page-selector select{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;padding:4px 8px;border-radius:3px;font-size:0.85rem;}
+            .scroll-indicator{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:#4a4a3a;font-size:0.8rem;pointer-events:none}
+            
+            /* Стили для контейнера с отчетами */
+            .reports-container{display:flex;flex-direction:column;gap:12px;padding:5px;}
+            .report-card{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;border-radius:4px;padding:15px;transition:all 0.2s;}
+            .report-card:hover{border-color:#5a5a4a;background:rgba(40,42,36,0.9);}
+        `;
         document.head.appendChild(style);
     }
 }
-
 function addScrollButtons() {
     if (!document.getElementById('scroll-buttons')) {
         document.body.insertAdjacentHTML('beforeend', `<div id="scroll-buttons"><button id="scroll-to-top" class="scroll-btn" style="display:none"><i class="fas fa-arrow-up"></i></button><button id="scroll-to-bottom" class="scroll-btn"><i class="fas fa-arrow-down"></i></button></div>`);
@@ -113,22 +123,44 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     if (!container) return;
     
     let html = `<div class="pagination-container">`;
-    if (currentPage > 1) html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница"><i class="fas fa-chevron-left"></i></button>`;
     
-    const startPage = Math.max(1, currentPage - Math.floor(PAGINATION_CONFIG.visiblePages / 2));
-    const endPage = Math.min(totalPages, startPage + PAGINATION_CONFIG.visiblePages - 1);
+    // Кнопка "Назад"
+    if (currentPage > 1) {
+        html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница"><i class="fas fa-chevron-left"></i></button>`;
+    }
     
-    if (startPage > 1) html += `<button onclick="${callback}(1)" class="pagination-btn">1</button>${startPage > 2 ? '<span style="color: #8f9779;">...</span>' : ''}`;
-    for (let i = startPage; i <= endPage; i++) html += `<button onclick="${callback}(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">${i}</button>`;
-    if (endPage < totalPages) html += `${endPage < totalPages - 1 ? '<span style="color: #8f9779;">...</span>' : ''}<button onclick="${callback}(${totalPages})" class="pagination-btn">${totalPages}</button>`;
-    if (currentPage < totalPages) html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница"><i class="fas fa-chevron-right"></i></button>`;
+    // Первая страница
+    if (currentPage > 3) {
+        html += `<button onclick="${callback}(1)" class="pagination-btn">1</button>`;
+        if (currentPage > 4) html += `<span style="color: #8f9779; padding: 0 5px;">...</span>`;
+    }
     
-    html += `<div class="page-info">Страница ${currentPage} из ${totalPages}</div><div class="items-per-page-selector"><span>На странице:</span><select onchange="changeItemsPerPage('${callback}', this.value)"><option value="5">5</option><option value="10">10</option><option value="15" selected>15</option><option value="20">20</option><option value="30">30</option><option value="50">50</option></select></div></div>`;
+    // Страницы вокруг текущей
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button onclick="${callback}(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">${i}</button>`;
+    }
+    
+    // Последняя страница
+    if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) html += `<span style="color: #8f9779; padding: 0 5px;">...</span>`;
+        html += `<button onclick="${callback}(${totalPages})" class="pagination-btn">${totalPages}</button>`;
+    }
+    
+    // Кнопка "Вперед"
+    if (currentPage < totalPages) {
+        html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница"><i class="fas fa-chevron-right"></i></button>`;
+    }
+    
+    // Информация о странице
+    html += `<div class="page-info">Страница ${currentPage} из ${totalPages}</div>`;
+    
+    html += `</div>`;
+    
     container.innerHTML = html;
-    const select = container.querySelector('select');
-    if (select) select.value = PAGINATION_CONFIG.itemsPerPage;
 }
-
 /* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
 function changeItemsPerPage(callback, value) {
     PAGINATION_CONFIG.itemsPerPage = parseInt(value);
@@ -907,53 +939,269 @@ window.renderMLKForm = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container report-form-scrollable" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
-            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА</h2>
-            <div class="report-creation-container scrollable-container" style="flex: 1; overflow-y: auto; padding-right: 10px;">
-                <div class="zone-card" style="margin-bottom: 15px;"><div class="card-icon"><i class="fas fa-user-tag"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
-                    <div class="form-group"><label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label><div style="position: relative;"><input type="text" id="mlk-tag" class="form-input" placeholder="@никнейм / STEAM_1:0:123456 / ID игрока" style="padding-left: 40px; width: 100%;"><i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;"></i></div></div>
-                    <div class="form-group"><label class="form-label">ТИП НАРУШИТЕЛЯ</label><div class="tag-selector" style="display: flex; flex-wrap: wrap; gap: 10px;"><button type="button" class="tag-option active" data-value="player" style="flex: 1; min-width: 120px;">Игрок</button><button type="button" class="tag-option" data-value="admin" style="flex: 1; min-width: 120px;">Админ</button><button type="button" class="tag-option" data-value="curator" style="flex: 1; min-width: 120px;">Куратор</button><button type="button" class="tag-option" data-value="other" style="flex: 1; min-width: 120px;">Другое</button></div></div></div>
-                <div class="zone-card" style="margin-bottom: 15px; border-color: #c0b070;"><div class="card-icon" style="color: #c0b070;"><i class="fas fa-exclamation-triangle"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
-                    <div class="form-group"><label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label><div class="category-grid" id="violation-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
-                        <div class="category-card" data-category="cheat" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-skull-crossbones"></i></div><span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">ЧИТЫ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Использование ПО</span></div>
-                        <div class="category-card" data-category="toxic" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-slash"></i></div><span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">ТОКСИЧНОСТЬ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Оскорбления</span></div>
-                        <div class="category-card" data-category="spam" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-dots"></i></div><span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">СПАМ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Флуд в чате</span></div>
-                        <div class="category-card" data-category="bug" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-bug"></i></div><span class="category-name" style="color: #c0b070; font-weight: 500; display: block; margin-bottom: 5px;">БАГИ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Использование багов</span></div>
-                        <div class="category-card" data-category="grief" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-user-slash"></i></div><span class="category-name" style="color: #c0b070; font-weight: 500; display: block; margin-bottom: 5px;">ГРИФ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Вредительство</span></div>
-                        <div class="category-card" data-category="other" data-color="#8f9779" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;"><div class="category-icon" style="font-size: 1.5rem; color: #8f9779; margin-bottom: 8px;"><i class="fas fa-question-circle"></i></div><span class="category-name" style="color: #8f9779; font-weight: 500; display: block; margin-bottom: 5px;">ДРУГОЕ</span><span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Иные нарушения</span></div></div></div>
-                    <div class="form-group"><label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label><div class="priority-selector" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                        <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;"><div class="priority-dot" style="width: 12px; height: 12px; background: #8cb43c; border-radius: 50%;"></div><span style="color: #8f9779;">НИЗКИЙ</span></div>
-                        <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #c0b070; border-radius: 4px; transition: all 0.2s;"><div class="priority-dot" style="width: 12px; height: 12px; background: #c0b070; border-radius: 50%;"></div><span style="color: #c0b070;">СРЕДНИЙ</span></div>
-                        <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;"><div class="priority-dot" style="width: 12px; height: 12px; background: #b43c3c; border-radius: 50%;"></div><span style="color: #b43c3c;">ВЫСОКИЙ</span></div></div></div></div>
-                <div class="zone-card" style="margin-bottom: 15px; border-color: #8cb43c;"><div class="card-icon"><i class="fas fa-align-left"></i></div><h4 style="color: #8cb43c; margin-bottom: 10px;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
-                    <div class="form-group"><label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label><div style="position: relative;"><textarea id="mlk-action" class="form-textarea" rows="6" placeholder="Опишите нарушение максимально подробно..." style="width: 100%; resize: vertical;"></textarea><div class="char-counter" style="position: absolute; bottom: 10px; right: 10px; color: #8f9779; font-size: 0.8rem;"><span id="char-count">0</span>/2000 символов</div></div></div>
-                    <div class="form-group"><label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label><div id="proof-links-container"><div class="proof-link-input" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;"><input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;"><button type="button" class="btn-secondary add-proof-btn" style="padding: 8px 12px;"><i class="fas fa-plus"></i></button></div></div><div style="margin-top: 5px; font-size: 0.8rem; color: #8f9779;">Можно добавить ссылки на скриншоты, видео, демо-записи</div></div></div>
-                <div class="zone-card" style="background: rgba(40, 42, 36, 0.8); margin-bottom: 15px;"><div class="card-icon"><i class="fas fa-eye"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
-                    <div id="report-preview" class="report-preview" style="background: rgba(20, 18, 15, 0.8); padding: 15px; border: 1px solid #4a4a3a; border-radius: 4px;">
-                        <div class="preview-header" style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4a4a3a;">
-                            <div class="preview-badge" style="display: flex; gap: 10px; flex-wrap: wrap;"><span class="preview-category" style="background: rgba(180, 60, 60, 0.1); color: #b43c3c; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ЧИТЫ</span><span class="preview-priority" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">СРЕДНИЙ</span></div>
-                            <div class="preview-time" style="color: #8f9779; font-size: 0.8rem;">${new Date().toLocaleString()}</div></div>
-                        <div class="preview-content">
-                            <div class="preview-violator" style="margin-bottom: 15px;"><i class="fas fa-user-tag" style="color: #8f9779; margin-right: 8px;"></i> <span id="preview-tag" style="color: #c0b070;">[не указано]</span></div>
-                            <div class="preview-description" id="preview-description" style="color: #8f9779; line-height: 1.5; min-height: 60px;">[описание появится здесь]</div></div>
-                        <div class="preview-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #4a4a3a; display: flex; justify-content: space-between; flex-wrap: wrap;">
-                            <div class="preview-author" style="color: #8f9779; font-size: 0.9rem;"><i class="fas fa-user" style="margin-right: 8px;"></i> ${CURRENT_USER}</div>
-                            <div class="preview-status"><span class="status-pending" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ОЖИДАЕТ ПРОВЕРКИ</span></div></div></div></div>
-                <div class="form-actions" style="display: flex; gap: 15px; padding-top: 15px; border-top: 1px solid #4a4a3a;">
-                    <button onclick="renderMLKScreen()" class="btn-secondary" style="flex: 1; padding: 12px;"><i class="fas fa-arrow-left"></i> ОТМЕНА</button>
-                    <button id="submit-mlk-btn" class="btn-primary" style="flex: 2; padding: 12px;"><i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ</button></div></div>
-            <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10;">
-                <button onclick="scrollFormToTop()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-up"></i></button>
-                <button onclick="scrollFormToBottom()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-down"></i></button></div></div>`;
+        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                <div>
+                    <h2 style="color: #c0b070; margin-bottom: 5px; font-family: 'Orbitron', sans-serif;">
+                        <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
+                    </h2>
+                    <p style="color: #8f9779; font-size: 0.9rem; margin: 0;">ЗАПОЛНИТЕ ВСЕ ПОЛЯ ДЛЯ СОЗДАНИЯ ОТЧЕТА</p>
+                </div>
+                <button onclick="renderMLKScreen()" class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; white-space: nowrap;">
+                    <i class="fas fa-arrow-left"></i> НАЗАД
+                </button>
+            </div>
+            
+            <div id="mlk-form-scrollable" class="scrollable-container" style="flex: 1; overflow-y: auto; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px;">
+                <!-- Форма будет вставлена здесь -->
+                <div style="color: #8f9779; text-align: center; padding: 40px;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                    <p>Загрузка формы...</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(40, 42, 36, 0.5); border-radius: 4px; border: 1px solid #4a4a3a;">
+                <div style="color: #8f9779; font-size: 0.9rem;">
+                    <i class="fas fa-info-circle"></i> Проверьте все поля перед отправкой
+                </div>
+                <button id="submit-mlk-btn" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem; min-width: 180px;">
+                    <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
+                </button>
+            </div>
+        </div>
+    `;
     
-    document.getElementById("submit-mlk-btn").onclick = addMLKReport;
-    const actionTextarea = document.getElementById("mlk-action"), tagInput = document.getElementById("mlk-tag");
-    if (actionTextarea) actionTextarea.addEventListener('input', function(e) { updatePreview(); updateCharCount(); });
-    if (tagInput) tagInput.addEventListener('input', updatePreview);
-    setupReportFormHandlers();
-    setTimeout(() => { const firstCategory = document.querySelector('.category-card'); if (firstCategory) firstCategory.classList.add('active'); }, 100);
-    setTimeout(adjustInterfaceHeights, 100);
-}
+    // Загружаем форму с небольшой задержкой
+    setTimeout(() => {
+        const formContainer = document.getElementById("mlk-form-scrollable");
+        if (!formContainer) return;
+        
+        formContainer.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- КАРТОЧКА 1: ИНФОРМАЦИЯ О НАРУШИТЕЛЕ -->
+                <div class="zone-card" style="border-left: 3px solid #c0b070;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-user-tag"></i></div>
+                        <h4 style="color: #c0b070; margin: 0;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
+                            <div style="position: relative;">
+                                <input type="text" id="mlk-tag" class="form-input" placeholder="@никнейм / STEAM_1:0:123456 / ID игрока" style="width: 100%; padding-left: 40px;">
+                                <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;"></i>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="form-label">ТИП НАРУШИТЕЛЯ</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                <button type="button" class="tag-option active" data-value="player" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(140, 180, 60, 0.2); border: 1px solid #8cb43c; color: #8cb43c; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-user"></i> Игрок
+                                </button>
+                                <button type="button" class="tag-option" data-value="admin" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-user-shield"></i> Админ
+                                </button>
+                                <button type="button" class="tag-option" data-value="curator" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-user-tie"></i> Куратор
+                                </button>
+                                <button type="button" class="tag-option" data-value="other" style="flex: 1; min-width: 120px; padding: 10px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; color: #8f9779; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+                                    <i class="fas fa-question"></i> Другое
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- КАРТОЧКА 2: КАТЕГОРИЯ НАРУШЕНИЯ -->
+                <div class="zone-card" style="border-left: 3px solid #c0b070;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h4 style="color: #c0b070; margin: 0;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 10px;">
+                                <div class="category-card active" data-category="cheat" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-skull-crossbones"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">ЧИТЫ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Использование ПО</div>
+                                </div>
+                                <div class="category-card" data-category="toxic" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-slash"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">ТОКСИЧНОСТЬ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Оскорбления</div>
+                                </div>
+                                <div class="category-card" data-category="spam" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;"><i class="fas fa-comment-dots"></i></div>
+                                    <div style="color: #b43c3c; font-weight: 500; margin-bottom: 5px;">СПАМ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Флуд в чате</div>
+                                </div>
+                                <div class="category-card" data-category="bug" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-bug"></i></div>
+                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 5px;">БАГИ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Использование багов</div>
+                                </div>
+                                <div class="category-card" data-category="grief" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;"><i class="fas fa-user-slash"></i></div>
+                                    <div style="color: #c0b070; font-weight: 500; margin-bottom: 5px;">ГРИФ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Вредительство</div>
+                                </div>
+                                <div class="category-card" data-category="other" data-color="#8f9779" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                    <div style="font-size: 1.5rem; color: #8f9779; margin-bottom: 8px;"><i class="fas fa-question-circle"></i></div>
+                                    <div style="color: #8f9779; font-weight: 500; margin-bottom: 5px;">ДРУГОЕ</div>
+                                    <div style="color: #8f9779; font-size: 0.8rem;">Иные нарушения</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px;">
+                                <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
+                                    <div style="width: 12px; height: 12px; background: #8cb43c; border-radius: 50%;"></div>
+                                    <span style="color: #8f9779;">НИЗКИЙ</span>
+                                </div>
+                                <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(192, 176, 112, 0.2); border: 1px solid #c0b070; border-radius: 4px; transition: all 0.2s;">
+                                    <div style="width: 12px; height: 12px; background: #c0b070; border-radius: 50%;"></div>
+                                    <span style="color: #c0b070; font-weight: 500;">СРЕДНИЙ</span>
+                                </div>
+                                <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
+                                    <div style="width: 12px; height: 12px; background: #b43c3c; border-radius: 50%;"></div>
+                                    <span style="color: #b43c3c;">ВЫСОКИЙ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- КАРТОЧКА 3: ДЕТАЛЬНОЕ ОПИСАНИЕ -->
+                <div class="zone-card" style="border-left: 3px solid #8cb43c;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div style="color: #8cb43c; font-size: 1.2rem;"><i class="fas fa-align-left"></i></div>
+                        <h4 style="color: #8cb43c; margin: 0;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label>
+                            <div style="position: relative;">
+                                <textarea id="mlk-action" class="form-textarea" rows="6" placeholder="Опишите нарушение максимально подробно... Время, место, действия нарушителя, последствия и т.д." style="width: 100%; resize: vertical; min-height: 150px;"></textarea>
+                                <div class="char-counter" style="position: absolute; bottom: 10px; right: 10px; color: #8f9779; font-size: 0.8rem; background: rgba(30, 32, 28, 0.8); padding: 2px 8px; border-radius: 3px;">
+                                    <span id="char-count">0</span>/2000 символов
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label>
+                            <div id="proof-links-container" style="display: flex; flex-direction: column; gap: 10px;">
+                                <div class="proof-link-input" style="display: flex; gap: 10px;">
+                                    <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
+                                    <button type="button" class="btn-secondary add-proof-btn" style="padding: 8px 12px; white-space: nowrap;">
+                                        <i class="fas fa-plus"></i> Добавить
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="margin-top: 5px; font-size: 0.8rem; color: #8f9779;">
+                                Можно добавить ссылки на скриншоты, видео, демо-записи. Нажмите "+" чтобы добавить еще поле.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- КАРТОЧКА 4: ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР -->
+                <div class="zone-card" style="border-left: 3px solid #c0b070;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                        <div style="color: #c0b070; font-size: 1.2rem;"><i class="fas fa-eye"></i></div>
+                        <h4 style="color: #c0b070; margin: 0;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
+                    </div>
+                    
+                    <div id="report-preview" style="background: rgba(20, 18, 15, 0.8); padding: 20px; border: 1px solid #4a4a3a; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4a4a3a;">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <span id="preview-category" style="background: rgba(180, 60, 60, 0.1); color: #b43c3c; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ЧИТЫ</span>
+                                <span id="preview-priority" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">СРЕДНИЙ</span>
+                            </div>
+                            <div style="color: #8f9779; font-size: 0.8rem;">${new Date().toLocaleString()}</div>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                <i class="fas fa-user-tag" style="color: #8f9779;"></i>
+                                <span id="preview-tag" style="color: #c0b070; font-weight: 500;">[не указано]</span>
+                            </div>
+                            <div id="preview-description" style="color: #8f9779; line-height: 1.5; min-height: 60px; padding: 10px; background: rgba(30, 32, 28, 0.5); border-radius: 4px;">
+                                [описание появится здесь]
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid #4a4a3a;">
+                            <div style="color: #8f9779; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-user"></i> ${CURRENT_USER}
+                            </div>
+                            <div>
+                                <span style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ОЖИДАЕТ ПРОВЕРКИ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Инициализируем обработчики событий
+        const submitBtn = document.getElementById('submit-mlk-btn');
+        if (submitBtn) {
+            submitBtn.onclick = addMLKReport;
+        }
+        
+        const actionTextarea = document.getElementById("mlk-action");
+        const tagInput = document.getElementById("mlk-tag");
+        
+        if (actionTextarea) {
+            actionTextarea.addEventListener('input', function(e) { 
+                updatePreview(); 
+                updateCharCount(); 
+            });
+        }
+        
+        if (tagInput) {
+            tagInput.addEventListener('input', updatePreview);
+        }
+        
+        // Инициализируем обработчики формы
+        setupReportFormHandlers();
+        
+        // Инициализируем предварительный просмотр
+        updatePreview();
+        updateCharCount();
+        
+        // Настраиваем кнопки навигации для прокрутки
+        setTimeout(() => {
+            const formContainer = document.getElementById("mlk-form-scrollable");
+            if (formContainer) {
+                // Добавляем кнопки прокрутки в форму
+                const scrollButtons = document.createElement('div');
+                scrollButtons.style.cssText = 'position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 100;';
+                scrollButtons.innerHTML = `
+                    <button onclick="scrollFormToTop()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-up"></i></button>
+                    <button onclick="scrollFormToBottom()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;"><i class="fas fa-arrow-down"></i></button>
+                `;
+                
+                const container = document.querySelector('.form-container');
+                if (container) {
+                    container.style.position = 'relative';
+                    container.appendChild(scrollButtons);
+                }
+            }
+            
+            adjustInterfaceHeights();
+        }, 300);
+    }, 50);
+};
 
 function scrollFormToTop() {
     const formContainer = document.querySelector('.report-creation-container');
@@ -971,20 +1219,20 @@ window.renderMLKScreen = function() {
     
     loadReports(function() {
         content.innerHTML = `
-            <div class="form-container with-scroll">
+            <div class="form-container" style="display: flex; flex-direction: column; height: 100%;">
                 <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
                 </h2>
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; padding: 10px; background: rgba(40, 42, 36, 0.5); border-radius: 4px;">
                     <div>
                         <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
-                        <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
+                        <p style="color: #8f9779; font-size: 0.9rem; margin: 0;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <div class="items-per-page-selector" style="margin: 0;">
                             <span style="color: #8f9779; font-size: 0.9rem;">На странице:</span>
-                            <select onchange="changeItemsPerPage('renderMLKListPaginated', this.value)">
+                            <select onchange="changeItemsPerPage('renderMLKListPaginated', this.value)" style="background: rgba(30, 32, 28, 0.8); border: 1px solid #4a4a3a; color: #8f9779; padding: 4px 8px; border-radius: 3px;">
                                 <option value="5" ${PAGINATION_CONFIG.itemsPerPage === 5 ? 'selected' : ''}>5</option>
                                 <option value="10" ${PAGINATION_CONFIG.itemsPerPage === 10 ? 'selected' : ''}>10</option>
                                 <option value="15" ${PAGINATION_CONFIG.itemsPerPage === 15 ? 'selected' : ''}>15</option>
@@ -992,17 +1240,19 @@ window.renderMLKScreen = function() {
                                 <option value="30" ${PAGINATION_CONFIG.itemsPerPage === 30 ? 'selected' : ''}>30</option>
                             </select>
                         </div>
-                        <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+                        <button onclick="renderMLKForm()" class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem; white-space: nowrap;">
                             <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
                         </button>
                     </div>
                 </div>
                 
-                <div id="mlk-list" class="table-container scrollable-container" style="flex: 1; min-height: 400px;">
+                <div id="mlk-list" class="scrollable-container" style="flex: 1; overflow-y: auto; margin-bottom: 10px; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 15px;">
                     <!-- Здесь будет список отчетов -->
                 </div>
                 
-                <div id="mlk-pagination-container" style="margin-top: 20px;"></div>
+                <div id="mlk-pagination-container" style="min-height: 60px; display: flex; align-items: center; justify-content: center; background: rgba(40, 42, 36, 0.5); border-radius: 4px; padding: 10px;">
+                    <!-- Здесь будет пагинация -->
+                </div>
             </div>
         `;
         

@@ -805,7 +805,7 @@ window.renderBanInterface = function() {
     const activeBans = bans.filter(ban => !ban.unbanned);
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container"
             <h2 style="color: #b43c3c; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
             </h2>
@@ -1751,7 +1751,7 @@ function renderMLKForm() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container"
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
@@ -1988,7 +1988,7 @@ window.renderMLKScreen = function() {
     // Загружаем отчеты сначала
     loadReports(function() {
         content.innerHTML = `
-            <div class="form-container" style="padding: 20px;">
+            <div class="form-container"
                 <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
                 </h2>
@@ -2349,7 +2349,7 @@ function renderReports() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     let html = `
-        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+        <div class="form-container"
             <div style="margin-bottom: 30px;">
                 <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
@@ -2455,7 +2455,7 @@ window.renderPasswords = function() {
     }
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container"
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
             </h2>
@@ -2579,7 +2579,7 @@ window.renderWhitelist = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+        <div class="form-container"
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
@@ -2750,7 +2750,7 @@ window.renderUsers = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+        <div class="form-container" 
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ СТАЛКЕРЫ
             </h2>
@@ -2939,7 +2939,7 @@ window.renderWhitelist = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px; height: calc(100vh - 200px);">
+        <div class="form-container"
             <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
@@ -3076,7 +3076,7 @@ window.renderSystem = function() {
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px;">
+        <div class="form-container"
             <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
             </h2>
@@ -3191,7 +3191,6 @@ window.renderSystem = function() {
 }
 
 /* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
-/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 window.renderIPStats = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -3212,7 +3211,7 @@ window.renderIPStats = function() {
             const activeIPBans = ipBansList.filter(ban => !ban.unbanned);
             
             content.innerHTML = `
-                <div class="form-container" style="padding: 20px;">
+                <div class="form-container"
                     <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
                         <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
                     </h2>
@@ -4207,4 +4206,40 @@ window.exportIPData = function() {
 }
 
 
+/* ===== АВТОМАТИЧЕСКАЯ РЕГУЛИРОВКА ВЫСОТЫ ===== */
+function adjustContentHeight() {
+    const contentBody = document.getElementById('content-body');
+    if (!contentBody) return;
+    
+    const header = document.querySelector('.content-header');
+    const footer = document.querySelector('.content-footer');
+    
+    if (header && footer) {
+        const headerHeight = header.offsetHeight;
+        const footerHeight = footer.offsetHeight;
+        const windowHeight = window.innerHeight;
+        const sidebar = document.querySelector('.zone-sidebar');
+        const sidebarHeight = sidebar ? sidebar.offsetHeight : 0;
+        
+        // Рассчитываем доступную высоту
+        const availableHeight = windowHeight - headerHeight - footerHeight - 40; // 40px для отступов
+        
+        // Устанавливаем минимальную высоту
+        contentBody.style.minHeight = Math.max(availableHeight, 400) + 'px';
+    }
+}
+
+// Вызываем при загрузке и изменении размера окна
+window.addEventListener('load', adjustContentHeight);
+window.addEventListener('resize', adjustContentHeight);
+
+// Также вызываем при переключении модулей
+const originalAddNavButton = addNavButton;
+window.addNavButton = function(container, icon, text, onClick) {
+    const button = originalAddNavButton(container, icon, text, function() {
+        if (onClick) onClick();
+        setTimeout(adjustContentHeight, 100); // Ждем отрисовки контента
+    });
+    return button;
+};
 

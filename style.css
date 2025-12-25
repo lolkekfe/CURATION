@@ -2116,283 +2116,139 @@ body {
     }
 }
 
-/* ===== ИСПРАВЛЕНИЯ ДЛЯ ТАБЛИЦ ===== */
+/* ДОБАВЬТЕ В КОНЕЦ ВАШЕГО style.css */
 
+/* ===== ИСПРАВЛЕНИЯ ДЛЯ ТАБЛИЦ ===== */
 .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    border-spacing: 0;
-    table-layout: auto; /* Важно для правильного распределения столбцов */
-    background: rgba(20, 18, 15, 0.9);
-    border: 1px solid var(--border-dark);
-    border-radius: 4px;
-    overflow: hidden;
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border-spacing: 0 !important;
+    table-layout: auto !important;
+    background: rgba(20, 18, 15, 0.9) !important;
 }
 
 .data-table thead {
-    background: linear-gradient(to right, rgba(28, 26, 23, 0.95), rgba(20, 18, 15, 0.95));
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    display: table-header-group !important;
+    background: linear-gradient(to right, rgba(28, 26, 23, 0.95), rgba(20, 18, 15, 0.95)) !important;
 }
 
-.data-table th {
-    padding: 12px 15px;
-    text-align: left;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--text-primary);
-    border-bottom: 2px solid var(--border-light);
-    background: rgba(28, 26, 23, 0.95);
-    white-space: nowrap;
+.data-table tbody {
+    display: table-row-group !important;
 }
 
-.data-table td {
-    padding: 10px 15px;
-    border-bottom: 1px solid rgba(42, 40, 31, 0.3);
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    font-family: 'JetBrains Mono', monospace;
-    vertical-align: middle;
-    line-height: 1.4;
-}
-
-.data-table tr:last-child td {
-    border-bottom: none;
-}
-
-.data-table tr:hover {
-    background: rgba(74, 122, 80, 0.05);
-}
-
-/* Улучшение для ячеек с длинным текстом */
-.data-table td {
-    max-width: 200px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: normal;
-}
-
-/* Для специальных ячеек */
-.data-table td.static-id {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85rem;
-    color: #8f9779;
-}
-
-.data-table td.actions {
-    min-width: 100px;
-    white-space: nowrap;
-}
-
-/* Стили для кнопок действий в таблицах */
-.table-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* Стили для статусов */
-.report-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: 3px;
-    font-size: 0.8rem;
-    font-weight: 500;
-}
-
-.status-pending {
-    background: rgba(192, 176, 112, 0.1);
-    color: #c0b070;
-    border: 1px solid rgba(192, 176, 112, 0.3);
-}
-
-.status-confirmed {
-    background: rgba(140, 180, 60, 0.1);
-    color: #8cb43c;
-    border: 1px solid rgba(140, 180, 60, 0.3);
-}
-
-.status-deleted {
-    background: rgba(180, 60, 60, 0.1);
-    color: #b43c3c;
-    border: 1px solid rgba(180, 60, 60, 0.3);
-}
-
-/* Улучшение скролла таблиц */
-.table-container {
-    flex: 1;
-    overflow-y: auto;
-    min-height: 0;
-    border: 1px solid var(--border-dark);
-    border-radius: 4px;
-    background: rgba(20, 18, 15, 0.8);
-}
-
-.table-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.table-container::-webkit-scrollbar-track {
-    background: rgba(20, 18, 15, 0.5);
-}
-
-.table-container::-webkit-scrollbar-thumb {
-    background: var(--accent-green);
-    border-radius: 4px;
-}
-
-/* Адаптивность таблиц */
-@media (max-width: 768px) {
-    .table-container {
-        overflow-x: auto;
-    }
-    
-    .data-table {
-        min-width: 600px; /* Минимальная ширина для мобильных */
-    }
-    
-    .data-table th,
-    .data-table td {
-        padding: 8px 10px;
-        font-size: 0.85rem;
-    }
-    
-    .table-actions {
-        flex-direction: column;
-        gap: 5px;
-    }
-}
-
-/* ===== ИСПРАВЛЕНИЕ ВЫСОТЫ ДЛЯ ТАБЛИЦ ===== */
-
-/* Контейнеры форм с таблицами */
-.form-container.with-table {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-.form-container.with-table > *:not(.table-container) {
-    flex-shrink: 0;
-}
-
-.form-container.with-table .table-container {
-    flex: 1;
-    min-height: 200px;
-}
-
-/* ===== ДОПОЛНИТЕЛЬНЫЕ СТИЛИ ДЛЯ ЭЛЕМЕНТОВ ТАБЛИЦ ===== */
-
-/* Иконки в таблицах */
-.data-table .fa-icon {
-    margin-right: 8px;
-    width: 16px;
-    text-align: center;
-    color: var(--accent-green);
-}
-
-/* Чередование строк для лучшей читаемости */
-.data-table tbody tr:nth-child(even) {
-    background: rgba(40, 42, 36, 0.3);
-}
-
-.data-table tbody tr:hover {
-    background: rgba(74, 122, 80, 0.1);
-}
-
-/* Стили для ячеек с кнопками */
-.data-table td .action-buttons {
-    display: flex;
-    gap: 5px;
-    flex-wrap: nowrap;
-}
-
-.data-table td .action-btn {
-    padding: 4px 8px;
-    font-size: 0.75rem;
-    min-width: 60px;
-}
-
-/* Для статусных ячеек */
-.data-table td.status-cell {
-    text-align: center;
-}
-
-/* Выравнивание текста в заголовках */
-.data-table th:first-child,
-.data-table td:first-child {
-    padding-left: 20px;
-}
-
-.data-table th:last-child,
-.data-table td:last-child {
-    padding-right: 20px;
-}
-
-/* ===== ФИКС ДЛЯ ПУСТЫХ ТАБЛИЦ ===== */
-.table-container:empty::before {
-    content: "Нет данных";
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 200px;
-    color: var(--text-dim);
-    font-style: italic;
-}
-
-/* ===== УЛУЧШЕНИЕ ОТОБРАЖЕНИЯ ДЛИННЫХ ТЕКСТОВ ===== */
-.data-table td.truncate {
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.data-table td.truncate:hover {
-    overflow: visible;
-    white-space: normal;
-    position: relative;
-    z-index: 5;
-    background: rgba(20, 18, 15, 0.95);
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
-}
-/* ===== ИСПРАВЛЕНИЯ ДЛЯ ТАБЛИЦ ===== */
-.data-table {
-    border-collapse: collapse !important;
-    width: 100% !important;
+.data-table tr {
+    display: table-row !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
 }
 
 .data-table th,
 .data-table td {
-    border: 1px solid var(--border-dark);
-    padding: 12px 15px;
-    text-align: left;
-    display: table-cell;
-    vertical-align: middle;
+    display: table-cell !important;
+    padding: 12px 15px !important;
+    border: 1px solid var(--border-dark) !important;
+    text-align: left !important;
+    vertical-align: middle !important;
+    box-sizing: border-box !important;
 }
 
 .data-table th {
-    background: linear-gradient(to right, var(--tertiary-dark), var(--secondary-dark));
-    color: var(--text-primary);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    background: linear-gradient(to right, var(--tertiary-dark), var(--secondary-dark)) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Orbitron', sans-serif !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    font-size: 0.85rem !important;
+    white-space: nowrap !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    border-bottom: 2px solid var(--border-light) !important;
 }
 
-.data-table tr {
-    display: table-row;
+.data-table td {
+    color: var(--text-secondary) !important;
+    font-size: 0.9rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    line-height: 1.4 !important;
 }
 
+.data-table tr:hover {
+    background: rgba(74, 122, 80, 0.05) !important;
+}
+
+/* Улучшение для контейнера таблиц */
 .table-container {
-    overflow-x: auto;
-    width: 100%;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    max-height: calc(100vh - 250px) !important;
+    border: 1px solid var(--border-dark) !important;
+    border-radius: 4px !important;
+    background: rgba(20, 18, 15, 0.8) !important;
 }
+
+.table-container::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: rgba(20, 18, 15, 0.5) !important;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--accent-green) !important;
+    border-radius: 4px !important;
+}
+
+/* Исправление для кнопок в таблицах */
+.data-table .action-buttons {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+}
+
+.data-table .action-btn {
+    padding: 6px 12px !important;
+    margin: 2px !important;
+    min-width: auto !important;
+    white-space: nowrap !important;
+}
+
+/* Улучшение для статусов в таблицах */
+.report-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    padding: 4px 10px !important;
+    border-radius: 3px !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    border: 1px solid !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Удалите все медиа-запросы, которые ломают таблицы на десктопе */
+@media (max-width: 768px) {
+    .table-container {
+        border-radius: 0 !important;
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    .data-table {
+        min-width: 1000px !important;
+    }
+}
+
+
+
+
+
 

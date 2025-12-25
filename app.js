@@ -2705,7 +2705,6 @@ function renderUsersTable() {
     tableBody.innerHTML = '';
     
     users.forEach(user => {
-        const row = document.createElement('tr');
         const isProtected = PROTECTED_USERS.some(protectedUser => 
             protectedUser.toLowerCase() === user.username.toLowerCase()
         );
@@ -2715,83 +2714,62 @@ function renderUsersTable() {
             !ban.unbanned
         );
         
+        // Определяем ранг
         let rankBadge = '';
+        let rankClass = '';
+        
         if (user.role === RANKS.ADMIN.name) {
-            rankBadge = '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-user-shield"></i> АДМИНИСТРАТОР</span>';
+            rankBadge = 'АДМИНИСТРАТОР';
+            rankClass = 'status-confirmed';
         } else if (user.role === RANKS.SENIOR_CURATOR.name) {
-            rankBadge = '<span class="report-status status-pending" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-star"></i> СТАРШИЙ КУРАТОР</span>';
+            rankBadge = 'СТАРШИЙ КУРАТОР';
+            rankClass = 'status-pending';
         } else if (user.role === RANKS.CURATOR.name) {
-            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(140, 180, 60, 0.1); color: #8cb43c; border: 1px solid rgba(140, 180, 60, 0.3); font-size: 0.8rem;"><i class="fas fa-user"></i> КУРАТОР</span>';
+            rankBadge = 'КУРАТОР';
+            rankClass = '';
         } else {
-            rankBadge = '<span class="report-status" style="display: inline-flex; padding: 4px 10px; background: rgba(100, 100, 100, 0.1); color: #8f9779; border: 1px solid rgba(100, 100, 100, 0.3); font-size: 0.8rem;"><i class="fas fa-user-graduate"></i> МЛАДШИЙ КУРАТОР</span>';
+            rankBadge = 'МЛАДШИЙ КУРАТОР';
+            rankClass = '';
         }
         
-        const registrationDate = user.registrationDate || "НЕИЗВЕСТНО";
-        const lastLogin = user.lastLogin || "НИКОГДА";
-        
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
-                <i class="fas ${isProtected ? 'fa-shield-alt' : user.role === RANKS.ADMIN.name ? 'fa-user-shield' : user.role === RANKS.SENIOR_CURATOR.name ? 'fa-star' : user.role === RANKS.CURATOR.name ? 'fa-user' : 'fa-user-graduate'}"></i>
+                <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>
                 ${user.username}
-                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.7rem;">(ВЫ)</span>' : ''}
-                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.7rem;">(ЗАБАНЕН)</span>' : ''}
+                ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
+                ${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
             </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8f9779;">
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
                 ${user.staticId || "N/A"}
             </td>
-            <td>${rankBadge}</td>
-            <td style="font-size: 0.85rem;">${registrationDate}</td>
-            <td style="font-size: 0.85rem;">${lastLogin}</td>
+            <td>
+                <span class="report-status ${rankClass}" style="${!rankClass ? 'background: rgba(100, 100, 100, 0.1); color: #8f9779; border-color: rgba(100, 100, 100, 0.3);' : ''}">
+                    ${rankBadge}
+                </span>
+            </td>
+            <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
+            <td>${user.lastLogin || "НИКОГДА"}</td>
             <td>
                 ${isBanned ? 
-                    '<span class="report-status status-deleted" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
-                    '<span class="report-status status-confirmed" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;"><i class="fas fa-check"></i> АКТИВЕН</span>'
+                    '<span class="report-status status-deleted"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
+                    '<span class="report-status status-confirmed"><i class="fas fa-check"></i> АКТИВЕН</span>'
                 }
             </td>
             <td>
-                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 200px;">
-                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
-                            `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-user-shield"></i> АДМ
-                            </button>` : 
-                            ''
-                        }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
-                            `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-star"></i> СТ.КУР
-                            </button>` : 
-                            ''
-                        }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
-                            `<button onclick="promoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #6a6a5a; border-color: #6a6a5a; color: white; font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-user"></i> КУР
-                            </button>` : 
-                            ''
-                        }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.JUNIOR_CURATOR.name ? 
-                            `<button onclick="demoteToJuniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8f9779; border-color: #8f9779; color: white; font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-user-graduate"></i> МЛ.КУР
-                            </button>` : 
-                            ''
-                        }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && !isBanned ? 
-                            `<button onclick="showBanModal('${user.username}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-ban"></i> БАН
-                            </button>` : 
-                            ''
-                        }
-                        ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && isBanned ? 
-                            `<button onclick="unbanByStaticId('${user.staticId}')" class="action-btn confirm" style="font-size: 0.75rem; padding: 3px 6px;">
-                                <i class="fas fa-unlock"></i> РАЗБАН
-                            </button>` : 
-                            ''
-                        }
-                    </div>
-                    
-                    <div style="font-size: 0.7rem; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : '#8f9779'};">
-                        ${isProtected ? '🔒 ЗАЩИЩЕННЫЙ ПОЛЬЗОВАТЕЛЬ' : isCurrentUser ? '👤 ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ' : ''}
-                    </div>
+                <div class="action-buttons">
+                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
+                        `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c;">
+                            <i class="fas fa-user-shield"></i> АДМ
+                        </button>` : 
+                        ''
+                    }
+                    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
+                        `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c;">
+                            <i class="fas fa-star"></i> СТ.КУР
+                        </button>` : 
+                        ''
+                    }
                 </div>
             </td>
         `;
@@ -3897,6 +3875,7 @@ window.addNavButton = function(container, icon, text, onClick) {
     });
     return button;
 };
+
 
 
 

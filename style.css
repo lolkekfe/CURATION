@@ -2441,3 +2441,196 @@ input:checked + .slider:before {
 .avatar-option:hover i {
     animation: iconPulse 0.5s ease;
 }
+/* ===== РАЗМЕРЫ АВАТАРОК (СРЕДНИЕ) ===== */
+.user-info-avatar img {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    border: 1px solid #4a4a3a;
+}
+
+/* Большой аватар в шапке профиля */
+#avatar-preview-large {
+    width: 96px !important;
+    height: 96px !important;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid #c0b070;
+}
+
+#avatar-preview-large img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+#avatar-preview-large i {
+    font-size: 2.5rem !important;
+    color: #c0b070;
+}
+
+/* Аватар во вкладке профиля */
+#current-avatar {
+    width: 144px !important;
+    height: 144px !important;
+    position: relative;
+    border: 4px solid #8cb43c;
+}
+
+#current-avatar img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+}
+
+#current-avatar i {
+    font-size: 4rem !important;
+    color: #8cb43c;
+}
+
+/* Кнопка изменения аватара */
+#avatar-change-btn {
+    width: 32px !important;
+    height: 32px !important;
+    background: #c0b070;
+    border: 2px solid #1e201c;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    z-index: 10;
+}
+
+#avatar-change-btn i {
+    color: #1e201c;
+    font-size: 1rem !important;
+}
+
+/* Варианты аватарок */
+.avatar-option {
+    width: 72px !important;
+    height: 72px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px !important;
+    border: 2px solid #4a4a3a;
+    border-radius: 50%;
+    background: rgba(60, 62, 56, 0.8);
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.avatar-option:hover {
+    transform: scale(1.1);
+    border-color: #8cb43c !important;
+    background: rgba(140, 180, 60, 0.2);
+}
+
+.avatar-option i {
+    font-size: 1.8rem !important;
+    color: #8f9779;
+    margin-bottom: 5px;
+}
+
+.avatar-option span {
+    font-size: 0.75rem !important;
+    color: #6a6a5a;
+    line-height: 1.2;
+}
+
+/* Модальное окно аватара */
+#avatar-modal div[style*="padding: 30px"] {
+    padding: 25px !important;
+}
+
+#avatar-dropzone {
+    padding: 30px !important;
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+#avatar-dropzone i {
+    font-size: 3rem !important;
+    color: #4a4a3a;
+    margin-bottom: 15px;
+}
+
+/* Аватары в сайдбаре */
+.user-terminal .display-line:nth-child(2) .user-info-avatar {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Анимации */
+@keyframes avatarGlow {
+    0% { box-shadow: 0 0 5px rgba(192, 176, 112, 0.5); }
+    50% { box-shadow: 0 0 15px rgba(192, 176, 112, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(192, 176, 112, 0.5); }
+}
+
+.avatar-option.active {
+    animation: avatarGlow 2s infinite;
+    border-color: #c0b070 !important;
+}
+
+/* Отзывчивые размеры */
+@media (max-width: 768px) {
+    #avatar-preview-large {
+        width: 80px !important;
+        height: 80px !important;
+    }
+    
+    #current-avatar {
+        width: 120px !important;
+        height: 120px !important;
+    }
+    
+    .avatar-option {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .avatar-option i {
+        font-size: 1.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #avatar-preview-large {
+        width: 64px !important;
+        height: 64px !important;
+    }
+    
+    #current-avatar {
+        width: 96px !important;
+        height: 96px !important;
+    }
+    
+    .avatar-option {
+        width: 48px !important;
+        height: 48px !important;
+        padding: 5px !important;
+    }
+    
+    .avatar-option i {
+        font-size: 1.2rem !important;
+        margin-bottom: 3px;
+    }
+    
+    .avatar-option span {
+        font-size: 0.65rem !important;
+    }
+}

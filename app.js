@@ -122,11 +122,23 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     const container = document.getElementById(containerId);
     if (!container) return;
     
+    // Если всего 1 страница - не показываем пагинацию
+    if (totalPages <= 1) {
+        container.innerHTML = '<div style="color: #8f9779; font-size: 0.85rem;">Страница 1 из 1</div>';
+        return;
+    }
+    
     let html = `<div class="pagination-container">`;
     
     // Кнопка "Назад"
     if (currentPage > 1) {
-        html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница"><i class="fas fa-chevron-left"></i></button>`;
+        html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница">
+                    <i class="fas fa-chevron-left"></i>
+                 </button>`;
+    } else {
+        html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    <i class="fas fa-chevron-left"></i>
+                 </button>`;
     }
     
     // Первая страница
@@ -151,7 +163,13 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     
     // Кнопка "Вперед"
     if (currentPage < totalPages) {
-        html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница"><i class="fas fa-chevron-right"></i></button>`;
+        html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница">
+                    <i class="fas fa-chevron-right"></i>
+                 </button>`;
+    } else {
+        html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    <i class="fas fa-chevron-right"></i>
+                 </button>`;
     }
     
     // Информация о странице
@@ -162,6 +180,7 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
     container.innerHTML = html;
 }
 /* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
+/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
 function changeItemsPerPage(callback, value) {
     PAGINATION_CONFIG.itemsPerPage = parseInt(value);
     
@@ -170,14 +189,15 @@ function changeItemsPerPage(callback, value) {
     } else if (callback === 'renderUsersWithPagination') {
         renderUsersWithPagination(1);
     } else if (callback === 'renderMLKListPaginated') {
-        renderMLKListPaginated(1); // ДОБАВЬТЕ ЭТУ СТРОКУ
+        renderMLKListPaginated(1);
     } else if (callback === 'renderWhitelistWithPagination') {
         renderWhitelistWithPagination(1);
     } else if (callback === 'renderBansWithPagination') {
         renderBansWithPagination(1);
+    } else if (callback === 'renderIPStatsWithPagination') {
+        renderIPStatsWithPagination(1);
     }
 }
-
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); addScrollButtons(); }, 500);
     window.addEventListener('resize', () => setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); }, 100));
@@ -441,59 +461,214 @@ function checkSpecialAccess(username, password) {
 window.renderBansWithPagination = function(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; return; }
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { 
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
+        return; 
+    }
     
     currentPage = page;
-    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage, startIndex = (page - 1) * itemsPerPage, endIndex = startIndex + itemsPerPage;
-    const activeBans = bans.filter(ban => !ban.unbanned), paginatedActiveBans = activeBans.slice(startIndex, endIndex), activeBansTotalPages = Math.ceil(activeBans.length / itemsPerPage);
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    const activeBans = bans.filter(ban => !ban.unbanned);
+    const paginatedActiveBans = activeBans.slice(startIndex, endIndex);
+    const activeBansTotalPages = Math.max(1, Math.ceil(activeBans.length / itemsPerPage));
     
     content.innerHTML = `
-        <div class="form-container with-scroll">
-            <h2 style="color: #b43c3c; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ</h2>
-            <div class="zone-card" style="margin-bottom: 20px; border-color: #b43c3c;">
-                <div class="card-icon" style="color: #b43c3c;"><i class="fas fa-user-slash"></i></div>
-                <h4 style="color: #b43c3c; margin-bottom: 10px;">НОВЫЙ БАН</h4>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div><label class="form-label">БАН ПО ИМЕНИ ПОЛЬЗОВАТЕЛЯ</label><div style="display: flex; gap: 10px; flex-wrap: wrap;"><input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя" style="flex: 2; min-width: 200px;"><input type="text" id="ban-reason" class="form-input" placeholder="Причина бана" style="flex: 3; min-width: 200px;"><button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;"><i class="fas fa-ban"></i> ЗАБАНИТЬ</button></div></div>
-                    <div><label class="form-label">БАН ПО STATIC ID</label><div style="display: flex; gap: 10px; flex-wrap: wrap;"><input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" style="font-family: 'Courier New', monospace; flex: 2; min-width: 200px;"><input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана" style="flex: 3; min-width: 200px;"><button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;"><i class="fas fa-id-card"></i> БАН ПО ID</button></div></div>
+        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                <div>
+                    <h2 style="color: #b43c3c; margin: 0 0 5px 0; font-family: 'Orbitron', sans-serif;">
+                        <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
+                    </h2>
+                    <p style="color: #8f9779; font-size: 0.9rem; margin: 0;">УПРАВЛЕНИЕ БАНАМИ ПОЛЬЗОВАТЕЛЕЙ</p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="items-per-page-selector" style="margin: 0;">
+                        <span style="color: #8f9779; font-size: 0.9rem;">На странице:</span>
+                        <select onchange="changeItemsPerPage('renderBansWithPagination', this.value)" style="background: rgba(30, 32, 28, 0.8); border: 1px solid #4a4a3a; color: #8f9779; padding: 4px 8px; border-radius: 3px;">
+                            <option value="5" ${PAGINATION_CONFIG.itemsPerPage === 5 ? 'selected' : ''}>5</option>
+                            <option value="10" ${PAGINATION_CONFIG.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                            <option value="15" ${PAGINATION_CONFIG.itemsPerPage === 15 ? 'selected' : ''}>15</option>
+                            <option value="20" ${PAGINATION_CONFIG.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                            <option value="30" ${PAGINATION_CONFIG.itemsPerPage === 30 ? 'selected' : ''}>30</option>
+                        </select>
+                    </div>
                 </div>
             </div>
-            <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
-                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><h4 style="color: #b43c3c; margin-bottom: 10px;">АКТИВНЫЕ БАНЫ (${activeBans.length})</h4><div class="table-container scrollable-container" style="flex: 1;">${activeBans.length === 0 ? `<div style="text-align: center; padding: 30px; color: #8f9779;"><i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px;"></i><p>АКТИВНЫХ БАНОВ НЕТ</p></div>` : `<table class="data-table"><thead><tr><th>ПОЛЬЗОВАТЕЛЬ</th><th>STATIC ID</th><th>ПРИЧИНА</th><th>ЗАБАНИЛ</th><th>ДАТА</th><th>ДЕЙСТВИЯ</th></tr></thead><tbody id="bans-table-body"></tbody></table>`}</div></div>
-                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;"><h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ БАНОВ (${bans.length})</h4><div class="table-container scrollable-container" style="flex: 1;">${bans.length === 0 ? `<div style="text-align: center; padding: 30px; color: #8f9779;"><i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i><p>ИСТОРИЯ ПУСТА</p></div>` : `<table class="data-table"><thead><tr><th>ПОЛЬЗОВАТЕЛЬ</th><th>STATIC ID</th><th>ПРИЧИНА</th><th>СТАТУС</th><th>ДАТА</th></tr></thead><tbody id="bans-history-body"></tbody></table>`}</div></div>
-            </div><div id="bans-pagination-container"></div>
-        </div>`;
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 4px; border: 1px solid #4a4a3a;">
+                <div style="flex: 1; min-width: 300px;">
+                    <label class="form-label">БАН ПО ИМЕНИ ПОЛЬЗОВАТЕЛЯ</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя" style="flex: 1;">
+                        <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана" style="flex: 1;">
+                        <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;">
+                            <i class="fas fa-ban"></i> ЗАБАНИТЬ
+                        </button>
+                    </div>
+                </div>
+                
+                <div style="flex: 1; min-width: 300px;">
+                    <label class="form-label">БАН ПО STATIC ID</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" style="font-family: 'Courier New', monospace; flex: 1;">
+                        <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана" style="flex: 1;">
+                        <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px; min-width: 120px;">
+                            <i class="fas fa-id-card"></i> БАН ПО ID
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 15px; overflow: hidden;">
+                <!-- АКТИВНЫЕ БАНЫ -->
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: #b43c3c; margin: 0;">
+                            <i class="fas fa-user-slash"></i> АКТИВНЫЕ БАНЫ (${activeBans.length})
+                        </h4>
+                        ${activeBansTotalPages > 1 ? `
+                        <div id="bans-pagination-top" style="display: flex; align-items: center; gap: 5px;">
+                            <!-- Пагинация будет здесь -->
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="scrollable-container" style="flex: 1; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 15px;">
+                        ${activeBans.length === 0 ? 
+                            `<div style="text-align: center; padding: 30px; color: #8f9779;">
+                                <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                                <p>АКТИВНЫХ БАНОВ НЕТ</p>
+                            </div>` : 
+                            `<table class="data-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 120px;">ПОЛЬЗОВАТЕЛЬ</th>
+                                        <th style="min-width: 120px;">STATIC ID</th>
+                                        <th style="min-width: 150px;">ПРИЧИНА</th>
+                                        <th style="min-width: 100px;">ЗАБАНИЛ</th>
+                                        <th style="min-width: 120px;">ДАТА</th>
+                                        <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bans-table-body"></tbody>
+                            </table>`
+                        }
+                    </div>
+                </div>
+                
+                <!-- ИСТОРИЯ БАНОВ -->
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="color: #c0b070; margin: 0;">
+                            <i class="fas fa-history"></i> ИСТОРИЯ БАНОВ (${bans.length})
+                        </h4>
+                    </div>
+                    
+                    <div class="scrollable-container" style="flex: 1; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 15px;">
+                        ${bans.length === 0 ? 
+                            `<div style="text-align: center; padding: 30px; color: #8f9779;">
+                                <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                                <p>ИСТОРИЯ ПУСТА</p>
+                            </div>` : 
+                            `<table class="data-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width: 120px;">ПОЛЬЗОВАТЕЛЬ</th>
+                                        <th style="min-width: 120px;">STATIC ID</th>
+                                        <th style="min-width: 150px;">ПРИЧИНА</th>
+                                        <th style="min-width: 80px;">СТАТУС</th>
+                                        <th style="min-width: 150px;">ДАТА</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bans-history-body"></tbody>
+                            </table>`
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <div id="bans-pagination-bottom" style="min-height: 50px; display: flex; align-items: center; justify-content: center; padding: 10px; background: rgba(40, 42, 36, 0.5); border-radius: 4px; border: 1px solid #4a4a3a;">
+                <!-- Пагинация будет здесь -->
+            </div>
+        </div>
+    `;
     
-    if (activeBans.length > 0) { renderBansTablePaginated(paginatedActiveBans); renderPagination('bans-pagination-container', currentPage, activeBansTotalPages, 'renderBansWithPagination'); }
-    if (bans.length > 0) renderBansHistoryPaginated(bans.slice(startIndex, endIndex));
+    if (activeBans.length > 0) { 
+        renderBansTablePaginated(paginatedActiveBans);
+        if (activeBansTotalPages > 1) {
+            renderPagination('bans-pagination-top', currentPage, activeBansTotalPages, 'renderBansWithPagination');
+            renderPagination('bans-pagination-bottom', currentPage, activeBansTotalPages, 'renderBansWithPagination');
+        }
+    }
+    
+    if (bans.length > 0) {
+        const historyStartIndex = (page - 1) * itemsPerPage;
+        const historyEndIndex = historyStartIndex + itemsPerPage;
+        const paginatedBansHistory = bans.slice(historyStartIndex, historyEndIndex);
+        renderBansHistoryPaginated(paginatedBansHistory);
+    }
+    
     setTimeout(adjustInterfaceHeights, 100);
 }
 
 function renderBansTablePaginated(activeBans) {
     const tableBody = document.getElementById("bans-table-body");
     if (!tableBody) return;
+    
     tableBody.innerHTML = activeBans.map(ban => `
         <tr>
-            <td style="font-weight: 500; color: #b43c3c;"><i class="fas fa-user-slash"></i> ${ban.username}</td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">${ban.staticId || "N/A"}</td>
+            <td style="font-weight: 500; color: #b43c3c;">
+                <i class="fas fa-user-slash"></i> ${ban.username || 'Неизвестно'}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
             <td>${ban.reason || "Причина не указана"}</td>
             <td>${ban.bannedBy || "Неизвестно"}</td>
             <td>${ban.bannedDate || "Неизвестно"}</td>
-            <td>${CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? `<button onclick="unbanByStaticId('${ban.staticId}')" class="action-btn confirm"><i class="fas fa-unlock"></i> РАЗБАН</button>` : '<span style="color: #8f9779;">НЕТ ДОСТУПА</span>'}</td>
-        </tr>`).join('');
+            <td>
+                ${CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level ? 
+                    `<button onclick="unbanByStaticId('${ban.staticId}')" class="action-btn confirm" style="padding: 5px 10px; font-size: 0.85rem;">
+                        <i class="fas fa-unlock"></i> РАЗБАН
+                    </button>` : 
+                    '<span style="color: #8f9779; font-size: 0.85rem;">НЕТ ДОСТУПА</span>'
+                }
+            </td>
+        </tr>
+    `).join('');
 }
 
-function renderBansHistoryPaginated(bans) {
+function renderBansHistoryPaginated(bansHistory) {
     const tableBody = document.getElementById("bans-history-body");
     if (!tableBody) return;
-    tableBody.innerHTML = bans.map(ban => {
-        const isActive = !ban.unbanned, bannedDate = ban.bannedDate || "Неизвестно", unbannedDate = ban.unbannedDate || "";
+    
+    tableBody.innerHTML = bansHistory.map(ban => {
+        const isActive = !ban.unbanned;
+        const bannedDate = ban.bannedDate || "Неизвестно";
+        const unbannedDate = ban.unbannedDate || "";
+        
         return `<tr>
-            <td style="color: ${isActive ? '#b43c3c' : '#8f9779'}"><i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username}</td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">${ban.staticId || "N/A"}</td>
+            <td style="color: ${isActive ? '#b43c3c' : '#8f9779'};">
+                <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i> ${ban.username || 'Неизвестно'}
+            </td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${ban.staticId || "N/A"}
+            </td>
             <td>${ban.reason || "Причина не указана"}</td>
-            <td><span class="report-status ${isActive ? 'status-deleted' : 'status-confirmed'}" style="display: inline-flex; padding: 4px 10px;"><i class="fas ${isActive ? 'fa-ban' : 'fa-check'}"></i>${isActive ? 'АКТИВЕН' : 'СНЯТ'}</span></td>
-            <td>${bannedDate}${unbannedDate ? `<br><small style="color: #6a6a5a;">Снят: ${unbannedDate}</small>` : ''}</td>
+            <td>
+                <span class="report-status ${isActive ? 'status-deleted' : 'status-confirmed'}" 
+                      style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
+                    <i class="fas ${isActive ? 'fa-ban' : 'fa-check'}"></i>
+                    ${isActive ? 'АКТИВЕН' : 'СНЯТ'}
+                </span>
+            </td>
+            <td>
+                ${bannedDate}
+                ${unbannedDate ? `<br><small style="color: #6a6a5a; font-size: 0.8rem;">Снят: ${unbannedDate}</small>` : ''}
+            </td>
         </tr>`;
     }).join('');
 }

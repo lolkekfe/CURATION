@@ -322,16 +322,41 @@ function generateStaticId(username) {
 function restoreSession() {
     const savedSession = localStorage.getItem('mlk_session');
     if (!savedSession) return false;
+    
     try {
-        const session = JSON.parse(savedSession), currentTime = new Date().getTime(), maxAge = 8 * 60 * 60 * 1000;
-        if (currentTime - session.timestamp > maxAge) { localStorage.removeItem('mlk_session'); return false; }
-        CURRENT_USER = session.user, CURRENT_ROLE = session.role, CURRENT_RANK = null, CURRENT_STATIC_ID = session.staticId;
-        if (session.rank === CREATOR_RANK.level) CURRENT_RANK = CREATOR_RANK;
-        else for (const rankKey in RANKS) if (RANKS[rankKey].level === session.rank) { CURRENT_RANK = RANKS[rankKey]; break; }
+        const session = JSON.parse(savedSession);
+        const currentTime = new Date().getTime();
+        const maxAge = 8 * 60 * 60 * 1000; // 8 часов
+        
+        if (currentTime - session.timestamp > maxAge) { 
+            localStorage.removeItem('mlk_session'); 
+            return false; 
+        }
+        
+        CURRENT_USER = session.user;
+        CURRENT_ROLE = session.role;
+        CURRENT_RANK = null;
+        CURRENT_STATIC_ID = session.staticId;
+        
+        // Определяем ранг
+        if (session.rank === CREATOR_RANK.level) {
+            CURRENT_RANK = CREATOR_RANK;
+        } else {
+            for (const rankKey in RANKS) {
+                if (RANKS[rankKey].level === session.rank) { 
+                    CURRENT_RANK = RANKS[rankKey]; 
+                    break; 
+                }
+            }
+        }
+        
         return CURRENT_USER && CURRENT_RANK && CURRENT_STATIC_ID;
-    } catch (e) { localStorage.removeItem('mlk_session'); return false; }
+        
+    } catch (e) { 
+        localStorage.removeItem('mlk_session'); 
+        return false; 
+    }
 }
-
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
 window.deleteReport = function(id) {
     if(CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK.level !== CREATOR_RANK.level) { showNotification("Недостаточно прав", "error"); return; }
@@ -377,12 +402,19 @@ function loadData(callback) {
 }
 
 async function createOrUpdatePasswords() {
-    const newPasswords = { admin: "admin", curator: "curator", junior: "junior", senior: "senior", special: "special" };
+    const defaultPasswords = { 
+        admin: "admin123", 
+        senior: "senior123", 
+        special: "creator123" 
+    };
+    
     const hashedPasswords = {};
-    for (const [key, plainPassword] of Object.entries(newPasswords)) {
-        const salt = generateSalt(), hash = await hashPassword(plainPassword, salt);
+    for (const [key, plainPassword] of Object.entries(defaultPasswords)) {
+        const salt = generateSalt();
+        const hash = await hashPassword(plainPassword, salt);
         hashedPasswords[key] = { hash, salt, plain: plainPassword };
     }
+    
     return db.ref('mlk_passwords').set(hashedPasswords);
 }
 
@@ -756,112 +788,356 @@ window.demoteToJuniorByStaticId = function(staticId) {
 }
 
 window.login = async function() {
-    const usernameInput = document.getElementById("username").value.trim(), passwordInput = document.getElementById("password").value.trim();
+    const usernameInput = document.getElementById("username").value.trim();
+    const passwordInput = document.getElementById("password").value.trim();
     const errorElement = document.getElementById("login-error");
+    
     if (errorElement) errorElement.textContent = "";
     
     const usernameValidation = validateUsername(usernameInput);
-    if (!usernameValidation.valid) { showLoginError(usernameValidation.message); return; }
+    if (!usernameValidation.valid) { 
+        showLoginError(usernameValidation.message); 
+        return; 
+    }
+    
     const passwordValidation = validatePassword(passwordInput);
-    if (!passwordValidation.valid) { showLoginError(passwordValidation.message); return; }
+    if (!passwordValidation.valid) { 
+        showLoginError(passwordValidation.message); 
+        return; 
+    }
     
     try {
         const userIP = await getUserIP();
         if (userIP !== "unknown") {
             const ipLockStatus = isIPLocked(userIP);
-            if (ipLockStatus) { showLoginError(ipLockStatus); return; }
+            if (ipLockStatus) { 
+                showLoginError(ipLockStatus); 
+                return; 
+            }
             const ipBanCheck = await checkIPBan(userIP);
-            if (ipBanCheck.banned) { showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`); return; }
+            if (ipBanCheck.banned) { 
+                showLoginError(`IP адрес ${userIP} заблокирован. Причина: ${ipBanCheck.reason}`); 
+                return; 
+            }
         }
         
         const banCheck = checkIfBanned(usernameInput);
-        if (banCheck.banned) { showBannedScreen(banCheck); return; }
+        if (banCheck.banned) { 
+            showBannedScreen(banCheck); 
+            return; 
+        }
         
+        // Ищем пользователя в базе
         const existingUser = users.find(user => user.username.toLowerCase() === usernameInput.toLowerCase());
-        const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
-        const passwords = passwordsSnapshot.val() || {};
+        
+        // Проверяем специальный доступ для защищенных пользователей
         const isProtectedUser = PROTECTED_USERS.some(protectedUser => protectedUser.toLowerCase() === usernameInput.toLowerCase());
-
+        
         if (isProtectedUser) {
-            const isSpecialValid = await verifyPassword(passwordInput, passwords.special);
-            if (isSpecialValid) {
+            // Проверяем системный пароль для защищенных пользователей
+            const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
+            const passwords = passwordsSnapshot.val() || {};
+            const specialPassword = passwords.special;
+            
+            if (specialPassword && await verifyPassword(passwordInput, specialPassword)) {
+                // Защищенный пользователь с системным паролем
                 if (!existingUser) {
+                    // Регистрация нового защищенного пользователя
                     const ipCheck = await checkIPLimit(usernameInput);
-                    if (!ipCheck.allowed) { showLoginError(ipCheck.message); return; }
+                    if (!ipCheck.allowed) { 
+                        showLoginError(ipCheck.message); 
+                        return; 
+                    }
+                    
                     const staticId = generateStaticId(usernameInput);
-                    const newUser = { username: usernameInput, staticId, role: CREATOR_RANK.name, rank: CREATOR_RANK.level, registrationDate: new Date().toLocaleString(), lastLogin: new Date().toLocaleString(), registrationIP: ipCheck.ip };
+                    const newUser = { 
+                        username: usernameInput, 
+                        staticId, 
+                        role: CREATOR_RANK.name, 
+                        rank: CREATOR_RANK.level, 
+                        registrationDate: new Date().toLocaleString(), 
+                        lastLogin: new Date().toLocaleString(), 
+                        registrationIP: ipCheck.ip,
+                        // Хешированный пароль пользователя
+                        passwordHash: await hashPassword(passwordInput, generateSalt()),
+                        passwordSalt: generateSalt()
+                    };
+                    
                     await db.ref('mlk_users').push(newUser);
                     await registerIP(usernameInput, staticId);
                     await new Promise(resolve => loadData(resolve));
-                    CURRENT_ROLE = CREATOR_RANK.name, CURRENT_USER = usernameInput, CURRENT_RANK = CREATOR_RANK, CURRENT_STATIC_ID = staticId;
+                    
+                    CURRENT_ROLE = CREATOR_RANK.name;
+                    CURRENT_USER = usernameInput;
+                    CURRENT_RANK = CREATOR_RANK;
+                    CURRENT_STATIC_ID = staticId;
+                    
                     trackLoginAttempt(userIP, true);
                     completeLogin();
                 } else {
-                    await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
-                    await updateIPActivity(usernameInput);
-                    CURRENT_ROLE = CREATOR_RANK.name, CURRENT_USER = usernameInput, CURRENT_RANK = CREATOR_RANK, CURRENT_STATIC_ID = existingUser.staticId || generateStaticId(usernameInput);
-                    trackLoginAttempt(userIP, true);
-                    completeLogin();
+                    // Существующий защищенный пользователь
+                    const validPassword = await verifyPassword(passwordInput, { 
+                        hash: existingUser.passwordHash, 
+                        salt: existingUser.passwordSalt 
+                    });
+                    
+                    if (validPassword) {
+                        await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
+                        await updateIPActivity(usernameInput);
+                        
+                        CURRENT_ROLE = existingUser.role || CREATOR_RANK.name;
+                        CURRENT_USER = usernameInput;
+                        CURRENT_RANK = CREATOR_RANK;
+                        CURRENT_STATIC_ID = existingUser.staticId;
+                        
+                        trackLoginAttempt(userIP, true);
+                        completeLogin();
+                    } else {
+                        trackLoginAttempt(userIP, false);
+                        showLoginError("НЕВЕРНЫЙ ПАРОЛЬ");
+                    }
                 }
                 return;
-            } else { trackLoginAttempt(userIP, false); showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА"); return; }
+            }
         }
         
+        // ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ - РЕГИСТРАЦИЯ/ВХОД С ЛИЧНЫМ ПАРОЛЕМ
         if (!existingUser) {
-            let userRank = RANKS.JUNIOR_CURATOR, isValidPassword = false;
-            const adminValid = await verifyPassword(passwordInput, passwords.admin);
-            const seniorValid = await verifyPassword(passwordInput, passwords.senior);
-            const curatorValid = await verifyPassword(passwordInput, passwords.curator);
-            const juniorValid = await verifyPassword(passwordInput, passwords.junior);
-            
-            if (adminValid) {
-                const isInWhitelist = whitelist.some(user => user.username.toLowerCase() === usernameInput.toLowerCase());
-                if (!isInWhitelist) { trackLoginAttempt(userIP, false); showLoginError("ДОСТУП ЗАПРЕЩЕН"); return; }
-                userRank = RANKS.ADMIN, isValidPassword = true;
-            } else if (seniorValid) {
-                const isInWhitelist = whitelist.some(user => user.username.toLowerCase() === usernameInput.toLowerCase());
-                if (!isInWhitelist) { trackLoginAttempt(userIP, false); showLoginError("ДОСТУП ЗАПРЕЩЕН"); return; }
-                userRank = RANKS.SENIOR_CURATOR, isValidPassword = true;
-            } else if (curatorValid) { userRank = RANKS.CURATOR, isValidPassword = true; }
-            else if (juniorValid) { userRank = RANKS.JUNIOR_CURATOR, isValidPassword = true; }
-            
-            if (!isValidPassword) { trackLoginAttempt(userIP, false); showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА"); return; }
-            
+            // РЕГИСТРАЦИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ
             const ipCheck = await checkIPLimit(usernameInput);
-            if (!ipCheck.allowed) { showLoginError(ipCheck.message); return; }
+            if (!ipCheck.allowed) { 
+                showLoginError(ipCheck.message); 
+                return; 
+            }
+            
+            // Проверяем, разрешена ли регистрация (есть ли в вайтлисте для старших рангов)
+            const isInWhitelist = whitelist.some(user => user.username.toLowerCase() === usernameInput.toLowerCase());
+            
+            // По умолчанию новый пользователь - младший куратор
+            let userRank = RANKS.JUNIOR_CURATOR;
+            
+            // Если пользователь в вайтлисте, он может стать старшим куратором или админом
+            // Но для этого нужно проверить системные пароли
+            if (isInWhitelist) {
+                const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
+                const passwords = passwordsSnapshot.val() || {};
+                
+                // Проверяем пароль администратора
+                const adminValid = await verifyPassword(passwordInput, passwords.admin);
+                if (adminValid) {
+                    userRank = RANKS.ADMIN;
+                } 
+                // Проверяем пароль старшего куратора
+                else if (await verifyPassword(passwordInput, passwords.senior)) {
+                    userRank = RANKS.SENIOR_CURATOR;
+                }
+                // Иначе остается младшим куратором
+            }
+            
+            // Генерируем соль и хеш пароля
+            const salt = generateSalt();
+            const passwordHash = await hashPassword(passwordInput, salt);
             
             const staticId = generateStaticId(usernameInput);
-            const newUser = { username: usernameInput, staticId, role: userRank.name, rank: userRank.level, registrationDate: new Date().toLocaleString(), lastLogin: new Date().toLocaleString(), registrationIP: ipCheck.ip };
+            const newUser = { 
+                username: usernameInput, 
+                staticId, 
+                role: userRank.name, 
+                rank: userRank.level, 
+                registrationDate: new Date().toLocaleString(), 
+                lastLogin: new Date().toLocaleString(), 
+                registrationIP: ipCheck.ip,
+                passwordHash: passwordHash,
+                passwordSalt: salt
+            };
+            
             await db.ref('mlk_users').push(newUser);
             await registerIP(usernameInput, staticId);
             await new Promise(resolve => loadData(resolve));
-            CURRENT_ROLE = userRank.name, CURRENT_USER = usernameInput, CURRENT_RANK = userRank, CURRENT_STATIC_ID = staticId;
+            
+            CURRENT_ROLE = userRank.name;
+            CURRENT_USER = usernameInput;
+            CURRENT_RANK = userRank;
+            CURRENT_STATIC_ID = staticId;
+            
             trackLoginAttempt(userIP, true);
             completeLogin();
-            return;
+            
         } else {
-            let isValidPassword = false, userRank = RANKS.JUNIOR_CURATOR;
-            if (existingUser.role === RANKS.ADMIN.name) userRank = RANKS.ADMIN;
-            else if (existingUser.role === RANKS.SENIOR_CURATOR.name) userRank = RANKS.SENIOR_CURATOR;
-            else if (existingUser.role === RANKS.CURATOR.name) userRank = RANKS.CURATOR;
+            // ВХОД СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ
+            // Проверяем личный пароль пользователя
+            const validPassword = await verifyPassword(passwordInput, { 
+                hash: existingUser.passwordHash, 
+                salt: existingUser.passwordSalt 
+            });
+            
+            if (!validPassword) {
+                trackLoginAttempt(userIP, false);
+                showLoginError("НЕВЕРНЫЙ ПАРОЛЬ");
+                return;
+            }
+            
+            // Определяем ранг пользователя
+            let userRank;
+            if (existingUser.rank === RANKS.ADMIN.level) userRank = RANKS.ADMIN;
+            else if (existingUser.rank === RANKS.SENIOR_CURATOR.level) userRank = RANKS.SENIOR_CURATOR;
+            else if (existingUser.rank === RANKS.CURATOR.level) userRank = RANKS.CURATOR;
             else userRank = RANKS.JUNIOR_CURATOR;
-            
-            if (userRank.level >= RANKS.ADMIN.level) isValidPassword = await verifyPassword(passwordInput, passwords.admin);
-            else if (userRank.level >= RANKS.SENIOR_CURATOR.level) isValidPassword = await verifyPassword(passwordInput, passwords.senior);
-            else if (userRank.level >= RANKS.CURATOR.level) isValidPassword = await verifyPassword(passwordInput, passwords.curator);
-            else isValidPassword = await verifyPassword(passwordInput, passwords.junior);
-            
-            if (!isValidPassword) { trackLoginAttempt(userIP, false); showLoginError("НЕВЕРНЫЙ КОД ДОСТУПА"); return; }
             
             await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
             await updateIPActivity(usernameInput);
-            CURRENT_ROLE = userRank.name, CURRENT_USER = usernameInput, CURRENT_RANK = userRank, CURRENT_STATIC_ID = existingUser.staticId;
+            
+            CURRENT_ROLE = userRank.name;
+            CURRENT_USER = usernameInput;
+            CURRENT_RANK = userRank;
+            CURRENT_STATIC_ID = existingUser.staticId;
+            
             trackLoginAttempt(userIP, true);
             completeLogin();
         }
-    } catch (error) { showLoginError("ОШИБКА СИСТЕМЫ"); }
-}
+        
+    } catch (error) { 
+        console.error('Login error:', error);
+        showLoginError("ОШИБКА СИСТЕМЫ"); 
+    }
+};
     
+window.changeUserPassword = async function() {
+    if (!CURRENT_USER) {
+        showNotification("Сначала войдите в систему", "error");
+        return;
+    }
+    
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    content.innerHTML = `
+        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(40, 42, 36, 0.7); border: 1px solid #4a4a3a; border-radius: 4px;">
+                <div>
+                    <h2 style="color: #c0b070; margin: 0 0 5px 0; font-family: 'Orbitron', sans-serif; font-size: 1.2rem;">
+                        <i class="fas fa-key"></i> СМЕНА ПАРОЛЯ
+                    </h2>
+                    <p style="color: #8f9779; font-size: 0.85rem; margin: 0;">ИЗМЕНИТЕ ВАШ ПАРОЛЬ</p>
+                </div>
+                <button onclick="renderSystem()" class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+                    <i class="fas fa-arrow-left"></i> НАЗАД
+                </button>
+            </div>
+            
+            <div style="flex: 1; background: rgba(30, 32, 28, 0.3); border: 1px solid #4a4a3a; border-radius: 4px; padding: 20px;">
+                <div style="max-width: 500px; margin: 0 auto;">
+                    <div class="zone-card" style="margin-bottom: 20px;">
+                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                        <h4 style="color: #c0b070; margin-bottom: 15px;">СМЕНА ПАРОЛЯ</h4>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <div>
+                                <label class="form-label">ТЕКУЩИЙ ПАРОЛЬ</label>
+                                <input type="password" id="current-password" class="form-input" placeholder="Введите текущий пароль">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">НОВЫЙ ПАРОЛЬ</label>
+                                <input type="password" id="new-password" class="form-input" placeholder="Введите новый пароль">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label">ПОВТОРИТЕ НОВЫЙ ПАРОЛЬ</label>
+                                <input type="password" id="confirm-password" class="form-input" placeholder="Повторите новый пароль">
+                            </div>
+                            
+                            <div style="margin-top: 20px;">
+                                <button onclick="processPasswordChange()" class="btn-primary" style="width: 100%; padding: 12px;">
+                                    <i class="fas fa-save"></i> СОХРАНИТЬ НОВЫЙ ПАРОЛЬ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="color: #8f9779; font-size: 0.85rem; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 4px; border: 1px solid #4a4a3a;">
+                        <h5 style="color: #c0b070; margin-bottom: 10px;"><i class="fas fa-info-circle"></i> ТРЕБОВАНИЯ К ПАРОЛЮ:</h5>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li>Минимум 6 символов</li>
+                            <li>Рекомендуется использовать буквы, цифры и специальные символы</li>
+                            <li>Не используйте простые пароли (123456, qwerty, password)</li>
+                            <li>Пароль должен отличаться от старого</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+};
+
+window.processPasswordChange = async function() {
+    const currentPassword = document.getElementById("current-password")?.value.trim();
+    const newPassword = document.getElementById("new-password")?.value.trim();
+    const confirmPassword = document.getElementById("confirm-password")?.value.trim();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showNotification("Заполните все поля", "error");
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification("Новые пароли не совпадают", "error");
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification("Пароль должен содержать минимум 6 символов", "error");
+        return;
+    }
+    
+    if (newPassword === currentPassword) {
+        showNotification("Новый пароль должен отличаться от старого", "error");
+        return;
+    }
+    
+    try {
+        // Находим текущего пользователя
+        const currentUser = users.find(u => u.username === CURRENT_USER);
+        if (!currentUser) {
+            showNotification("Пользователь не найден", "error");
+            return;
+        }
+        
+        // Проверяем текущий пароль
+        const validCurrentPassword = await verifyPassword(currentPassword, {
+            hash: currentUser.passwordHash,
+            salt: currentUser.passwordSalt
+        });
+        
+        if (!validCurrentPassword) {
+            showNotification("Неверный текущий пароль", "error");
+            return;
+        }
+        
+        // Генерируем новый хеш пароля
+        const newSalt = generateSalt();
+        const newHash = await hashPassword(newPassword, newSalt);
+        
+        // Обновляем пароль в базе данных
+        await db.ref('mlk_users/' + currentUser.id).update({
+            passwordHash: newHash,
+            passwordSalt: newSalt,
+            passwordChangedAt: new Date().toLocaleString()
+        });
+        
+        showNotification("✅ Пароль успешно изменен", "success");
+        
+        // Возвращаемся в систему
+        setTimeout(() => {
+            renderSystem();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Password change error:', error);
+        showNotification("Ошибка при смене пароля", "error");
+    }
+};
+
 function showBannedScreen(banInfo) {
     const loginScreen = document.getElementById("login-screen");
     if (!loginScreen) return;
@@ -961,23 +1237,42 @@ function setupSidebar() {
     if (staticIdElement && CURRENT_STATIC_ID) staticIdElement.textContent = CURRENT_STATIC_ID;
     
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
+    
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', () => renderReportsWithPagination(1));
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', () => renderUsersWithPagination(1));
     }
+    
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', () => renderWhitelistWithPagination(1));
-        addNavButton(navMenu, 'fas fa-key', 'КОДЫ ДОСТУПА', renderPasswords);
+        addNavButton(navMenu, 'fas fa-key', 'СИСТЕМНЫЕ ПАРОЛИ', renderPasswords);
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', () => renderBansWithPagination(1));
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
+    // ДОБАВЛЯЕМ КНОПКУ СМЕНЫ ПАРОЛЯ ВСЕМ ПОЛЬЗОВАТЕЛЯМ
+    const changePasswordBtn = document.createElement('button');
+    changePasswordBtn.className = 'nav-button';
+    changePasswordBtn.innerHTML = `<i class="fas fa-key"></i><span>СМЕНА ПАРОЛЯ</span>`;
+    changePasswordBtn.onclick = function() {
+        changeUserPassword();
+        const titleElement = document.getElementById('content-title');
+        if (titleElement) titleElement.textContent = 'СМЕНА ПАРОЛЯ';
+        updateSystemPrompt(`СМЕНА ЛИЧНОГО ПАРОЛЯ`);
+    };
+    navMenu.appendChild(changePasswordBtn);
+    
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.onclick = logout;
     
-    setTimeout(() => { if (sidebar) { sidebar.classList.add('scrollable-container'); adjustInterfaceHeights(); } }, 100);
+    setTimeout(() => { 
+        if (sidebar) { 
+            sidebar.classList.add('scrollable-container'); 
+            adjustInterfaceHeights(); 
+        } 
+    }, 100);
 }
 
 function addNavButton(container, icon, text, onClick) {
@@ -1804,37 +2099,135 @@ function sendReportToDiscord(report) {
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; return; }
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
+        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
+        return; 
+    }
     
     content.innerHTML = `
         <div class="form-container with-scroll">
-            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА</h2>
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-key"></i> УПРАВЛЕНИЕ СИСТЕМНЫМИ ПАРОЛЯМИ
+            </h2>
+            
             <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-user-graduate"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ МЛАДШИХ КУРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">ИСПОЛЬЗУЕТСЯ МЛАДШИМИ КУРАТОРАМИ ДЛЯ ВХОДА</p>
-                    <div style="display: flex; gap: 10px;"><input type="password" id="junior-password" class="form-input" value="${passwords.junior || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
-                    <button onclick="updatePassword('junior')" class="btn-primary" style="padding: 10px 15px;"><i class="fas fa-save"></i> ИЗМЕНИТЬ</button></div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-users"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ КУРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ</p>
-                    <div style="display: flex; gap: 10px;"><input type="password" id="curator-password" class="form-input" value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
-                    <button onclick="updatePassword('curator')" class="btn-primary" style="padding: 10px 15px;"><i class="fas fa-save"></i> ИЗМЕНИТЬ</button></div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-star"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРЫМИ ДЛЯ ВХОДА</p>
-                    <div style="display: flex; gap: 10px;"><input type="password" id="senior-password" class="form-input" value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
-                    <button onclick="updatePassword('senior')" class="btn-primary" style="padding: 10px 15px;"><i class="fas fa-save"></i> ИЗМЕНИТЬ</button></div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА</p>
-                    <div style="display: flex; gap: 10px;"><input type="password" id="admin-password" class="form-input" value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
-                    <button onclick="updatePassword('admin')" class="btn-primary" style="padding: 10px 15px;"><i class="fas fa-save"></i> ИЗМЕНИТЬ</button></div></div>
-                <div class="zone-card" style="border-color: #c0b070;"><div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМНЫЙ КОД</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ</p>
-                    <div style="display: flex; gap: 10px;"><input type="password" id="special-password" class="form-input" value="${passwords.special || ''}" placeholder="НОВЫЙ КОД" style="flex: 1; border-color: #c0b070;">
-                    <button onclick="updatePassword('special')" class="btn-primary" style="border-color: #c0b070; padding: 10px 15px;"><i class="fas fa-save"></i> ИЗМЕНИТЬ</button></div></div>
+                <div class="zone-card" style="margin-bottom: 20px;">
+                    <div class="card-icon"><i class="fas fa-info-circle"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О СИСТЕМЕ ПАРОЛЕЙ</h4>
+                    <p style="color: #8f9779; line-height: 1.6;">
+                        В новой системе каждый пользователь создает свой собственный пароль при регистрации.<br>
+                        Системные пароли используются только для определения ранга при <strong>первой регистрации</strong> пользователя из списка доступа.
+                    </p>
+                </div>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ПАРОЛЬ ДЛЯ АДМИНИСТРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        Используется при регистрации пользователей из списка доступа для получения роли администратора
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="admin-password" class="form-input" value="${passwords.admin ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1;">
+                        <button onclick="updateSystemPassword('admin')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ПАРОЛЬ ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        Используется при регистрации пользователей из списка доступа для получения роли старшего куратора
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="senior-password" class="form-input" value="${passwords.senior ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1;">
+                        <button onclick="updateSystemPassword('senior')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="zone-card" style="border-color: #c0b070;">
+                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМНЫЙ ПАРОЛЬ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        Используется только защищенными пользователями (создатель системы)
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="special-password" class="form-input" value="${passwords.special ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1; border-color: #c0b070;">
+                        <button onclick="updateSystemPassword('special')" class="btn-primary" style="border-color: #c0b070; padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="zone-card" style="margin-top: 20px; background: rgba(192, 176, 112, 0.05); border-color: #c0b070;">
+                    <div class="card-icon"><i class="fas fa-user-cog"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">СМЕНА ЛИЧНОГО ПАРОЛЯ</h4>
+                    <p style="color: #8f9779; margin-bottom: 15px;">
+                        Хотите изменить ваш личный пароль для входа в систему?
+                    </p>
+                    <button onclick="changeUserPassword()" class="btn-primary" style="width: 100%; padding: 12px;">
+                        <i class="fas fa-key"></i> ИЗМЕНИТЬ МОЙ ПАРОЛЬ
+                    </button>
+                </div>
             </div>
-        </div>`;
+        </div>
+    `;
+    
     setTimeout(adjustInterfaceHeights, 100);
-}
+};
+
+window.updateSystemPassword = async function(type) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только администратор может изменять системные пароли", "error"); 
+        return; 
+    }
+    
+    const inputId = type + "-password";
+    const input = document.getElementById(inputId);
+    const newPassword = input ? input.value.trim() : "";
+    
+    if (!newPassword) { 
+        showNotification("Введите новый пароль", "error"); 
+        return; 
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification("Пароль должен содержать минимум 6 символов", "error");
+        return;
+    }
+    
+    const confirmMessage = `Изменить системный пароль "${type}"?\nНовый пароль будет установлен.`;
+    if (!confirm(confirmMessage)) return;
+    
+    try {
+        const salt = generateSalt();
+        const hash = await hashPassword(newPassword, salt);
+        
+        await db.ref('mlk_passwords').update({ 
+            [type]: { hash, salt, plain: newPassword } 
+        });
+        
+        passwords[type] = { hash, salt, plain: newPassword };
+        showNotification(`✅ Системный пароль "${type}" изменен`, "success");
+        
+        // Логируем изменение
+        await db.ref('mlk_password_logs').push({ 
+            type, 
+            changedBy: CURRENT_USER, 
+            changedAt: new Date().toLocaleString(),
+            userStaticId: CURRENT_STATIC_ID
+        });
+        
+        // Обновляем отображение
+        renderPasswords();
+        
+    } catch (error) { 
+        showNotification("Ошибка изменения пароля: " + error.message, "error"); 
+    }
+};
 
 window.resetAllPasswords = async function() {
     if (CURRENT_RANK !== CREATOR_RANK) { showNotification("Только создатель может сбрасывать все пароли", "error"); return; }

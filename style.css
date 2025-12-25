@@ -2396,6 +2396,79 @@ body {
     transform: none !important;
     transition: none !important;
 }
+/* ===== ИСПРАВЛЕНИЯ ДЛЯ ВСЕХ КОНТЕЙНЕРОВ ===== */
+
+/* Основные исправления */
+body, html {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+/* Сбрасываем все лишние позиционирования */
+.content-body > *,
+.form-container > *,
+.zone-card > * {
+    position: static !important;
+    transform: none !important;
+}
+
+/* Исправляем высоту контента */
+.content-body {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: calc(100vh - 300px) !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/* Исправляем контейнеры форм */
+.form-container {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Исправляем карточки */
+.zone-card {
+    position: static !important;
+    margin: 0 0 15px 0 !important;
+    padding: 15px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+}
+
+/* Убираем все абсолютные позиционирования внутри форм */
+.form-input, .form-textarea, .btn-primary, .btn-secondary {
+    position: relative !important;
+    z-index: auto !important;
+}
+
+/* Исправляем таблицы */
+.table-container {
+    position: static !important;
+    height: auto !important;
+    min-height: 300px !important;
+    max-height: 500px !important;
+    overflow: auto !important;
+    margin-bottom: 20px !important;
+}
+
+/* Исправляем навигацию */
+.nav-menu {
+    position: relative !important;
+    z-index: auto !important;
+}
+
+.nav-button {
+    position: relative !important;
+    z-index: auto !important;
+    margin: 2px 0 !important;
+}
 
 
 

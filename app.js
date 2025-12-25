@@ -146,15 +146,6 @@ function changeItemsPerPage(callback, value) { // ← ДОБАВИТЬ ЗДЕС�
     }
 }
 
-function changeItemsPerPage(callback, value) {
-    PAGINATION_CONFIG.itemsPerPage = parseInt(value);
-    if (callback === 'renderReportsWithPagination') renderReportsWithPagination(1);
-    else if (callback === 'renderUsersWithPagination') renderUsersWithPagination(1);
-    else if (callback === 'renderMLKListPaginated') renderMLKListPaginated(1);
-    else if (callback === 'renderWhitelistWithPagination') renderWhitelistWithPagination(1);
-    else if (callback === 'renderBansWithPagination') renderBansWithPagination(1);
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); addScrollButtons(); }, 500);
     window.addEventListener('resize', () => setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); }, 100));

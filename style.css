@@ -2684,6 +2684,111 @@ body, html {
         padding: 12px 15px;
     }
 }
+/* ===== СТИЛИЗОВАННЫЕ СКРОЛЛБАРЫ ===== */
 
+/* Основной контейнер для скролла */
+.scrollable-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 10px;
+    margin-right: -10px;
+}
 
+/* Общие стили для всех скроллбаров */
+::-webkit-scrollbar {
+    width: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(30, 32, 28, 0.3);
+    border-radius: 6px;
+    border: 1px solid rgba(42, 40, 31, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #c0b070 0%, #8cb43c 50%, #c0b070 100%);
+    border-radius: 6px;
+    border: 2px solid rgba(30, 32, 28, 0.8);
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #d0c080 0%, #9cc44c 50%, #d0c080 100%);
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(135deg, #b0a060 0%, #7ca42c 50%, #b0a060 100%);
+}
+
+/* Стили для разных типов контейнеров */
+
+/* Формы отчетов */
+.report-creation-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #c0b070 0%, #8cb43c 100%);
+}
+
+/* Таблицы */
+.table-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #5865F2 0%, #8cb43c 100%);
+}
+
+/* Сайдбар */
+.zone-sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.zone-sidebar::-webkit-scrollbar-track {
+    background: rgba(20, 18, 15, 0.3);
+}
+
+.zone-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #8cb43c, #c0b070);
+}
+
+/* Логи и история */
+.system-log::-webkit-scrollbar-thumb,
+.webhook-history::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #8f9779 0%, #c0b070 100%);
+}
+
+/* Firefox стили */
+.scrollable-container {
+    scrollbar-width: thin;
+    scrollbar-color: #c0b070 rgba(30, 32, 28, 0.3);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .scrollable-container {
+        padding-right: 5px;
+        margin-right: -5px;
+    }
+}
+
+/* Эффект при скролле */
+.scrollable-container:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #d0c080 0%, #9cc44c 100%);
+}
+
+/* Индикатор скролла */
+.scroll-indicator {
+    position: fixed;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(192, 176, 112, 0.2);
+    border-radius: 3px;
+    padding: 5px 2px;
+    z-index: 100;
+    display: none;
+}
+
+.scroll-indicator.active {
+    display: block;
+}
 

@@ -798,7 +798,7 @@ window.renderBanInterface = function() {
             <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
                 <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                     <h4 style="color: #b43c3c; margin-bottom: 10px;">АКТИВНЫЕ БАНЫ (${activeBans.length})</h4>
-                    <div class="table-container" style="flex: 1;">
+                    <div class="table-container scrollable-container" style="flex: 1;">
                         ${activeBans.length === 0 ? `
                             <div style="text-align: center; padding: 30px; color: #8f9779;">
                                 <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -825,7 +825,7 @@ window.renderBanInterface = function() {
                 
                 <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ БАНОВ (${bans.length})</h4>
-                    <div class="table-container" style="flex: 1;">
+                    <div class="table-container scrollable-container" style="flex: 1;">
                         ${bans.length === 0 ? `
                             <div style="text-align: center; padding: 30px; color: #8f9779;">
                                 <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -1904,7 +1904,7 @@ function renderMLKForm() {
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="report-creation-container" id="report-scroll-container">
+            <div class="report-creation-container" id="report-scroll-container" class="scrollable-container">
                 <div class="zone-card" style="margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-user-tag"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
@@ -2115,7 +2115,7 @@ window.renderMLKScreen = function() {
                     </button>
                 </div>
                 
-                <div id="mlk-list" style="flex: 1; overflow-y: auto; min-height: 0;">
+                <div id="mlk-list" class="scrollable-container">
                     <!-- Здесь будет список отчетов -->
                 </div>
             </div>
@@ -2486,7 +2486,7 @@ function renderReports() {
             
             <h4 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
             
-            <div class="table-container">
+            <div class="table-container scrollable-container" style="flex: 1;">
                 ${reports.length === 0 ? `
                     <div style="text-align: center; padding: 40px; color: #8f9779;">
                         <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -2911,7 +2911,7 @@ window.renderUsers = function() {
             
             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
                 <h4 style="color: #c0b070; margin-bottom: 15px;">СПИСОК ПОЛЬЗОВАТЕЛЕЙ (${users.length})</h4>
-                <div class="table-container" style="flex: 1;">
+                <div class="table-container scrollable-container" style="flex: 1;">
                     ${users.length === 0 ? `
                         <div style="text-align: center; padding: 40px; color: #8f9779;">
                             <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -3054,7 +3054,7 @@ window.renderWhitelist = function() {
             
             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
                 <h4 style="color: #c0b070; margin-bottom: 15px;">ТЕКУЩИЙ СПИСОК (${whitelist.length})</h4>
-                <div class="table-container" style="flex: 1;">
+                <div class="table-container scrollable-container" style="flex: 1;">
                     ${whitelist.length === 0 ? `
                         <div style="text-align: center; padding: 40px; color: #8f9779;">
                             <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -3281,7 +3281,7 @@ window.renderIPStats = function() {
                         </div>
                     </div>
                     
-                    <div class="table-container" style="flex: 1;">
+                    <div class="table-container scrollable-container" style="flex: 1;">
                         ${ipList.length === 0 ? `
                             <div style="text-align: center; padding: 40px; color: #8f9779;">
                                 <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
@@ -3531,7 +3531,7 @@ function renderWebhookManager() {
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-history"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ОТПРАВКИ</h4>
-                    <div id="webhook-history" style="min-height: 100px; max-height: 200px; overflow-y: auto; background: rgba(20, 18, 15, 0.5); border-radius: 4px; padding: 10px;"></div>
+                    <div id="webhook-history" class="scrollable-container" style="min-height: 100px; max-height: 200px; background: rgba(20, 18, 15, 0.5); border-radius: 4px; padding: 10px;"></div>
                 </div>
             </div>
         </div>
@@ -4422,6 +4422,18 @@ function adjustInterfaceHeights() {
     const terminal = document.getElementById('terminal');
     const contentBody = document.getElementById('content-body');
     
+    // Настраиваем высоту для всех скроллируемых контейнеров
+    const scrollableContainers = document.querySelectorAll('.scrollable-container');
+    
+    scrollableContainers.forEach(container => {
+        const parent = container.closest('.form-container, .terminal-screen, .zone-card');
+        if (parent) {
+            const parentHeight = parent.clientHeight;
+            const padding = 20;
+            container.style.maxHeight = (parentHeight - padding) + 'px';
+        }
+    });
+    
     // Настраиваем высоту экрана входа
     if (loginScreen && loginScreen.style.display !== 'none') {
         const windowHeight = window.innerHeight;
@@ -4431,37 +4443,74 @@ function adjustInterfaceHeights() {
         if (header && footer) {
             const headerHeight = header.offsetHeight;
             const footerHeight = footer.offsetHeight;
-            const terminalScreen = document.querySelector('.terminal-screen');
+            const terminalScreen = document.querySelector('.terminal-screen .screen-content');
             
             if (terminalScreen) {
-                const maxHeight = windowHeight - headerHeight - footerHeight - 80;
-                terminalScreen.style.maxHeight = Math.min(maxHeight, 600) + 'px';
+                const maxHeight = windowHeight - headerHeight - footerHeight - 100;
+                terminalScreen.style.maxHeight = Math.min(maxHeight, 500) + 'px';
             }
         }
     }
     
-    // Настраиваем высоту для формы отчета
-    if (contentBody && contentBody.innerHTML.includes('report-creation-container')) {
-        const reportContainer = document.getElementById('report-scroll-container');
-        const formContainer = document.querySelector('.form-container');
+    // Проверяем скролл после настройки высоты
+    setTimeout(setupAutoScroll, 100);
+}
+/* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ ===== */
+function setupAutoScroll() {
+    // Проверяем все контейнеры на переполнение
+    const scrollableContainers = document.querySelectorAll('.scrollable-container');
+    
+    scrollableContainers.forEach(container => {
+        // Проверяем, есть ли переполнение по вертикали
+        const hasVerticalScroll = container.scrollHeight > container.clientHeight;
         
-        if (reportContainer && formContainer) {
-            const header = document.querySelector('.content-header');
-            const footer = document.querySelector('.content-footer');
-            const windowHeight = window.innerHeight;
-            
-            if (header && footer) {
-                const headerHeight = header.offsetHeight;
-                const footerHeight = footer.offsetHeight;
-                const maxHeight = windowHeight - headerHeight - footerHeight - 40;
-                
-                reportContainer.style.maxHeight = Math.max(maxHeight, 300) + 'px';
-            }
+        if (hasVerticalScroll) {
+            // Добавляем индикатор, если нужно
+            container.style.paddingRight = '15px'; // Даем место для скроллбара
         }
-    }
+    });
 }
 
+// Вызываем при загрузке и изменении контента
+document.addEventListener('DOMContentLoaded', setupAutoScroll);
+
+// Функция для проверки конкретного контейнера
+window.checkScrollable = function(containerId) {
+    const container = document.getElementById(containerId);
+    if (container && container.scrollHeight > container.clientHeight) {
+        container.classList.add('needs-scroll');
+        return true;
+    }
+    return false;
+};
+// Инициализация скроллбаров после загрузки
+document.addEventListener('DOMContentLoaded', function() {
+    // Даем время на отрисовку контента
+    setTimeout(function() {
+        setupAutoScroll();
+        adjustInterfaceHeights();
+    }, 500);
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', function() {
+        setTimeout(setupAutoScroll, 100);
+    });
+});
+
+// Функция для прокрутки вверх контейнера
+window.scrollToTop = function(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.scrollTop = 0;
+    }
 };
 
+// Функция для прокрутки вниз контейнера
+window.scrollToBottom = function(containerId) {
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.scrollTop = container.scrollHeight;
+    }
+};
 
-
+}

@@ -2302,17 +2302,18 @@ function setupReportFormHandlers() {
 }
 
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК С ПРОКРУТКОЙ ===== */
+/* ===== СТРАНИЦА ОТЧЕТОВ МЛК С ПРОКРУТКОЙ ===== */
 function renderMLKForm() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container report-form-scrollable">
+        <div class="form-container report-form-scrollable" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="report-creation-container scrollable-container" style="flex: 1;">
+            <div class="report-creation-container scrollable-container" style="flex: 1; overflow-y: auto; padding-right: 10px;">
                 <div class="zone-card" style="margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-user-tag"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
@@ -2322,18 +2323,18 @@ function renderMLKForm() {
                         <div style="position: relative;">
                             <input type="text" id="mlk-tag" class="form-input" 
                                    placeholder="@никнейм / STEAM_1:0:123456 / ID игрока"
-                                   style="padding-left: 40px;">
+                                   style="padding-left: 40px; width: 100%;">
                             <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;"></i>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">ТИП НАРУШИТЕЛЯ</label>
-                        <div class="tag-selector">
-                            <button type="button" class="tag-option active" data-value="player">Игрок</button>
-                            <button type="button" class="tag-option" data-value="admin">Админ</button>
-                            <button type="button" class="tag-option" data-value="curator">Куратор</button>
-                            <button type="button" class="tag-option" data-value="other">Другое</button>
+                        <div class="tag-selector" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            <button type="button" class="tag-option active" data-value="player" style="flex: 1; min-width: 120px;">Игрок</button>
+                            <button type="button" class="tag-option" data-value="admin" style="flex: 1; min-width: 120px;">Админ</button>
+                            <button type="button" class="tag-option" data-value="curator" style="flex: 1; min-width: 120px;">Куратор</button>
+                            <button type="button" class="tag-option" data-value="other" style="flex: 1; min-width: 120px;">Другое</button>
                         </div>
                     </div>
                 </div>
@@ -2344,64 +2345,64 @@ function renderMLKForm() {
                     
                     <div class="form-group">
                         <label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label>
-                        <div class="category-grid" id="violation-categories" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                            <div class="category-card" data-category="cheat" data-color="#b43c3c">
-                                <div class="category-icon">
+                        <div class="category-grid" id="violation-categories" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;">
+                            <div class="category-card" data-category="cheat" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;">
                                     <i class="fas fa-skull-crossbones"></i>
                                 </div>
-                                <span class="category-name">ЧИТЫ</span>
-                                <span class="category-desc">Использование ПО</span>
+                                <span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">ЧИТЫ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Использование ПО</span>
                             </div>
-                            <div class="category-card" data-category="toxic" data-color="#b43c3c">
-                                <div class="category-icon">
+                            <div class="category-card" data-category="toxic" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;">
                                     <i class="fas fa-comment-slash"></i>
                                 </div>
-                                <span class="category-name">ТОКСИЧНОСТЬ</span>
-                                <span class="category-desc">Оскорбления</span>
+                                <span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">ТОКСИЧНОСТЬ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Оскорбления</span>
                             </div>
-                            <div class="category-card" data-category="spam" data-color="#b43c3c">
-                                <div class="category-icon">
+                            <div class="category-card" data-category="spam" data-color="#b43c3c" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #b43c3c; margin-bottom: 8px;">
                                     <i class="fas fa-comment-dots"></i>
                                 </div>
-                                <span class="category-name">СПАМ</span>
-                                <span class="category-desc">Флуд в чате</span>
+                                <span class="category-name" style="color: #b43c3c; font-weight: 500; display: block; margin-bottom: 5px;">СПАМ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Флуд в чате</span>
                             </div>
-                            <div class="category-card" data-category="bug" data-color="#c0b070">
-                                <div class="category-icon">
+                            <div class="category-card" data-category="bug" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;">
                                     <i class="fas fa-bug"></i>
                                 </div>
-                                <span class="category-name">БАГИ</span>
-                                <span class="category-desc">Использование багов</span>
+                                <span class="category-name" style="color: #c0b070; font-weight: 500; display: block; margin-bottom: 5px;">БАГИ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Использование багов</span>
                             </div>
-                            <div class="category-card" data-category="grief" data-color="#c0b070">
-                                <div class="category-icon">
+                            <div class="category-card" data-category="grief" data-color="#c0b070" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #c0b070; margin-bottom: 8px;">
                                     <i class="fas fa-user-slash"></i>
                                 </div>
-                                <span class="category-name">ГРИФ</span>
-                                <span class="category-desc">Вредительство</span>
+                                <span class="category-name" style="color: #c0b070; font-weight: 500; display: block; margin-bottom: 5px;">ГРИФ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Вредительство</span>
                             </div>
-                            <div class="category-card" data-category="other" data-color="#8f9779">
-                                <div class="category-icon">
+                            <div class="category-card" data-category="other" data-color="#8f9779" style="cursor: pointer; padding: 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; text-align: center; transition: all 0.2s;">
+                                <div class="category-icon" style="font-size: 1.5rem; color: #8f9779; margin-bottom: 8px;">
                                     <i class="fas fa-question-circle"></i>
                                 </div>
-                                <span class="category-name">ДРУГОЕ</span>
-                                <span class="category-desc">Иные нарушения</span>
+                                <span class="category-name" style="color: #8f9779; font-weight: 500; display: block; margin-bottom: 5px;">ДРУГОЕ</span>
+                                <span class="category-desc" style="color: #8f9779; font-size: 0.8rem;">Иные нарушения</span>
                             </div>
                         </div>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label>
-                        <div class="priority-selector" style="display: flex; gap: 15px;">
-                            <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <div class="priority-selector" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                            <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
                                 <div class="priority-dot" style="width: 12px; height: 12px; background: #8cb43c; border-radius: 50%;"></div>
                                 <span style="color: #8f9779;">НИЗКИЙ</span>
                             </div>
-                            <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #c0b070; border-radius: 4px; transition: all 0.2s;">
                                 <div class="priority-dot" style="width: 12px; height: 12px; background: #c0b070; border-radius: 50%;"></div>
                                 <span style="color: #c0b070;">СРЕДНИЙ</span>
                             </div>
-                            <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px 15px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a; border-radius: 4px; transition: all 0.2s;">
                                 <div class="priority-dot" style="width: 12px; height: 12px; background: #b43c3c; border-radius: 50%;"></div>
                                 <span style="color: #b43c3c;">ВЫСОКИЙ</span>
                             </div>
@@ -2417,7 +2418,8 @@ function renderMLKForm() {
                         <label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label>
                         <div style="position: relative;">
                             <textarea id="mlk-action" class="form-textarea" rows="6" 
-                                      placeholder="Опишите нарушение максимально подробно..."></textarea>
+                                      placeholder="Опишите нарушение максимально подробно..."
+                                      style="width: 100%; resize: vertical;"></textarea>
                             <div class="char-counter" style="position: absolute; bottom: 10px; right: 10px; color: #8f9779; font-size: 0.8rem;">
                                 <span id="char-count">0</span>/2000 символов
                             </div>
@@ -2427,7 +2429,7 @@ function renderMLKForm() {
                     <div class="form-group">
                         <label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label>
                         <div id="proof-links-container">
-                            <div class="proof-link-input" style="display: flex; gap: 10px;">
+                            <div class="proof-link-input" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                                 <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
                                 <button type="button" class="btn-secondary add-proof-btn" style="padding: 8px 12px;">
                                     <i class="fas fa-plus"></i>
@@ -2441,12 +2443,12 @@ function renderMLKForm() {
                 </div>
                 
                 <div class="zone-card" style="background: rgba(40, 42, 36, 0.8); margin-bottom: 15px;">
-                    <div class="card-icon"><i class="fas fa-preview"></i></div>
+                    <div class="card-icon"><i class="fas fa-eye"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
                     
                     <div id="report-preview" class="report-preview" style="background: rgba(20, 18, 15, 0.8); padding: 15px; border: 1px solid #4a4a3a; border-radius: 4px;">
                         <div class="preview-header" style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4a4a3a;">
-                            <div class="preview-badge" style="display: flex; gap: 10px;">
+                            <div class="preview-badge" style="display: flex; gap: 10px; flex-wrap: wrap;">
                                 <span class="preview-category" style="background: rgba(180, 60, 60, 0.1); color: #b43c3c; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ЧИТЫ</span>
                                 <span class="preview-priority" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">СРЕДНИЙ</span>
                             </div>
@@ -2456,11 +2458,11 @@ function renderMLKForm() {
                             <div class="preview-violator" style="margin-bottom: 15px;">
                                 <i class="fas fa-user-tag" style="color: #8f9779; margin-right: 8px;"></i> <span id="preview-tag" style="color: #c0b070;">[не указано]</span>
                             </div>
-                            <div class="preview-description" id="preview-description" style="color: #8f9779; line-height: 1.5;">
+                            <div class="preview-description" id="preview-description" style="color: #8f9779; line-height: 1.5; min-height: 60px;">
                                 [описание появится здесь]
                             </div>
                         </div>
-                        <div class="preview-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #4a4a3a; display: flex; justify-content: space-between;">
+                        <div class="preview-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #4a4a3a; display: flex; justify-content: space-between; flex-wrap: wrap;">
                             <div class="preview-author" style="color: #8f9779; font-size: 0.9rem;">
                                 <i class="fas fa-user" style="margin-right: 8px;"></i> ${CURRENT_USER}
                             </div>
@@ -2480,6 +2482,16 @@ function renderMLKForm() {
                     </button>
                 </div>
             </div>
+            
+            <!-- Кнопки прокрутки для формы -->
+            <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; z-index: 10;">
+                <button onclick="scrollFormToTop()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button onclick="scrollFormToBottom()" class="scroll-btn" style="width: 30px; height: 30px; font-size: 0.9rem;">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+            </div>
         </div>
     `;
     
@@ -2498,11 +2510,159 @@ function renderMLKForm() {
         tagInput.addEventListener('input', updatePreview);
     }
     
+    // Инициализация обработчиков UI
     setupReportFormHandlers();
+    
+    // Активируем первую категорию по умолчанию
+    setTimeout(() => {
+        const firstCategory = document.querySelector('.category-card');
+        if (firstCategory) {
+            firstCategory.classList.add('active');
+        }
+    }, 100);
     
     setTimeout(adjustInterfaceHeights, 100);
 }
 
+/* ===== ФУНКЦИИ ДЛЯ ПРОКРУТКИ ФОРМЫ ===== */
+function scrollFormToTop() {
+    const formContainer = document.querySelector('.report-creation-container');
+    if (formContainer) {
+        formContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+function scrollFormToBottom() {
+    const formContainer = document.querySelector('.report-creation-container');
+    if (formContainer) {
+        formContainer.scrollTo({ top: formContainer.scrollHeight, behavior: 'smooth' });
+    }
+}
+
+/* ===== ОБНОВЛЕННЫЕ ФУНКЦИИ ДЛЯ ФОРМЫ ===== */
+function updateCharCount() {
+    const textarea = document.getElementById('mlk-action');
+    const counter = document.getElementById('char-count');
+    if (textarea && counter) {
+        const count = textarea.value.length;
+        counter.textContent = count;
+        counter.style.color = count > 1800 ? '#b43c3c' : count > 1500 ? '#c0b070' : '#8cb43c';
+    }
+}
+
+function updatePreview() {
+    const tagInput = document.getElementById('mlk-tag');
+    const descriptionInput = document.getElementById('mlk-action');
+    const selectedCategory = document.querySelector('.category-card.active');
+    const selectedPriority = document.querySelector('.priority-option.active');
+    
+    const previewTag = document.getElementById('preview-tag');
+    const previewDescription = document.getElementById('preview-description');
+    const previewCategory = document.querySelector('.preview-category');
+    const previewPriority = document.querySelector('.preview-priority');
+    
+    if (previewTag) {
+        previewTag.textContent = tagInput.value || '[не указано]';
+    }
+    
+    if (previewDescription) {
+        previewDescription.textContent = descriptionInput.value || '[описание появится здесь]';
+    }
+    
+    if (selectedCategory && previewCategory) {
+        const categoryName = selectedCategory.querySelector('.category-name').textContent;
+        const categoryColor = selectedCategory.dataset.color;
+        previewCategory.textContent = categoryName;
+        previewCategory.style.color = categoryColor;
+    }
+    
+    if (selectedPriority && previewPriority) {
+        const priorityText = selectedPriority.querySelector('span').textContent;
+        const priorityColor = selectedPriority.querySelector('.priority-dot').style.background;
+        previewPriority.textContent = priorityText;
+        previewPriority.style.color = priorityColor;
+    }
+}
+
+/* ===== ОБНОВЛЕННАЯ НАСТРОЙКА ОБРАБОТЧИКОВ ДЛЯ ФОРМЫ ОТЧЕТА ===== */
+function setupReportFormHandlers() {
+    // Обработчики для категорий нарушения
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        card.addEventListener('click', function() {
+            categoryCards.forEach(c => {
+                c.style.background = 'rgba(40, 42, 36, 0.8)';
+                c.style.borderColor = '#4a4a3a';
+            });
+            this.style.background = 'rgba(40, 42, 36, 0.95)';
+            this.style.borderColor = this.dataset.color;
+            updatePreview();
+        });
+    });
+
+    // Обработчики для приоритета
+    const priorityOptions = document.querySelectorAll('.priority-option');
+    priorityOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            priorityOptions.forEach(o => {
+                o.style.borderColor = '#4a4a3a';
+            });
+            this.style.borderColor = this.querySelector('.priority-dot').style.background;
+            updatePreview();
+        });
+    });
+
+    // Обработчики для типа нарушителя
+    const tagOptions = document.querySelectorAll('.tag-option');
+    tagOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            tagOptions.forEach(o => {
+                o.style.background = 'rgba(40, 42, 36, 0.8)';
+                o.style.borderColor = '#4a4a3a';
+                o.style.color = '#8f9779';
+            });
+            this.style.background = 'rgba(192, 176, 112, 0.2)';
+            this.style.borderColor = '#c0b070';
+            this.style.color = '#c0b070';
+            updatePreview();
+        });
+    });
+
+    // Обработчик для кнопки добавления доказательств
+    const addProofBtn = document.querySelector('.add-proof-btn');
+    if (addProofBtn) {
+        addProofBtn.addEventListener('click', addProofField);
+    }
+
+    // Инициализация счетчика символов
+    updateCharCount();
+    
+    // Инициализация предпросмотра
+    updatePreview();
+}
+
+/* ===== ФУНКЦИЯ ДОБАВЛЕНИЯ ПОЛЯ ДЛЯ ДОКАЗАТЕЛЬСТВ ===== */
+window.addProofField = function() {
+    const container = document.getElementById('proof-links-container');
+    const newInput = document.createElement('div');
+    newInput.className = 'proof-link-input';
+    newInput.style.cssText = 'display: flex; gap: 10px; align-items: center; margin-bottom: 10px;';
+    newInput.innerHTML = `
+        <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
+        <button type="button" class="btn-secondary remove-proof-btn" onclick="removeProofField(this)" style="padding: 8px 12px;">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newInput);
+}
+
+/* ===== ФУНКЦИЯ УДАЛЕНИЯ ПОЛЯ ДЛЯ ДОКАЗАТЕЛЬСТВ ===== */
+window.removeProofField = function(button) {
+    const container = document.getElementById('proof-links-container');
+    if (container.children.length > 1) {
+        button.closest('.proof-link-input').remove();
+    }
+}
 window.renderMLKScreen = function() {
     const content = document.getElementById("content-body");
     if (!content) return;

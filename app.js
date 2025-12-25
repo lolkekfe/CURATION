@@ -51,6 +51,80 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
+/* ===== АДАПТИВНОСТЬ ИНТЕРФЕЙСА И СКРОЛЛ ===== */
+function adjustInterfaceHeights() {
+    const loginScreen = document.getElementById('login-screen');
+    const terminal = document.getElementById('terminal');
+    const contentBody = document.getElementById('content-body');
+    
+    // Настраиваем высоту для всех скроллируемых контейнеров
+    const scrollableContainers = document.querySelectorAll('.scrollable-container');
+    
+    scrollableContainers.forEach(container => {
+        const parent = container.closest('.form-container, .terminal-screen, .zone-card');
+        if (parent) {
+            const parentHeight = parent.clientHeight;
+            const padding = 20;
+            container.style.maxHeight = (parentHeight - padding) + 'px';
+        }
+    });
+    
+    // Настраиваем высоту экрана входа
+    if (loginScreen && loginScreen.style.display !== 'none') {
+        const windowHeight = window.innerHeight;
+        const header = document.querySelector('.zone-header');
+        const footer = document.querySelector('.zone-footer');
+        
+        if (header && footer) {
+            const headerHeight = header.offsetHeight;
+            const footerHeight = footer.offsetHeight;
+            const terminalScreen = document.querySelector('.terminal-screen .screen-content');
+            
+            if (terminalScreen) {
+                const maxHeight = windowHeight - headerHeight - footerHeight - 100;
+                terminalScreen.style.maxHeight = Math.min(maxHeight, 500) + 'px';
+            }
+        }
+    }
+    
+    // Проверяем скролл после настройки высоты
+    setTimeout(setupAutoScroll, 100);
+}
+
+/* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ ===== */
+function setupAutoScroll() {
+    // Проверяем все контейнеры на переполнение
+    const scrollableContainers = document.querySelectorAll('.scrollable-container');
+    
+    scrollableContainers.forEach(container => {
+        // Проверяем, есть ли переполнение по вертикали
+        const hasVerticalScroll = container.scrollHeight > container.clientHeight;
+        
+        if (hasVerticalScroll) {
+            // Добавляем индикатор, если нужно
+            container.style.paddingRight = '15px'; // Даем место для скроллбара
+        } else {
+            container.style.paddingRight = '10px';
+        }
+    });
+}
+
+// Инициализация скроллбаров после загрузки
+document.addEventListener('DOMContentLoaded', function() {
+    // Даем время на отрисовку контента
+    setTimeout(function() {
+        setupAutoScroll();
+        adjustInterfaceHeights();
+    }, 500);
+    
+    // Обновляем при изменении размера окна
+    window.addEventListener('resize', function() {
+        setTimeout(function() {
+            setupAutoScroll();
+            adjustInterfaceHeights();
+        }, 100);
+    });
+});
 
 /* ===== УЛУЧШЕННОЕ ХЕШИРОВАНИЕ С СОЛЬЮ ===== */
 function generateSalt() {
@@ -4416,45 +4490,6 @@ window.clearWebhook = function() {
     }
 };
 
-/* ===== АДАПТИВНОСТЬ ИНТЕРФЕЙСА ===== */
-function adjustInterfaceHeights() {
-    const loginScreen = document.getElementById('login-screen');
-    const terminal = document.getElementById('terminal');
-    const contentBody = document.getElementById('content-body');
-    
-    // Настраиваем высоту для всех скроллируемых контейнеров
-    const scrollableContainers = document.querySelectorAll('.scrollable-container');
-    
-    scrollableContainers.forEach(container => {
-        const parent = container.closest('.form-container, .terminal-screen, .zone-card');
-        if (parent) {
-            const parentHeight = parent.clientHeight;
-            const padding = 20;
-            container.style.maxHeight = (parentHeight - padding) + 'px';
-        }
-    });
-    
-    // Настраиваем высоту экрана входа
-    if (loginScreen && loginScreen.style.display !== 'none') {
-        const windowHeight = window.innerHeight;
-        const header = document.querySelector('.zone-header');
-        const footer = document.querySelector('.zone-footer');
-        
-        if (header && footer) {
-            const headerHeight = header.offsetHeight;
-            const footerHeight = footer.offsetHeight;
-            const terminalScreen = document.querySelector('.terminal-screen .screen-content');
-            
-            if (terminalScreen) {
-                const maxHeight = windowHeight - headerHeight - footerHeight - 100;
-                terminalScreen.style.maxHeight = Math.min(maxHeight, 500) + 'px';
-            }
-        }
-    }
-    
-    // Проверяем скролл после настройки высоты
-    setTimeout(setupAutoScroll, 100);
-}
 /* ===== АВТОМАТИЧЕСКОЕ ОБНАРУЖЕНИЕ ПЕРЕПОЛНЕНИЯ ===== */
 function setupAutoScroll() {
     // Проверяем все контейнеры на переполнение

@@ -1,3 +1,29 @@
+/* ===== ИСПРАВЛЕНИЕ ВИДИМОСТИ ===== */
+#content-body {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.zone-content {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.content-body {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    background: rgba(10, 8, 5, 0.7);
+}
+
+/* Убедись, что контент виден */
+.content-body > * {
+    position: relative;
+    z-index: 10;
+}
 /* ===== ТЕСТ CSS ПЕРЕМЕННЫХ ===== */
 :root {
     --primary-dark: #0a0805;
@@ -1530,4 +1556,5 @@ body {
 .module-grid {
     /* Удалите если этот класс не используется */
 }
+
 

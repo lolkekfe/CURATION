@@ -1748,6 +1748,129 @@ function loadReports(callback) {
     });
 }
 
+/* ===== ФУНКЦИИ ДЛЯ ФОРМЫ ОТЧЕТА ===== */
+window.addProofField = function() {
+    const container = document.getElementById('proof-links-container');
+    const newInput = document.createElement('div');
+    newInput.className = 'proof-link-input';
+    newInput.innerHTML = `
+        <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://...">
+        <button type="button" class="btn-secondary remove-proof-btn" onclick="removeProofField(this)">
+            <i class="fas fa-minus"></i>
+        </button>
+    `;
+    container.appendChild(newInput);
+}
+
+window.removeProofField = function(button) {
+    const container = document.getElementById('proof-links-container');
+    if (container.children.length > 1) {
+        button.closest('.proof-link-input').remove();
+    }
+}
+
+function updateCharCount() {
+    const textarea = document.getElementById('mlk-action');
+    const counter = document.getElementById('char-count');
+    if (textarea && counter) {
+        const count = textarea.value.length;
+        counter.textContent = count;
+        counter.style.color = count > 1800 ? '#b43c3c' : count > 1500 ? '#c0b070' : '#8cb43c';
+    }
+}
+
+function updatePreview() {
+    const tagInput = document.getElementById('mlk-tag');
+    const descriptionInput = document.getElementById('mlk-action');
+    const selectedCategory = document.querySelector('.category-card.active');
+    const selectedPriority = document.querySelector('.priority-option.active');
+    
+    const previewTag = document.getElementById('preview-tag');
+    const previewDescription = document.getElementById('preview-description');
+    const previewCategory = document.querySelector('.preview-category');
+    const previewPriority = document.querySelector('.preview-priority');
+    
+    if (previewTag) {
+        previewTag.textContent = tagInput.value || '[не указано]';
+    }
+    
+    if (previewDescription) {
+        previewDescription.textContent = descriptionInput.value || '[описание появится здесь]';
+    }
+    
+    if (selectedCategory && previewCategory) {
+        const categoryName = selectedCategory.querySelector('.category-name').textContent;
+        const categoryColor = selectedCategory.dataset.color;
+        previewCategory.textContent = categoryName;
+        previewCategory.style.color = categoryColor;
+    }
+    
+    if (selectedPriority && previewPriority) {
+        const priorityText = selectedPriority.querySelector('span').textContent;
+        const priorityColor = selectedPriority.querySelector('.priority-dot').style.background;
+        previewPriority.textContent = priorityText;
+        previewPriority.style.color = priorityColor;
+    }
+}
+
+/* ===== НАСТРОЙКА ОБРАБОТЧИКОВ ДЛЯ ФОРМЫ ОТЧЕТА ===== */
+function setupReportFormHandlers() {
+    // Обработчики для категорий нарушения
+    const categoryCards = document.querySelectorAll('.category-card');
+    categoryCards.forEach(card => {
+        card.addEventListener('click', function() {
+            categoryCards.forEach(c => c.classList.remove('active'));
+            this.classList.add('active');
+            updatePreview();
+        });
+    });
+
+    // Обработчики для приоритета
+    const priorityOptions = document.querySelectorAll('.priority-option');
+    priorityOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            priorityOptions.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+            updatePreview();
+        });
+    });
+
+    // Обработчики для типа нарушителя
+    const tagOptions = document.querySelectorAll('.tag-option');
+    tagOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            tagOptions.forEach(o => o.classList.remove('active'));
+            this.classList.add('active');
+            updatePreview();
+        });
+    });
+
+    // Обработчики для кнопки добавления доказательств
+    const addProofBtn = document.querySelector('.add-proof-btn');
+    if (addProofBtn) {
+        addProofBtn.addEventListener('click', addProofField);
+    }
+
+    // Обработчик для удаления доказательств через делегирование
+    const proofContainer = document.getElementById('proof-links-container');
+    if (proofContainer) {
+        proofContainer.addEventListener('click', function(event) {
+            if (event.target.classList.contains('remove-proof-btn') || 
+                event.target.closest('.remove-proof-btn')) {
+                const btn = event.target.classList.contains('remove-proof-btn') ? 
+                             event.target : event.target.closest('.remove-proof-btn');
+                removeProofField(btn);
+            }
+        });
+    }
+
+    // Инициализация счетчика символов
+    updateCharCount();
+    
+    // Инициализация предпросмотра
+    updatePreview();
+}
+
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
 function renderMLKForm() {
     const content = document.getElementById("content-body");
@@ -4252,6 +4375,7 @@ window.clearWebhook = function() {
 
 // ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
 } // <-- Закрывающая скобка;
+
 
 
 

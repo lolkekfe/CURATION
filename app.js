@@ -4490,6 +4490,8 @@ window.addNavButton = function(container, icon, text, onClick) {
       });
     return button;
 };
+    
+}
 
 
 

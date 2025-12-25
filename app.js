@@ -1657,18 +1657,25 @@ function addNavButton(container, icon, text, onClick) {
         });
         // Добавляем активный класс текущей кнопке
         button.classList.add('active');
+        
         // Вызываем функцию отображения контента
         onClick();
+        
         // Обновляем заголовок
         const titleElement = document.getElementById('content-title');
-        const moduleElement = document.getElementById('module-name');
         if (titleElement) {
+            // Находим элемент с классом title-text внутри заголовка
             const titleText = titleElement.querySelector('.title-text');
-            if (titleText) titleText.textContent = text;
+            if (titleText) {
+                titleText.textContent = text;
+            }
         }
+        
+        const moduleElement = document.getElementById('module-name');
         if (moduleElement) {
             moduleElement.textContent = text;
         }
+        
         updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
     };
     container.appendChild(button);
@@ -3766,6 +3773,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

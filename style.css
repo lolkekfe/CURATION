@@ -2470,6 +2470,92 @@ body, html {
     margin: 2px 0 !important;
 }
 
+/* Делаем экран входа адаптивным */
+.login-container {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.zone-header {
+    flex-shrink: 0;
+    padding: 15px 0;
+}
+
+.login-terminal {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 0;
+    max-height: 70vh;
+    min-height: 400px;
+}
+
+.terminal-screen {
+    width: 90%;
+    max-width: 800px;
+    height: auto;
+    max-height: 600px;
+    margin: 0 auto;
+}
+
+.screen-content {
+    padding: 25px;
+    overflow: hidden;
+}
+
+.access-line {
+    margin-bottom: 20px;
+    min-height: 50px;
+}
+
+.zone-footer {
+    flex-shrink: 0;
+    padding: 15px 0;
+    margin-top: auto;
+}
+
+/* Для мобильных устройств */
+@media (max-height: 800px) {
+    .login-terminal {
+        max-height: 65vh;
+        min-height: 350px;
+    }
+    
+    .terminal-screen {
+        max-height: 550px;
+    }
+    
+    .screen-content {
+        padding: 20px;
+    }
+}
+
+@media (max-height: 700px) {
+    .login-terminal {
+        max-height: 60vh;
+        min-height: 300px;
+    }
+    
+    .terminal-screen {
+        max-height: 500px;
+    }
+    
+    .screen-content {
+        padding: 15px;
+    }
+    
+    .access-line {
+        margin-bottom: 15px;
+        min-height: 45px;
+    }
+}
 
 
 

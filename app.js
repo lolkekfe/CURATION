@@ -3615,39 +3615,27 @@ function renderWebhookManager() {
                 </div>
             </div>
             
-            <div class="zone-card" style="border-color: #8cb43c;">
-                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-code"></i></div>
-                <h4 style="color: #8cb43c; margin-bottom: 15px;">ШАБЛОНЫ СООБЩЕНИЙ</h4>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                    <button onclick="loadTemplate('report')" class="template-btn">
-                        <i class="fas fa-file-alt"></i>
-                        <span>ШАБЛОН ОТЧЕТА</span>
-                    </button>
-                    <button onclick="loadTemplate('ban')" class="template-btn">
-                        <i class="fas fa-ban"></i>
-                        <span>ШАБЛОН БАНА</span>
-                    </button>
-                    <button onclick="loadTemplate('user_join')" class="template-btn">
-                        <i class="fas fa-user-plus"></i>
-                        <span>НОВЫЙ ПОЛЬЗОВАТЕЛЬ</span>
-                    </button>
-                    <button onclick="loadTemplate('admin_alert')" class="template-btn">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>АЛЕРТ АДМИНАМ</span>
-                    </button>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
-                    <h5 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ ВЕБХУКОВ</h5>
-                    <div style="max-height: 150px; overflow-y: auto;">
-                        <div id="webhook-history">
-                            ${webhooks.length === 0 ? '<div style="color: #6a6a5a; text-align: center; padding: 10px;">История пуста</div>' : ''}
-                        </div>
-                    </div>
-                </div>
+<div class="zone-card" style="border-color: #5865F2;">
+    <div class="card-icon" style="color: #5865F2;"><i class="fas fa-history"></i></div>
+    <h4 style="color: #5865F2; margin-bottom: 15px;">ИСТОРИЯ ОТПРАВКИ</h4>
+    
+    <div style="padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h5 style="color: #c0b070; margin: 0;">ПОСЛЕДНИЕ ОТПРАВКИ</h5>
+            <button onclick="clearWebhookHistory()" class="btn-secondary" style="font-size: 0.8rem; padding: 3px 10px;">
+                <i class="fas fa-trash"></i> ОЧИСТИТЬ
+            </button>
+        </div>
+        <div style="max-height: 200px; overflow-y: auto;">
+            <div id="webhook-history">
+                ${webhooks.length === 0 ? 
+                    '<div style="color: #6a6a5a; text-align: center; padding: 20px; font-style: italic;">Нет отправленных сообщений</div>' : 
+                    ''
+                }
             </div>
         </div>
+    </div>
+</div>
     `;
     
     // Обновляем превью аватарки при изменении URL
@@ -3735,6 +3723,18 @@ function loadTemplate(templateType) {
             changeMessageType();
             break;
     }
+}
+
+window.clearWebhookHistory = function() {
+    if (!confirm("Очистить историю вебхуков? Это действие нельзя отменить.")) return;
+    
+    db.ref('mlk_webhooks').remove().then(() => {
+        webhooks = [];
+        renderWebhookHistory();
+        showNotification("История вебхуков очищена", "success");
+    }).catch(error => {
+        showNotification("Ошибка очистки: " + error.message, "error");
+    });
 }
 
 function saveWebhook() {
@@ -4010,39 +4010,55 @@ function addWebhookHistory(message, type) {
 }
 
 function renderWebhookHistory() {
-    const historyDiv = document.getElementById('webhook-history');
+    const historyDiv = document.getElementById("webhook-history");
     if (!historyDiv) return;
+    
+    if (webhooks.length === 0) {
+        historyDiv.innerHTML = '<div style="color: #6a6a5a; text-align: center; padding: 20px; font-style: italic;">Нет отправленных сообщений</div>';
+        return;
+    }
     
     historyDiv.innerHTML = '';
     
-    webhooks.slice(0, 10).forEach(entry => {
+    // Берем только последние 20 записей
+    webhooks.slice(0, 20).forEach(entry => {
         const div = document.createElement('div');
         div.style.cssText = `
-            padding: 8px 10px;
-            margin-bottom: 5px;
-            border-left: 3px solid ${entry.type === 'test' ? '#5865F2' : '#8cb43c'};
-            background: rgba(40, 42, 36, 0.3);
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: rgba(30, 32, 28, 0.7);
+            border: 1px solid rgba(42, 40, 31, 0.3);
+            border-radius: 4px;
             font-size: 0.8rem;
             color: #8f9779;
         `;
         
+        const time = new Date(entry.timestamp).toLocaleTimeString('ru-RU', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        const date = new Date(entry.timestamp).toLocaleDateString('ru-RU');
+        
         div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                 <span style="color: ${entry.type === 'test' ? '#5865F2' : '#8cb43c'}">
                     <i class="fas fa-${entry.type === 'test' ? 'broadcast-tower' : 'paper-plane'}"></i>
-                    ${entry.type === 'test' ? 'Тест вебхука' : 'Сообщение'}
+                    ${entry.type === 'test' ? 'Тестирование' : 'Сообщение'}
                 </span>
-                <span style="color: #6a6a5a;">${entry.timestamp}</span>
+                <span style="color: #6a6a5a; font-size: 0.75rem;">${time}</span>
+            </div>
+            <div style="color: #c0b070; font-size: 0.75rem; margin-bottom: 3px;">
+                <i class="fas fa-user"></i> ${entry.user || 'Система'}
             </div>
             <div style="color: #6a6a5a; font-size: 0.7rem;">
-                От: ${entry.user}
+                ${date}
             </div>
         `;
         
         historyDiv.appendChild(div);
     });
 }
-
 /* ===== ВАЛИДАЦИЯ В РЕАЛЬНОМ ВРЕМЕНИ ===== */
 document.addEventListener('DOMContentLoaded', function() {
     // Добавляем валидацию в реальном времени
@@ -4189,5 +4205,6 @@ window.exportIPData = function() {
     });
 
 }
+
 
 

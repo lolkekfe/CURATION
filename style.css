@@ -1,3 +1,42 @@
+/* ===== ТЕСТ CSS ПЕРЕМЕННЫХ ===== */
+:root {
+    --primary-dark: #0a0805;
+    --secondary-dark: #14120f;
+    --tertiary-dark: #1c1a17;
+    --accent-green: #3a5a40;
+    --accent-green-glow: #4a7a50;
+    --accent-yellow: #8b7355;
+    --accent-yellow-glow: #9b8365;
+    --accent-red: #8b4513;
+    --accent-red-glow: #9b5523;
+    --text-primary: #c0b8a8;
+    --text-secondary: #8a8478;
+    --text-dim: #5a564d;
+    --glow-green: rgba(74, 122, 80, 0.3);
+    --glow-yellow: rgba(155, 131, 101, 0.3);
+    --border-dark: #2a281f;
+    --border-light: #4a483f;
+}
+/* ===== БАЗОВЫЕ СТИЛИ ДЛЯ КНОПОК И ФОРМ ===== */
+.btn-primary {
+    padding: 12px 25px;
+    background: linear-gradient(145deg, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9));
+    border: 1px solid var(--accent-green);
+    color: var(--text-primary);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+    margin: 10px;
+}
+
+.btn-primary:hover {
+    border-color: var(--accent-green-glow);
+    box-shadow: 0 0 20px var(--glow-green);
+}
 /* ===== БАЗОВЫЕ СТИЛИ ===== */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Orbitron:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -1491,3 +1530,4 @@ body {
 .module-grid {
     /* Удалите если этот класс не используется */
 }
+

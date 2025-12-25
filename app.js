@@ -271,21 +271,9 @@ function validatePassword(password) {
         return { valid: false, message: "Пароль не указан" };
     }
     
-    // Проверка длины
-    if (password.length < 6) {
-        return { valid: false, message: "Пароль должен содержать минимум 6 символов" };
-    }
-    
-    // Проверка сложности (опционально)
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /\d/.test(password);
-    
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-        return { 
-            valid: false, 
-            message: "Пароль должен содержать заглавные и строчные буквы, а также цифры" 
-        };
+    // Только минимальная длина
+    if (password.length < 3) {
+        return { valid: false, message: "Пароль должен содержать минимум 3 символа" };
     }
     
     return { valid: true, message: "" };
@@ -492,11 +480,11 @@ function loadData(callback) {
 /* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
 async function createOrUpdatePasswords() {
     const newPasswords = {
-        admin: "Admin123",
-        curator: "Curator123", 
-        junior: "Junior123",  // Исправил опечатку - было Cunior123
-        senior: "Senior123",
-        special: "Special123"
+        admin: "admin",
+        curator: "curator", 
+        junior: "junior",
+        senior: "senior",
+        special: "special"
     };
     
     // Создаем хешированные пароли
@@ -2703,11 +2691,6 @@ window.updatePassword = function(type) {
         return;
     }
     
-    if (newPassword.length < 3) {
-        showNotification("Код должен содержать минимум 3 символа", "error");
-        return;
-    }
-    
     let confirmMessage = `Изменить код доступа?\nНовый код: ${'*'.repeat(newPassword.length)}`;
     
     if (!confirm(confirmMessage)) {
@@ -4479,17 +4462,6 @@ function adjustInterfaceHeights() {
 }
 
 };
-
-
-
-
-
-
-
-
-
-
-
 
 
 

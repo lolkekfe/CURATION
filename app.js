@@ -1907,9 +1907,7 @@ function renderMLKForm() {
                         </div>
                     </div>
                 </div>
-             </div>
-        </div>
-    `;
+                
                 <div class="zone-card" style="margin-bottom: 15px; border-color: #c0b070;">
                     <div class="card-icon" style="color: #c0b070;"><i class="fas fa-exclamation-triangle"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
@@ -2074,7 +2072,6 @@ function renderMLKForm() {
     // Инициализация обработчиков UI
     setupReportFormHandlers();
 }
-
 window.renderMLKScreen = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -4435,6 +4432,7 @@ window.addNavButton = function(container, icon, text, onClick) {
 };
 
 }
+
 
 
 

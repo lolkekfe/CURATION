@@ -335,7 +335,6 @@ function validatePassword(password) {
     if (!password) {
         return { valid: false, message: "Пароль не указан" };
     }
-    
 
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
@@ -3748,11 +3747,4 @@ window.exportIPData = function() {
     });
 
 }
-
-
-
-
-
-
-
 

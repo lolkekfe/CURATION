@@ -1876,7 +1876,7 @@ function renderMLKForm() {
                         <div id="proof-links-container">
                             <div class="proof-link-input" style="display: flex; gap: 10px;">
                                 <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
-                                <button type="button" class="btn-secondary add-proof-btn" onclick="addProofField()" style="padding: 8px 12px;">
+                                <button type="button" class="btn-secondary add-proof-btn" style="padding: 8px 12px;">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
@@ -1931,8 +1931,6 @@ function renderMLKForm() {
     `;
     
     // Добавляем обработчики
-    setupReportFormHandlers();
-    
     document.getElementById("submit-mlk-btn").onclick = addMLKReport;
     
     const actionTextarea = document.getElementById("mlk-action");
@@ -1947,6 +1945,9 @@ function renderMLKForm() {
     if (tagInput) {
         tagInput.addEventListener('input', updatePreview);
     }
+    
+    // Инициализация обработчиков UI
+    setupReportFormHandlers();
 }
 
 window.renderMLKScreen = function() {
@@ -4251,6 +4252,7 @@ window.clearWebhook = function() {
 
 // ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
 } // <-- Закрывающая скобка;
+
 
 
 

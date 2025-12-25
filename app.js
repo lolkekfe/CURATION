@@ -1620,8 +1620,10 @@ function setupSidebar() {
         staticIdElement.textContent = CURRENT_STATIC_ID;
     }
     
+    // Добавляем первую кнопку всегда
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
+    // Остальные кнопки в зависимости от прав
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
@@ -1641,7 +1643,6 @@ function setupSidebar() {
         logoutBtn.onclick = logout;
     }
 }
-
 function addNavButton(container, icon, text, onClick) {
     const button = document.createElement('button');
     button.className = 'nav-button';
@@ -1650,14 +1651,23 @@ function addNavButton(container, icon, text, onClick) {
         <span>${text}</span>
     `;
     button.onclick = function() {
+        // Удаляем активный класс у всех кнопок
         document.querySelectorAll('.nav-button').forEach(btn => {
             btn.classList.remove('active');
         });
+        // Добавляем активный класс текущей кнопке
         button.classList.add('active');
+        // Вызываем функцию отображения контента
         onClick();
+        // Обновляем заголовок
         const titleElement = document.getElementById('content-title');
+        const moduleElement = document.getElementById('module-name');
         if (titleElement) {
-            titleElement.textContent = text;
+            const titleText = titleElement.querySelector('.title-text');
+            if (titleText) titleText.textContent = text;
+        }
+        if (moduleElement) {
+            moduleElement.textContent = text;
         }
         updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
     };
@@ -3756,5 +3766,6 @@ window.exportIPData = function() {
     });
 
 }
+
 
 

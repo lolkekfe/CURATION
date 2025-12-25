@@ -335,6 +335,15 @@ function validatePassword(password) {
     if (!password) {
         return { valid: false, message: "Пароль не указан" };
     }
+    
+    // Минимальная проверка - пароль не должен быть пустым
+    if (password.trim() === "") {
+        return { valid: false, message: "Пароль не может быть пустым" };
+    }
+    
+    // Больше никаких проверок - разрешаем любой пароль
+    return { valid: true, message: "" };
+}
 
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
@@ -3747,4 +3756,5 @@ window.exportIPData = function() {
     });
 
 }
+
 

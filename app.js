@@ -805,22 +805,22 @@ window.renderBanInterface = function() {
     const activeBans = bans.filter(ban => !ban.unbanned);
     
     content.innerHTML = `
-        <div class="form-container"
-            <h2 style="color: #b43c3c; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+        <div class="form-container">
+            <h2 style="color: #b43c3c; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-ban"></i> СИСТЕМА БЛОКИРОВКИ
             </h2>
             
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #b43c3c;">
+            <div class="zone-card" style="margin-bottom: 20px; border-color: #b43c3c;">
                 <div class="card-icon" style="color: #b43c3c;"><i class="fas fa-user-slash"></i></div>
-                <h4 style="color: #b43c3c; margin-bottom: 15px;">НОВЫЙ БАН</h4>
+                <h4 style="color: #b43c3c; margin-bottom: 10px;">НОВЫЙ БАН</h4>
                 
-                <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div>
                         <label class="form-label">БАН ПО ИМЕНИ ПОЛЬЗОВАТЕЛЯ</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя">
-                            <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана">
-                            <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c;">
+                            <input type="text" id="ban-username" class="form-input" placeholder="Введите имя пользователя" style="flex: 2;">
+                            <input type="text" id="ban-reason" class="form-input" placeholder="Причина бана" style="flex: 3;">
+                            <button onclick="addBan()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px;">
                                 <i class="fas fa-ban"></i> ЗАБАНИТЬ
                             </button>
                         </div>
@@ -829,10 +829,9 @@ window.renderBanInterface = function() {
                     <div>
                         <label class="form-label">БАН ПО STATIC ID</label>
                         <div style="display: flex; gap: 10px;">
-                            <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" 
-                                   style="font-family: 'Courier New', monospace;">
-                            <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана">
-                            <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c;">
+                            <input type="text" id="ban-staticid" class="form-input" placeholder="Введите STATIC ID" style="font-family: 'Courier New', monospace; flex: 2;">
+                            <input type="text" id="ban-reason-static" class="form-input" placeholder="Причина бана" style="flex: 3;">
+                            <button onclick="addBanByStaticId()" class="btn-primary" style="border-color: #b43c3c; padding: 10px 15px;">
                                 <i class="fas fa-id-card"></i> БАН ПО ID
                             </button>
                         </div>
@@ -840,21 +839,16 @@ window.renderBanInterface = function() {
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
-                <div>
-                    <h4 style="color: #b43c3c; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-exclamation-circle"></i> АКТИВНЫЕ БАНЫ
-                        <span style="font-size: 0.9rem; color: #8f9779;">(${activeBans.length})</span>
-                    </h4>
-                    
-                    ${activeBans.length === 0 ? `
-                        <div style="text-align: center; padding: 40px; color: rgba(180, 60, 60, 0.5); border: 1px dashed rgba(180, 60, 60, 0.3); border-radius: 2px;">
-                            <i class="fas fa-check-circle" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                            <h4>АКТИВНЫХ БАНОВ НЕТ</h4>
-                            <p>ВСЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП</p>
-                        </div>
-                    ` : `
-                        <div style="max-height: 400px; overflow-y: auto;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <h4 style="color: #b43c3c; margin-bottom: 10px;">АКТИВНЫЕ БАНЫ (${activeBans.length})</h4>
+                    <div class="table-container" style="flex: 1;">
+                        ${activeBans.length === 0 ? `
+                            <div style="text-align: center; padding: 30px; color: #8f9779;">
+                                <i class="fas fa-check-circle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                                <p>АКТИВНЫХ БАНОВ НЕТ</p>
+                            </div>
+                        ` : `
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -869,24 +863,19 @@ window.renderBanInterface = function() {
                                 <tbody id="bans-table-body">
                                 </tbody>
                             </table>
-                        </div>
-                    `}
+                        `}
+                    </div>
                 </div>
                 
-                <div>
-                    <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                        <i class="fas fa-history"></i> ИСТОРИЯ БАНОВ
-                        <span style="font-size: 0.9rem; color: #8f9779;">(${bans.length})</span>
-                    </h4>
-                    
-                    ${bans.length === 0 ? `
-                        <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
-                            <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                            <h4>ИСТОРИЯ ПУСТА</h4>
-                            <p>БАНЫ ЕЩЕ НЕ ВЫДАВАЛИСЬ</p>
-                        </div>
-                    ` : `
-                        <div style="max-height: 400px; overflow-y: auto;">
+                <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИСТОРИЯ БАНОВ (${bans.length})</h4>
+                    <div class="table-container" style="flex: 1;">
+                        ${bans.length === 0 ? `
+                            <div style="text-align: center; padding: 30px; color: #8f9779;">
+                                <i class="fas fa-history" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                                <p>ИСТОРИЯ ПУСТА</p>
+                            </div>
+                        ` : `
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -900,8 +889,8 @@ window.renderBanInterface = function() {
                                 <tbody id="bans-history-body">
                                 </tbody>
                             </table>
-                        </div>
-                    `}
+                        `}
+                    </div>
                 </div>
             </div>
         </div>
@@ -1751,15 +1740,15 @@ function renderMLKForm() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container"
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="report-creation-container">
-                <div class="zone-card" style="margin-bottom: 30px;">
+            <div class="report-creation-container" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 10px;">
+                <div class="zone-card" style="margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-user-tag"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 15px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
                     
                     <div class="form-group">
                         <label class="form-label">ИДЕНТИФИКАТОР НАРУШИТЕЛЯ</label>
@@ -1767,7 +1756,7 @@ function renderMLKForm() {
                             <input type="text" id="mlk-tag" class="form-input" 
                                    placeholder="@никнейм / STEAM_1:0:123456 / ID игрока"
                                    style="padding-left: 40px;">
-                            <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--accent-green);"></i>
+                            <i class="fas fa-user-secret" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #8cb43c;"></i>
                         </div>
                     </div>
                     
@@ -1782,13 +1771,13 @@ function renderMLKForm() {
                     </div>
                 </div>
                 
-                <div class="zone-card" style="margin-bottom: 30px; border-color: var(--accent-yellow);">
-                    <div class="card-icon" style="color: var(--accent-yellow);"><i class="fas fa-exclamation-triangle"></i></div>
-                    <h4 style="color: var(--accent-yellow); margin-bottom: 15px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
+                <div class="zone-card" style="margin-bottom: 15px; border-color: #c0b070;">
+                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-exclamation-triangle"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
                     
                     <div class="form-group">
                         <label class="form-label">ВЫБЕРИТЕ КАТЕГОРИЮ</label>
-                        <div class="category-grid" id="violation-categories">
+                        <div class="category-grid" id="violation-categories" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
                             <div class="category-card" data-category="cheat" data-color="#b43c3c">
                                 <div class="category-icon">
                                     <i class="fas fa-skull-crossbones"></i>
@@ -1836,37 +1825,33 @@ function renderMLKForm() {
                     
                     <div class="form-group">
                         <label class="form-label">ПРИОРИТЕТ ОТЧЕТА</label>
-                        <div class="priority-selector">
-                            <div class="priority-option" data-priority="low">
-                                <div class="priority-dot" style="background: #8cb43c;"></div>
-                                <span>НИЗКИЙ</span>
+                        <div class="priority-selector" style="display: flex; gap: 15px;">
+                            <div class="priority-option" data-priority="low" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <div class="priority-dot" style="width: 12px; height: 12px; background: #8cb43c; border-radius: 50%;"></div>
+                                <span style="color: #8f9779;">НИЗКИЙ</span>
                             </div>
-                            <div class="priority-option active" data-priority="medium">
-                                <div class="priority-dot" style="background: #c0b070;"></div>
-                                <span>СРЕДНИЙ</span>
+                            <div class="priority-option active" data-priority="medium" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <div class="priority-dot" style="width: 12px; height: 12px; background: #c0b070; border-radius: 50%;"></div>
+                                <span style="color: #c0b070;">СРЕДНИЙ</span>
                             </div>
-                            <div class="priority-option" data-priority="high">
-                                <div class="priority-dot" style="background: #b43c3c;"></div>
-                                <span>ВЫСОКИЙ</span>
+                            <div class="priority-option" data-priority="high" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <div class="priority-dot" style="width: 12px; height: 12px; background: #b43c3c; border-radius: 50%;"></div>
+                                <span style="color: #b43c3c;">ВЫСОКИЙ</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="zone-card" style="margin-bottom: 30px; border-color: var(--accent-green);">
+                <div class="zone-card" style="margin-bottom: 15px; border-color: #8cb43c;">
                     <div class="card-icon"><i class="fas fa-align-left"></i></div>
-                    <h4 style="color: var(--accent-green); margin-bottom: 15px;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
+                    <h4 style="color: #8cb43c; margin-bottom: 10px;">ДЕТАЛЬНОЕ ОПИСАНИЕ</h4>
                     
                     <div class="form-group">
                         <label class="form-label">ПОДРОБНОЕ ОПИСАНИЕ НАРУШЕНИЯ</label>
                         <div style="position: relative;">
-                            <textarea id="mlk-action" class="form-textarea" rows="8" 
-                                      placeholder="Опишите нарушение максимально подробно...
-• Время и место нарушения
-• Конкретные действия нарушителя
-• Доказательства (скриншоты, демо и т.д.)
-• Последствия нарушения"></textarea>
-                            <div class="char-counter">
+                            <textarea id="mlk-action" class="form-textarea" rows="6" 
+                                      placeholder="Опишите нарушение максимально подробно..."></textarea>
+                            <div class="char-counter" style="position: absolute; bottom: 10px; right: 10px; color: #8f9779; font-size: 0.8rem;">
                                 <span id="char-count">0</span>/2000 символов
                             </div>
                         </div>
@@ -1875,55 +1860,55 @@ function renderMLKForm() {
                     <div class="form-group">
                         <label class="form-label">ССЫЛКИ НА ДОКАЗАТЕЛЬСТВА</label>
                         <div id="proof-links-container">
-                            <div class="proof-link-input">
-                                <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://...">
-                                <button type="button" class="btn-secondary add-proof-btn" onclick="addProofField()">
+                            <div class="proof-link-input" style="display: flex; gap: 10px;">
+                                <input type="text" class="form-input proof-link" placeholder="https://imgur.com/... или steam://..." style="flex: 1;">
+                                <button type="button" class="btn-secondary add-proof-btn" onclick="addProofField()" style="padding: 8px 12px;">
                                     <i class="fas fa-plus"></i>
                                 </button>
                             </div>
                         </div>
-                        <div style="margin-top: 10px; font-size: 0.85rem; color: var(--text-dim);">
+                        <div style="margin-top: 5px; font-size: 0.8rem; color: #8f9779;">
                             Можно добавить ссылки на скриншоты, видео, демо-записи
                         </div>
                     </div>
                 </div>
                 
-                <div class="zone-card" style="background: rgba(40, 42, 36, 0.8);">
+                <div class="zone-card" style="background: rgba(40, 42, 36, 0.8); margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-preview"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 15px;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР</h4>
                     
-                    <div id="report-preview" class="report-preview">
-                        <div class="preview-header">
-                            <div class="preview-badge">
-                                <span class="preview-category">ЧИТЫ</span>
-                                <span class="preview-priority" style="color: #c0b070;">СРЕДНИЙ</span>
+                    <div id="report-preview" class="report-preview" style="background: rgba(20, 18, 15, 0.8); padding: 15px; border: 1px solid #4a4a3a; border-radius: 4px;">
+                        <div class="preview-header" style="display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #4a4a3a;">
+                            <div class="preview-badge" style="display: flex; gap: 10px;">
+                                <span class="preview-category" style="background: rgba(180, 60, 60, 0.1); color: #b43c3c; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ЧИТЫ</span>
+                                <span class="preview-priority" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">СРЕДНИЙ</span>
                             </div>
-                            <div class="preview-time">${new Date().toLocaleString()}</div>
+                            <div class="preview-time" style="color: #8f9779; font-size: 0.8rem;">${new Date().toLocaleString()}</div>
                         </div>
                         <div class="preview-content">
-                            <div class="preview-violator">
-                                <i class="fas fa-user-tag"></i> <span id="preview-tag">[не указано]</span>
+                            <div class="preview-violator" style="margin-bottom: 15px;">
+                                <i class="fas fa-user-tag" style="color: #8f9779; margin-right: 8px;"></i> <span id="preview-tag" style="color: #c0b070;">[не указано]</span>
                             </div>
-                            <div class="preview-description" id="preview-description">
+                            <div class="preview-description" id="preview-description" style="color: #8f9779; line-height: 1.5;">
                                 [описание появится здесь]
                             </div>
                         </div>
-                        <div class="preview-footer">
-                            <div class="preview-author">
-                                <i class="fas fa-user"></i> ${CURRENT_USER}
+                        <div class="preview-footer" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #4a4a3a; display: flex; justify-content: space-between;">
+                            <div class="preview-author" style="color: #8f9779; font-size: 0.9rem;">
+                                <i class="fas fa-user" style="margin-right: 8px;"></i> ${CURRENT_USER}
                             </div>
                             <div class="preview-status">
-                                <span class="status-pending">ОЖИДАЕТ ПРОВЕРКИ</span>
+                                <span class="status-pending" style="background: rgba(192, 176, 112, 0.1); color: #c0b070; padding: 4px 10px; border-radius: 3px; font-size: 0.8rem;">ОЖИДАЕТ ПРОВЕРКИ</span>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <div class="form-actions" style="margin-top: 30px;">
-                    <button onclick="renderMLKScreen()" class="btn-secondary">
+                <div class="form-actions" style="display: flex; gap: 15px; padding-top: 15px; border-top: 1px solid #4a4a3a;">
+                    <button onclick="renderMLKScreen()" class="btn-secondary" style="flex: 1; padding: 12px;">
                         <i class="fas fa-arrow-left"></i> ОТМЕНА
                     </button>
-                    <button id="submit-mlk-btn" class="btn-primary">
+                    <button id="submit-mlk-btn" class="btn-primary" style="flex: 2; padding: 12px;">
                         <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ ОТЧЕТ
                     </button>
                 </div>
@@ -1950,66 +1935,32 @@ function renderMLKForm() {
     }
 }
 
-function setupReportFormHandlers() {
-    // Обработчики категорий
-    const categoryCards = document.querySelectorAll('.category-card');
-    categoryCards.forEach(card => {
-        card.addEventListener('click', function() {
-            categoryCards.forEach(c => c.classList.remove('active'));
-            this.classList.add('active');
-            updatePreview();
-        });
-    });
-    
-    // Обработчики приоритета
-    const priorityOptions = document.querySelectorAll('.priority-option');
-    priorityOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            priorityOptions.forEach(o => o.classList.remove('active'));
-            this.classList.add('active');
-            updatePreview();
-        });
-    });
-    
-    // Обработчики типа нарушителя
-    const tagOptions = document.querySelectorAll('.tag-option');
-    tagOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            tagOptions.forEach(o => o.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-}
-
 window.renderMLKScreen = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
-    // Загружаем отчеты сначала
     loadReports(function() {
         content.innerHTML = `
-            <div class="form-container"
-                <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+            <div class="form-container">
+                <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                     <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК
                 </h2>
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <div>
-                        <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif;">АРХИВ ОТЧЕТОВ</h3>
-                        <p style="color: #8f9779;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
+                        <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
+                        <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
                     </div>
-                    <button onclick="renderMLKForm()" class="btn-primary">
+                    <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
                         <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
                     </button>
                 </div>
                 
-                <div id="mlk-list">
+                <div id="mlk-list" style="flex: 1; overflow-y: auto; min-height: 0;">
                     <!-- Здесь будет список отчетов -->
                 </div>
             </div>
         `;
-        
-        // Теперь рендерим список отчетов
         renderMLKList();
     });
 }
@@ -2348,27 +2299,14 @@ function renderReports() {
     const confirmedReports = reports.filter(r => r.confirmed).length;
     const deletedReports = reports.filter(r => r.deleted).length;
     
-    let html = `
-        <div class="form-container"
-            <div style="margin-bottom: 30px;">
-                <h2 style="color: #c0b070; margin-bottom: 10px; font-family: 'Orbitron', sans-serif;">
-                    <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
-                </h2>
-                <p style="color: rgba(192, 176, 112, 0.7);">ОБЩЕЕ КОЛИЧЕСТВО: ${reports.length}</p>
-            </div>
-    `;
-    
-    if (reports.length === 0) {
-        html += `
-            <div style="text-align: center; padding: 50px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 20px;"></i>
-                <h3>БАЗА ДАННЫХ ПУСТА</h3>
-                <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
-            </div>
-        </div>`;
-    } else {
-        html += `
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
+    content.innerHTML = `
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
+            </h2>
+            <p style="color: #8f9779; margin-bottom: 15px; font-size: 0.9rem;">ОБЩЕЕ КОЛИЧЕСТВО: ${reports.length}</p>
+            
+            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-clock"></i></div>
                     <div class="card-value">${pendingReports}</div>
@@ -2386,64 +2324,82 @@ function renderReports() {
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> ВСЕ ОТЧЕТЫ
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${reports.length})</span>
-                </h4>
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <h4 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
                 
-                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                    <div style="overflow-x: auto; flex: 1;">
+                <div class="table-container" style="flex: 1; overflow-y: auto;">
+                    ${reports.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: #8f9779;">
+                            <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                            <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
+                        </div>
+                    ` : `
                         <table class="data-table" style="min-width: 100%;">
                             <thead style="position: sticky; top: 0; background: #1e201c;">
                                 <tr>
-                                    <th style="min-width: 120px;">ИДЕНТИФИКАТОР</th>
-                                    <th style="min-width: 200px;">НАРУШЕНИЕ</th>
-                                    <th style="min-width: 100px;">АВТОР</th>
-                                    <th style="min-width: 120px;">STATIC ID</th>
-                                    <th style="min-width: 120px;">ВРЕМЯ</th>
-                                    <th style="min-width: 100px;">СТАТУС</th>
-                                    <th style="min-width: 120px;">ДЕЙСТВИЯ</th>
+                                    <th>ИДЕНТИФИКАТОР</th>
+                                    <th>НАРУШЕНИЕ</th>
+                                    <th>АВТОР</th>
+                                    <th>ВРЕМЯ</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДЕЙСТВИЯ</th>
                                 </tr>
                             </thead>
-                            <tbody>`;
-        
-        reports.forEach(r => {
-            let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
-            let statusClass = r.deleted ? "status-deleted" : (r.confirmed ? "status-confirmed" : "status-pending");
-            let statusIcon = r.deleted ? "fa-trash" : (r.confirmed ? "fa-check" : "fa-clock");
-            
-            const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
-                `<div class="table-actions">
-                    <button onclick="confirmReport('${r.id}')" class="action-btn confirm" style="font-size: 0.85rem; padding: 3px 8px;">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button onclick="deleteReport('${r.id}')" class="action-btn delete" style="font-size: 0.85rem; padding: 3px 8px;">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>` :
-                '';
-            
-            html += `<tr>
-                <td><i class="fas fa-user-tag"></i> ${r.tag || '—'}</td>
-                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${r.action || '—'}</td>
-                <td><i class="fas fa-user"></i> ${r.author || r.role || 'неизвестно'}</td>
-                <td style="font-family: 'Courier New', monospace; font-size: 0.85rem; color: #8f9779;">
-                    ${r.authorStaticId || '—'}
-                </td>
-                <td><i class="far fa-clock"></i> ${r.time || '—'}</td>
-                <td><span class="report-status ${statusClass}" style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
-                    <i class="fas ${statusIcon}"></i> ${status}
-                </span></td>
-                <td>${actionsHtml}</td>
-            </tr>`;
-        });
-        
-        html += `</tbody></table></div></div></div>`;
-    }
+                            <tbody id="all-reports-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
+            </div>
+        </div>
+    `;
     
-    content.innerHTML = html;
+    if (reports.length > 0) {
+        renderAllReportsTable();
+    }
 }
+
+function renderAllReportsTable() {
+    const tableBody = document.getElementById("all-reports-body");
+    if (!tableBody) return;
+    
+    tableBody.innerHTML = '';
+    
+    reports.forEach(r => {
+        let status = r.deleted ? "удален" : (r.confirmed ? "подтвержден" : "рассматривается");
+        let statusClass = r.deleted ? "status-deleted" : (r.confirmed ? "status-confirmed" : "status-pending");
+        
+        const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
+            `<div style="display: flex; gap: 5px;">
+                <button onclick="confirmReport('${r.id}')" class="action-btn confirm" style="padding: 4px 8px; font-size: 0.8rem;">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button onclick="deleteReport('${r.id}')" class="action-btn delete" style="padding: 4px 8px; font-size: 0.8rem;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>` : '';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                <i class="fas fa-user-tag" style="margin-right: 5px; color: #8f9779;"></i>${r.tag || '—'}
+            </td>
+            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${r.action || ''}">
+                ${(r.action || '').substring(0, 50)}${r.action && r.action.length > 50 ? '...' : ''}
+            </td>
+            <td>${r.author || 'неизвестно'}</td>
+            <td style="font-size: 0.85rem; color: #8f9779;">${r.time || '—'}</td>
+            <td>
+                <span class="report-status ${statusClass}" style="display: inline-block; padding: 4px 8px; font-size: 0.8rem; border-radius: 3px; background: ${statusClass === 'status-confirmed' ? 'rgba(140, 180, 60, 0.1)' : statusClass === 'status-deleted' ? 'rgba(180, 60, 60, 0.1)' : 'rgba(192, 176, 112, 0.1)'}; color: ${statusClass === 'status-confirmed' ? '#8cb43c' : statusClass === 'status-deleted' ? '#b43c3c' : '#c0b070'};">
+                    ${status}
+                </span>
+            </td>
+            <td>${actionsHtml}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+}
+
 /* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
@@ -2455,90 +2411,86 @@ window.renderPasswords = function() {
     }
     
     content.innerHTML = `
-        <div class="form-container"
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-key"></i> УПРАВЛЕНИЕ КОДАМИ ДОСТУПА
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                ИЗМЕНЕНИЕ КОДОВ ДОСТУПА В СИСТЕМУ<br>
-                <span style="color: #c0b070;">ИЗМЕНЕНИЯ ВСТУПАЮТ В СИЛУ НЕМЕДЛЕННО</span>
-            </p>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ МЛАДШИХ КУРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ МЛАДШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="junior-password" class="form-input" 
-                           value="${passwords.junior || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('junior')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
+            <div style="display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; padding-right: 10px;">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ МЛАДШИХ КУРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        ИСПОЛЬЗУЕТСЯ МЛАДШИМИ КУРАТОРАМИ ДЛЯ ВХОДА
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="junior-password" class="form-input" 
+                               value="${passwords.junior || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
+                        <button onclick="updatePassword('junior')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-users"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ КУРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="curator-password" class="form-input" 
-                           value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('curator')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ КУРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        ИСПОЛЬЗУЕТСЯ КУРАТОРАМИ ДЛЯ ВХОДА В СИСТЕМУ
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="curator-password" class="form-input" 
+                               value="${passwords.curator || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
+                        <button onclick="updatePassword('curator')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-star"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРЫМИ ДЛЯ ВХОДА
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="senior-password" class="form-input" 
-                           value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('senior')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        ИСПОЛЬЗУЕТСЯ СТАРШИМИ КУРАТОРЫМИ ДЛЯ ВХОДА
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="senior-password" class="form-input" 
+                               value="${passwords.senior || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
+                        <button onclick="updatePassword('senior')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 25px;">
-                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="admin-password" class="form-input" 
-                           value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД">
-                    <button onclick="updatePassword('admin')" class="btn-primary">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">КОД ДЛЯ АДМИНИСТРАТОРОВ</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        ИСПОЛЬЗУЕТСЯ АДМИНИСТРАТОРАМИ ДЛЯ ВХОДА
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="admin-password" class="form-input" 
+                               value="${passwords.admin || ''}" placeholder="НОВЫЙ КОД" style="flex: 1;">
+                        <button onclick="updatePassword('admin')" class="btn-primary" style="padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="zone-card" style="border-color: #c0b070;">
-                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">СИСТЕМНЫЙ КОД</h4>
-                <p style="color: #8f9779; margin-bottom: 15px;">
-                    ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ
-                </p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="password" id="special-password" class="form-input" 
-                           value="${passwords.special || ''}" placeholder="НОВЫЙ КОД"
-                           style="border-color: #c0b070;">
-                    <button onclick="updatePassword('special')" class="btn-primary" 
-                            style="border-color: #c0b070;">
-                        <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                    </button>
+                
+                <div class="zone-card" style="border-color: #c0b070;">
+                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМНЫЙ КОД</h4>
+                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
+                        ДЛЯ СИСТЕМНЫХ ОПЕРАЦИЙ И ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ
+                    </p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="password" id="special-password" class="form-input" 
+                               value="${passwords.special || ''}" placeholder="НОВЫЙ КОД" style="flex: 1; border-color: #c0b070;">
+                        <button onclick="updatePassword('special')" class="btn-primary" 
+                                style="border-color: #c0b070; padding: 10px 15px;">
+                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2750,78 +2702,60 @@ window.renderUsers = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container" 
-            <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ СТАЛКЕРЫ
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ ПОЛЬЗОВАТЕЛИ
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px;">
-                ВСЕ ПОЛЬЗОВАТЕЛИ, КОТОРЫЕ ВОШЛИ В СИСТЕМУ
-            </p>
-            
-            <div style="margin-bottom: 30px;">
-                <div class="dashboard-grid" style="grid-template-columns: repeat(5, 1fr);">
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-users"></i></div>
-                        <div class="card-value">${users.length}</div>
-                        <div class="card-label">ВСЕГО СТАЛКЕРОВ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                        <div class="card-value">${users.filter(u => u.role === RANKS.ADMIN.name).length}</div>
-                        <div class="card-label">АДМИНИСТРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-star"></i></div>
-                        <div class="card-value">${users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length}</div>
-                        <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user"></i></div>
-                        <div class="card-value">${users.filter(u => u.role === RANKS.CURATOR.name).length}</div>
-                        <div class="card-label">КУРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
-                        <div class="card-value">${users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length}</div>
-                        <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
-                    </div>
+            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <div class="card-value">${users.length}</div>
+                    <div class="card-label">ВСЕГО</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${users.filter(u => u.role === RANKS.ADMIN.name).length}</div>
+                    <div class="card-label">АДМИНЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <div class="card-value">${users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length}</div>
+                    <div class="card-label">СТ.КУРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user"></i></div>
+                    <div class="card-value">${users.filter(u => u.role === RANKS.CURATOR.name).length}</div>
+                    <div class="card-label">КУРАТОРЫ</div>
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> СПИСОК СТАЛКЕРОВ
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${users.length})</span>
-                </h4>
-                
-                ${users.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="fas fa-user-friends" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>НЕТ ПОЛЬЗОВАТЕЛЕЙ</h4>
-                        <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
-                    </div>
-                ` : `
-                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                        <div style="overflow-x: auto; flex: 1;">
-                            <table class="data-table" style="min-width: 100%; height: 100%;">
-                                <thead style="position: sticky; top: 0; background: #1e201c;">
-                                    <tr>
-                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
-                                        <th style="min-width: 120px;">STATIC ID</th>
-                                        <th style="min-width: 120px;">РАНГ</th>
-                                        <th style="min-width: 120px;">РЕГИСТРАЦИЯ</th>
-                                        <th style="min-width: 120px;">ПОСЛЕДНИЙ ВХОД</th>
-                                        <th style="min-width: 100px;">СТАТУС</th>
-                                        <th style="min-width: 200px;">ДЕЙСТВИЯ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="users-table-body">
-                                </tbody>
-                            </table>
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;">СПИСОК ПОЛЬЗОВАТЕЛЕЙ (${users.length})</h4>
+                <div class="table-container" style="flex: 1;">
+                    ${users.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: #8f9779;">
+                            <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                            <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
                         </div>
-                    </div>
-                `}
+                    ` : `
+                        <table class="data-table" style="min-width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>ПСЕВДОНИМ</th>
+                                    <th>STATIC ID</th>
+                                    <th>РАНГ</th>
+                                    <th>РЕГИСТРАЦИЯ</th>
+                                    <th>ПОСЛЕДНИЙ ВХОД</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
             </div>
         </div>
     `;
@@ -2939,59 +2873,47 @@ window.renderWhitelist = function() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container"
-            <h2 style="color: #c0b070; margin-bottom: 20px; font-family: 'Orbitron', sans-serif;">
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-users"></i> СПИСОК ДОСТУПА
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                ТОЛЬКО ПОЛЬЗОВАТЕЛИ ИЗ ЭТОГО СПИСКА МОГУТ ВХОДИТЬ КАК АДМИНИСТРАТОРЫ
-            </p>
-            
-            <div class="zone-card" style="margin-bottom: 30px; padding: 20px;">
+            <div class="zone-card" style="margin-bottom: 20px;">
                 <div class="card-icon"><i class="fas fa-user-plus"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="new-whitelist-user" class="form-input" 
-                           placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
-                    <button onclick="addToWhitelist()" class="btn-primary">
+                <h4 style="color: #c0b070; margin-bottom: 10px;">ДОБАВИТЬ В СПИСОК ДОСТУПА</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="new-whitelist-user" class="form-input" placeholder="ВВЕДИТЕ ПСЕВДОНИМ" style="flex: 1;">
+                    <button onclick="addToWhitelist()" class="btn-primary" style="padding: 10px 20px;">
                         <i class="fas fa-plus"></i> ДОБАВИТЬ
                     </button>
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column;">
-                <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-list"></i> ТЕКУЩИЙ СПИСОК
-                    <span style="font-size: 0.9rem; color: #8f9779;">(${whitelist.length})</span>
-                </h4>
-                
-                ${whitelist.length === 0 ? `
-                    <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px; flex: 1; display: flex; flex-direction: column; justify-content: center;">
-                        <i class="fas fa-user-slash" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                        <h4>СПИСОК ПУСТ</h4>
-                        <p>ДОБАВЬТЕ ПЕРВОГО ПОЛЬЗОВАТЕЛЯ</p>
-                    </div>
-                ` : `
-                    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                        <div style="overflow-x: auto; flex: 1;">
-                            <table class="data-table" style="min-width: 100%;">
-                                <thead style="position: sticky; top: 0; background: #1e201c;">
-                                    <tr>
-                                        <th style="min-width: 150px;">ПСЕВДОНИМ</th>
-                                        <th style="min-width: 120px;">STATIC ID</th>
-                                        <th style="min-width: 120px;">ДОБАВИЛ</th>
-                                        <th style="min-width: 150px;">ДАТА ДОБАВЛЕНИЯ</th>
-                                        <th style="min-width: 100px;">СТАТУС</th>
-                                        <th style="min-width: 100px;">ДЕЙСТВИЯ</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="whitelist-table-body">
-                                </tbody>
-                            </table>
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;">ТЕКУЩИЙ СПИСОК (${whitelist.length})</h4>
+                <div class="table-container" style="flex: 1;">
+                    ${whitelist.length === 0 ? `
+                        <div style="text-align: center; padding: 40px; color: #8f9779;">
+                            <i class="fas fa-user-slash" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                            <p>СПИСОК ПУСТ</p>
                         </div>
-                    </div>
-                `}
+                    ` : `
+                        <table class="data-table" style="min-width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>ПСЕВДОНИМ</th>
+                                    <th>STATIC ID</th>
+                                    <th>ДОБАВИЛ</th>
+                                    <th>ДАТА ДОБАВЛЕНИЯ</th>
+                                    <th>СТАТУС</th>
+                                    <th>ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="whitelist-table-body">
+                            </tbody>
+                        </table>
+                    `}
+                </div>
             </div>
         </div>
     `;
@@ -3076,26 +2998,12 @@ window.renderSystem = function() {
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
-        <div class="form-container"
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+        <div class="form-container">
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
             </h2>
             
-            <div class="zone-card" style="margin-bottom: 30px;">
-                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                <div class="card-value">${CURRENT_USER}</div>
-                <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
-                <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
-                    РАНГ: ${CURRENT_RANK.name}<br>
-                    STATIC ID: <span style="font-family: 'Courier New', monospace;">${CURRENT_STATIC_ID}</span>
-                </div>
-            </div>
-            
-            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
-            </h3>
-            
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
+            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-database"></i></div>
                     <div class="card-value">${reports.length}</div>
@@ -3104,21 +3012,21 @@ window.renderSystem = function() {
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-users"></i></div>
                     <div class="card-value">${users.length}</div>
-                    <div class="card-label">СТАЛКЕРОВ</div>
+                    <div class="card-label">ПОЛЬЗОВАТЕЛЕЙ</div>
                 </div>
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
                     <div class="card-value">${whitelist.length}</div>
                     <div class="card-label">В СПИСКЕ ДОСТУПА</div>
                 </div>
-                <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
-                    <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
-                    <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-ban"></i></div>
+                    <div class="card-value">${activeBans}</div>
                     <div class="card-label">АКТИВНЫХ БАНОВ</div>
                 </div>
             </div>
             
-            <div class="dashboard-grid" style="margin-bottom: 30px;">
+            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-clock"></i></div>
                     <div class="card-value">${pendingReports}</div>
@@ -3136,11 +3044,7 @@ window.renderSystem = function() {
                 </div>
             </div>
             
-            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
-            </h3>
-            
-            <div class="dashboard-grid">
+            <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
                     <div class="card-value">${adminUsers}</div>
@@ -3162,30 +3066,6 @@ window.renderSystem = function() {
                     <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
                 </div>
             </div>
-            
-            <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
-                <h4 style="color: #c0b070; margin-bottom: 15px;">
-                    <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
-                </h4>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                        <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
-                        <div>ОПЕРАТИВНАЯ</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
-                        <div>${new Date().toLocaleDateString('ru-RU')}</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
-                        <div style="color: #8cb43c;">АКТИВЕН</div>
-                    </div>
-                </div>
-            </div>
         </div>
     `;
 }
@@ -3204,96 +3084,73 @@ window.renderIPStats = function() {
         const ipData = snapshot.val() || {};
         const ipList = Object.keys(ipData).map(key => ({ ...ipData[key], id: key }));
         
-        // Загружаем IP баны для точного подсчета
-        db.ref('mlk_ip_bans').once('value').then(ipBansSnapshot => {
-            const ipBansData = ipBansSnapshot.val() || {};
-            const ipBansList = Object.keys(ipBansData).map(key => ({ ...ipBansData[key], id: key }));
-            const activeIPBans = ipBansList.filter(ban => !ban.unbanned);
-            
-            content.innerHTML = `
-                <div class="form-container"
-                    <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                        <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
-                    </h2>
-                    
-                    <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                        СИСТЕМА ОТСЛЕЖИВАНИЯ IP АДРЕСОВ ПОЛЬЗОВАТЕЛЕЙ<br>
-                        <span style="color: #c0b070;">ВСЕГО УНИКАЛЬНЫХ IP: ${ipList.length}</span>
-                    </p>
-                    
-                    <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
-                        <div class="card-icon" style="color: #5865F2;"><i class="fas fa-shield-alt"></i></div>
-                        <h4 style="color: #5865F2; margin-bottom: 15px;">БЕЗОПАСНОСТЬ СИСТЕМЫ</h4>
-                        
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                            <div style="text-align: center;">
-                                <div style="font-size: 2rem; color: #c0b070; font-weight: bold;">${ipList.length}</div>
-                                <div style="font-size: 0.9rem; color: #8f9779;">УНИКАЛЬНЫХ IP</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 2rem; color: #8cb43c; font-weight: bold;">${users.length}</div>
-                                <div style="font-size: 0.9rem; color: #8f9779;">АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ</div>
-                            </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 2rem; color: #b43c3c; font-weight: bold;">${activeIPBans.length}</div>
-                                <div style="font-size: 0.9rem; color: #8f9779;">ЗАБЛОКИРОВАННЫХ IP</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button onclick="clearOldIPRecords()" class="btn-secondary">
-                                <i class="fas fa-trash"></i> ОЧИСТИТЬ СТАРЫЕ ЗАПИСИ
-                            </button>
-                            <button onclick="exportIPData()" class="btn-primary">
-                                <i class="fas fa-download"></i> ЭКСПОРТ ДАННЫХ
+        content.innerHTML = `
+            <div class="form-container">
+                <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                    <i class="fas fa-network-wired"></i> МОНИТОРИНГ IP АДРЕСОВ
+                </h2>
+                
+                <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="card-value">${ipList.length}</div>
+                        <div class="card-label">УНИКАЛЬНЫХ IP</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-users"></i></div>
+                        <div class="card-value">${users.length}</div>
+                        <div class="card-label">АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ</div>
+                    </div>
+                    <div class="zone-card">
+                        <div class="card-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="card-value">${PROTECTED_USERS.length}</div>
+                        <div class="card-label">ЗАЩИЩЕННЫХ ПОЛЬЗОВАТ.</div>
+                    </div>
+                </div>
+                
+                <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h4 style="color: #c0b070;">ИСТОРИЯ IP АДРЕСОВ (${ipList.length})</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="exportIPData()" class="btn-primary" style="padding: 8px 15px;">
+                                <i class="fas fa-download"></i> ЭКСПОРТ
                             </button>
                         </div>
                     </div>
                     
-                    <div class="zone-card" style="padding: 20px;">
-                        <h4 style="color: #c0b070; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-list"></i> ИСТОРИЯ IP АДРЕСОВ
-                            <span style="font-size: 0.9rem; color: #8f9779;">(${ipList.length})</span>
-                        </h4>
-                        
+                    <div class="table-container" style="flex: 1;">
                         ${ipList.length === 0 ? `
-                            <div style="text-align: center; padding: 40px; color: rgba(140, 180, 60, 0.5); border: 1px dashed rgba(140, 180, 60, 0.3); border-radius: 2px;">
-                                <i class="fas fa-database" style="font-size: 3rem; margin-bottom: 15px;"></i>
-                                <h4>ДАННЫХ НЕТ</h4>
+                            <div style="text-align: center; padding: 40px; color: #8f9779;">
+                                <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
                                 <p>IP АДРЕСА ЕЩЕ НЕ ЗАРЕГИСТРИРОВАНЫ</p>
                             </div>
                         ` : `
-                            <div style="overflow-x: auto;">
-                                <table class="data-table" style="min-width: 100%;">
-                                    <thead>
-                                        <tr>
-                                            <th>IP АДРЕС</th>
-                                            <th>ПОЛЬЗОВАТЕЛЬ</th>
-                                            <th>STATIC ID</th>
-                                            <th>РЕГИСТРАЦИЯ</th>
-                                            <th>ПОСЛЕДНЯЯ АКТИВНОСТЬ</th>
-                                            <th>ПОСЛЕДНИЙ IP</th>
-                                            <th>СТАТУС</th>
-                                            <th>ДЕЙСТВИЯ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="ip-table-body">
-                                    </tbody>
-                                </table>
-                            </div>
+                            <table class="data-table" style="min-width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>IP АДРЕС</th>
+                                        <th>ПОЛЬЗОВАТЕЛЬ</th>
+                                        <th>STATIC ID</th>
+                                        <th>РЕГИСТРАЦИЯ</th>
+                                        <th>ПОСЛЕДНЯЯ АКТИВНОСТЬ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ip-table-body">
+                                </tbody>
+                            </table>
                         `}
                     </div>
                 </div>
-            `;
-            
-            if (ipList.length > 0) {
-                renderIPTable(ipList, ipBansList);
-            }
-        });
+            </div>
+        `;
+        
+        if (ipList.length > 0) {
+            renderIPTable(ipList);
+        }
     });
 }
 
-function renderIPTable(ipList, ipBansList) {
+function renderIPTable(ipList) {
     const tableBody = document.getElementById("ip-table-body");
     if (!tableBody) return;
     
@@ -3302,56 +3159,26 @@ function renderIPTable(ipList, ipBansList) {
     ipList.forEach(record => {
         const row = document.createElement('tr');
         const isCurrentUser = record.username === CURRENT_USER;
-        const isSuspicious = ipList.filter(r => r.ip === record.ip).length > 1;
-        const isIPBanned = ipBansList.some(ban => ban.ip === record.ip && !ban.unbanned);
         
         row.innerHTML = `
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isIPBanned ? '#b43c3c' : isSuspicious ? '#b43c3c' : '#8f9779'}">
-                <i class="fas fa-${isIPBanned ? 'ban' : isSuspicious ? 'exclamation-triangle' : 'desktop'}"></i>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: ${isCurrentUser ? '#8cb43c' : '#8f9779'}">
+                <i class="fas fa-desktop" style="margin-right: 5px;"></i>
                 ${record.ip}
-                ${isSuspicious ? ' <span style="color: #b43c3c; font-size: 0.7rem;">(ПОДОЗРИТЕЛЬНО)</span>' : ''}
             </td>
-            <td style="font-weight: 500; color: ${isCurrentUser ? '#8cb43c' : isIPBanned ? '#b43c3c' : '#c0b070'}">
+            <td style="color: ${isCurrentUser ? '#8cb43c' : '#c0b070'}; font-weight: ${isCurrentUser ? 'bold' : 'normal'}">
                 ${record.username}
                 ${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}
-                ${isIPBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(IP ЗАБАНЕН)</span>' : ''}
             </td>
             <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
                 ${record.staticId || "—"}
             </td>
-            <td>${record.registrationDate || "—"}</td>
-            <td>${record.lastActive || "—"}</td>
-            <td>${record.lastIP || record.ip || "—"}</td>
-            <td>
-                <span class="report-status ${isIPBanned ? 'status-deleted' : 'status-confirmed'}" 
-                      style="display: inline-flex; padding: 4px 10px; font-size: 0.8rem;">
-                    <i class="fas ${isIPBanned ? 'fa-ban' : 'fa-check'}"></i>
-                    ${isIPBanned ? 'IP ЗАБАНЕН' : 'АКТИВЕН'}
-                </span>
-            </td>
-            <td>
-                <div style="display: flex; gap: 5px; flex-wrap: nowrap;">
-                    ${isSuspicious ? `
-                        <button onclick="investigateIP('${record.ip}')" class="action-btn" style="background: #b43c3c; border-color: #b43c3c; color: white; font-size: 0.8rem; white-space: nowrap;">
-                            <i class="fas fa-search"></i> ПРОВЕРИТЬ
-                        </button>
-                    ` : ''}
-                    ${!isCurrentUser && !isIPBanned ? `
-                        <button onclick="banIP('${record.ip}')" class="action-btn delete" style="font-size: 0.8rem; white-space: nowrap;">
-                            <i class="fas fa-ban"></i> БАН IP
-                        </button>
-                    ` : ''}
-                    ${isIPBanned ? `
-                        <button onclick="unbanIP('${record.ip}')" class="action-btn confirm" style="font-size: 0.8rem; white-space: nowrap;">
-                            <i class="fas fa-unlock"></i> РАЗБАН IP
-                        </button>
-                    ` : ''}
-                </div>
-            </td>
+            <td style="font-size: 0.85rem;">${record.registrationDate || "—"}</td>
+            <td style="font-size: 0.85rem;">${record.lastActive || "—"}</td>
         `;
         tableBody.appendChild(row);
     });
 }
+
 /* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С IP БАНАМИ ===== */
 window.banIP = async function(ip) {
     if (!confirm(`Заблокировать IP адрес ${ip}?\nВсе пользователи с этого IP не смогут зайти в систему.`)) {
@@ -3455,201 +3282,96 @@ function renderWebhookManager() {
     
     content.innerHTML = `
         <div class="form-container">
-            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-broadcast-tower"></i> УПРАВЛЕНИЕ DISCORD ВЕБХУКАМИ
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-broadcast-tower"></i> DISCORD ВЕБХУКИ
             </h2>
             
-            <p style="color: #8f9779; margin-bottom: 30px; line-height: 1.6;">
-                НАСТРОЙКА И ТЕСТИРОВАНИЕ ВЕБХУКОВ ДЛЯ ОТПРАВКИ УВЕДОМЛЕНИЙ В DISCORD<br>
-                <span style="color: #c0b070;">СИСТЕМА ПОДДЕРЖИВАЕТ КАСТОМНЫЕ ВЛОЖЕНИЯ И ШАБЛОНЫ</span>
-            </p>
-            
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #5865F2;">
-                <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
-                <h4 style="color: #5865F2; margin-bottom: 15px;">НАСТРОЙКА ВЕБХУКА</h4>
-                
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label class="form-label">URL ВЕБХУКА DISCORD</label>
-                        <input type="text" id="webhook-url" class="form-input" 
-                               placeholder="https://discord.com/api/webhooks/..."
-                               value="${DISCORD_WEBHOOK_URL || ''}">
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Получить URL можно в настройках канала Discord: Канал → Редактировать канал → Интеграции → Вебхуки
-                        </div>
-                    </div>
+            <div style="display: flex; flex-direction: column; gap: 20px; flex: 1; overflow-y: auto; padding-right: 10px;">
+                <div class="zone-card" style="border-color: #5865F2;">
+                    <div class="card-icon" style="color: #5865F2;"><i class="fab fa-discord"></i></div>
+                    <h4 style="color: #5865F2; margin-bottom: 10px;">НАСТРОЙКА ВЕБХУКА</h4>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
                         <div>
-                            <label class="form-label">ИМЯ ВЕБХУКА</label>
-                            <input type="text" id="webhook-name" class="form-input" 
-                                   placeholder="Имя отправителя"
-                                   value="${DISCORD_WEBHOOK_NAME}">
-                        </div>
-                        <div>
-                            <label class="form-label">URL АВАТАРКИ</label>
-                            <input type="text" id="webhook-avatar" class="form-input" 
-                                   placeholder="https://example.com/avatar.png"
-                                   value="${DISCORD_WEBHOOK_AVATAR}">
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; align-items: center; gap: 15px; padding: 10px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a;">
-                        <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #5865F2;">
-                            <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
-                                 style="width: 100%; height: 100%; object-fit: cover;"
-                                 onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
-                        </div>
-                        <div>
-                            <div style="color: #c0b070; font-weight: 500;">${DISCORD_WEBHOOK_NAME}</div>
-                            <div style="color: #8f9779; font-size: 0.8rem;">Превью отправителя</div>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="testWebhook()" class="btn-primary" style="border-color: #5865F2;">
-                            <i class="fas fa-broadcast-tower"></i> ТЕСТИРОВАТЬ
-                        </button>
-                        <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c;">
-                            <i class="fas fa-save"></i> СОХРАНИТЬ ВСЕ
-                        </button>
-                        <button onclick="clearWebhook()" class="btn-secondary">
-                            <i class="fas fa-trash"></i> ОЧИСТИТЬ
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="zone-card" style="margin-bottom: 30px; border-color: #c0b070;">
-                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-paper-plane"></i></div>
-                <h4 style="color: #c0b070; margin-bottom: 15px;">ОТПРАВИТЬ СООБЩЕНИЕ</h4>
-                
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <label class="form-label">ТИП СООБЩЕНИЯ</label>
-                        <select id="message-type" class="form-input" onchange="changeMessageType()">
-                            <option value="simple">Простое сообщение</option>
-                            <option value="embed">Сообщение с Embed</option>
-                            <option value="report">Уведомление об отчете</option>
-                            <option value="ban">Уведомление о бане</option>
-                            <option value="user_join">Новый пользователь</option>
-                            <option value="admin_alert">Алерт админам</option>
-                            <option value="custom">Кастомный JSON</option>
-                        </select>
-                    </div>
-                    
-                    <!-- ПРОСТОЕ СООБЩЕНИЕ -->
-                    <div id="simple-message" class="message-section">
-                        <label class="form-label">ТЕКСТ СООБЩЕНИЯ</label>
-                        <textarea id="message-content" class="form-textarea" rows="6" 
-                                  placeholder="Введите текст сообщения..."></textarea>
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Простой текст будет отправлен как обычное сообщение Discord
-                        </div>
-                    </div>
-                    
-                    <!-- СООБЩЕНИЕ С EMBED -->
-                    <div id="embed-message" class="message-section" style="display: none;">
-                        <div>
-                            <label class="form-label">ОСНОВНОЙ ТЕКСТ (ОПЦИОНАЛЬНО)</label>
-                            <textarea id="embed-content" class="form-textarea" rows="3" 
-                                      placeholder="Текст перед Embed (опционально)..."></textarea>
+                            <label class="form-label">URL ВЕБХУКА DISCORD</label>
+                            <input type="text" id="webhook-url" class="form-input" 
+                                   placeholder="https://discord.com/api/webhooks/..."
+                                   value="${DISCORD_WEBHOOK_URL || ''}">
                         </div>
                         
-                        <div style="margin-top: 15px;">
-                            <label class="form-label">НАСТРОЙКИ EMBED</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                <div>
-                                    <label class="form-label">ЗАГОЛОВОК</label>
-                                    <input type="text" id="embed-title" class="form-input" placeholder="Заголовок embed">
-                                </div>
-                                <div>
-                                    <label class="form-label">ЦВЕТ (HEX)</label>
-                                    <input type="text" id="embed-color" class="form-input" placeholder="#5865F2" value="#5865F2">
-                                </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label class="form-label">ИМЯ ВЕБХУКА</label>
+                                <input type="text" id="webhook-name" class="form-input" 
+                                       placeholder="Имя отправителя"
+                                       value="${DISCORD_WEBHOOK_NAME}">
                             </div>
-                            <div style="margin-bottom: 15px;">
-                                <label class="form-label">ОПИСАНИЕ</label>
-                                <textarea id="embed-description" class="form-textarea" rows="6" 
-                                          placeholder="Описание embed..."></textarea>
-                            </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                <div>
-                                    <label class="form-label">ИМЯ АВТОРА</label>
-                                    <input type="text" id="embed-author" class="form-input" placeholder="Имя автора">
-                                </div>
-                                <div>
-                                    <label class="form-label">URL ИЗОБРАЖЕНИЯ</label>
-                                    <input type="text" id="embed-thumbnail" class="form-input" placeholder="URL изображения">
-                                </div>
+                            <div>
+                                <label class="form-label">URL АВАТАРКИ</label>
+                                <input type="text" id="webhook-avatar" class="form-input" 
+                                       placeholder="https://example.com/avatar.png"
+                                       value="${DISCORD_WEBHOOK_AVATAR}">
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- КАСТОМНЫЙ JSON -->
-                    <div id="custom-message" class="message-section" style="display: none;">
-                        <label class="form-label">JSON ПАЙЛОАД</label>
-                        <textarea id="custom-payload" class="form-textarea" rows="10" 
-                                  placeholder='{
-  "content": "Ваше сообщение",
-  "username": "Бот",
-  "avatar_url": "https://example.com/avatar.png",
-  "embeds": [
-    {
-      "title": "Заголовок",
-      "description": "Описание",
-      "color": 5793266
-    }
-  ]
-}'
-                                  style="font-family: 'Courier New', monospace; font-size: 0.9rem;"></textarea>
-                        <div style="margin-top: 5px; font-size: 0.8rem; color: #6a6a5a;">
-                            Введите кастомный JSON для отправки в Discord
+                        
+                        <div style="display: flex; gap: 15px; padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a; border-radius: 4px;">
+                            <div style="width: 50px; height: 50px; border-radius: 50%; overflow: hidden; border: 2px solid #5865F2;">
+                                <img id="avatar-preview" src="${DISCORD_WEBHOOK_AVATAR}" 
+                                     style="width: 100%; height: 100%; object-fit: cover;"
+                                     onerror="this.src='https://cdn.discordapp.com/embed/avatars/0.png'">
+                            </div>
+                            <div>
+                                <div style="color: #c0b070; font-weight: 500;">${DISCORD_WEBHOOK_NAME}</div>
+                                <div style="color: #8f9779; font-size: 0.9rem;">Превью отправителя</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px;">
+                            <button onclick="testWebhook()" class="btn-primary" style="border-color: #5865F2; padding: 10px 15px;">
+                                <i class="fas fa-broadcast-tower"></i> ТЕСТИРОВАТЬ
+                            </button>
+                            <button onclick="saveWebhook()" class="btn-primary" style="border-color: #8cb43c; padding: 10px 15px;">
+                                <i class="fas fa-save"></i> СОХРАНИТЬ
+                            </button>
                         </div>
                     </div>
+                </div>
+                
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-code"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ШАБЛОНЫ СООБЩЕНИЙ</h4>
                     
-                    <button onclick="sendDiscordMessage()" class="btn-primary" style="border-color: #5865F2;">
-                        <i class="fas fa-paper-plane"></i> ОТПРАВИТЬ В DISCORD
-                    </button>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <button onclick="loadTemplate('report')" class="btn-secondary" style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-file-alt"></i>
+                            <span>ШАБЛОН ОТЧЕТА</span>
+                        </button>
+                        <button onclick="loadTemplate('ban')" class="btn-secondary" style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-ban"></i>
+                            <span>ШАБЛОН БАНА</span>
+                        </button>
+                        <button onclick="loadTemplate('user_join')" class="btn-secondary" style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-user-plus"></i>
+                            <span>НОВЫЙ ПОЛЬЗОВАТЕЛЬ</span>
+                        </button>
+                        <button onclick="loadTemplate('admin_alert')" class="btn-secondary" style="padding: 15px; text-align: left; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>АЛЕРТ АДМИНАМ</span>
+                        </button>
+                    </div>
                 </div>
             </div>
-            
-<div class="zone-card" style="border-color: #5865F2;">
-    <div class="card-icon" style="color: #5865F2;"><i class="fas fa-history"></i></div>
-    <h4 style="color: #5865F2; margin-bottom: 15px;">ИСТОРИЯ ОТПРАВКИ</h4>
-    
-    <div style="padding: 15px; background: rgba(40, 42, 36, 0.5); border: 1px solid #4a4a3a; border-radius: 4px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h5 style="color: #c0b070; margin: 0;">ПОСЛЕДНИЕ ОТПРАВКИ</h5>
-            <button onclick="clearWebhookHistory()" class="btn-secondary" style="font-size: 0.8rem; padding: 3px 10px;">
-                <i class="fas fa-trash"></i> ОЧИСТИТЬ
-            </button>
         </div>
-        <div style="max-height: 200px; overflow-y: auto;">
-            <div id="webhook-history">
-                ${webhooks.length === 0 ? 
-                    '<div style="color: #6a6a5a; text-align: center; padding: 20px; font-style: italic;">Нет отправленных сообщений</div>' : 
-                    ''
-                }
-            </div>
-        </div>
-    </div>
-</div>
     `;
     
     // Обновляем превью аватарки при изменении URL
     const avatarInput = document.getElementById('webhook-avatar');
     const avatarPreview = document.getElementById('avatar-preview');
-    const nameInput = document.getElementById('webhook-name');
 
     if (avatarInput && avatarPreview) {
         avatarInput.addEventListener('input', function() {
             avatarPreview.src = this.value || 'https://cdn.discordapp.com/embed/avatars/0.png';
         });
-    }
-
-    if (webhooks.length > 0) {
-        renderWebhookHistory();
     }
 }
 
@@ -4242,4 +3964,5 @@ window.addNavButton = function(container, icon, text, onClick) {
     });
     return button;
 };
+
 

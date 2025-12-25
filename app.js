@@ -4487,11 +4487,9 @@ window.addNavButton = function(container, icon, text, onClick) {
     const button = originalAddNavButton(container, icon, text, function() {
         if (onClick) onClick();
         setTimeout(adjustInterfaceHeights, 100);
-    });
+      });
     return button;
 };
-
-}
 
 
 

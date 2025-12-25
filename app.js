@@ -51,26 +51,6 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
-/* ===== ОТЛАДКА ===== */
-console.log("=== APP.JS ЗАГРУЖЕН ===");
-
-// Проверяем, что Firebase загружен
-console.log("Firebase:", typeof firebase !== 'undefined' ? "✓" : "✗");
-console.log("Database:", typeof db !== 'undefined' ? db : "✗");
-
-// Глобальный объект для отладки
-window.DEBUG = {
-    CURRENT_USER,
-    CURRENT_RANK,
-    CURRENT_ROLE,
-    CURRENT_STATIC_ID,
-    reports: [],
-    users: [],
-    bans: [],
-    whitelist: [],
-    passwords: {}
-};
-
 /* ===== ИСПРАВЛЕННЫЙ CSS ДЛЯ КАРТОЧЕК ===== */
 const fixCSS = `
     .zone-card {
@@ -356,12 +336,23 @@ function validatePassword(password) {
         return { valid: false, message: "Пароль не указан" };
     }
     
-    // Минимальная проверка - пароль не должен быть пустым
-    if (password.trim() === "") {
-        return { valid: false, message: "Пароль не может быть пустым" };
+    // Проверка длины
+    if (password.length < 6) {
+        return { valid: false, message: "Пароль должен содержать минимум 6 символов" };
     }
     
-    // Больше никаких проверок - разрешаем любой пароль
+    // Проверка сложности (опционально)
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumbers = /\d/.test(password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
+        return { 
+            valid: false, 
+            message: "Пароль должен содержать заглавные и строчные буквы, а также цифры" 
+        };
+    }
+    
     return { valid: true, message: "" };
 }
 
@@ -1616,116 +1607,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ===== НАВИГАЦИЯ И SIDEBAR ===== */
-/* ===== НАВИГАЦИЯ И SIDEBAR ===== */
-function addNavButton(container, icon, text, onClick) {
-    const button = document.createElement('button');
-    button.className = 'nav-button';
-    button.id = `nav-${text.replace(/\s+/g, '-').toLowerCase()}`;
-    button.innerHTML = `
-        <i class="${icon}"></i>
-        <span>${text}</span>
-    `;
-    button.onclick = function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        console.log(`🟢 НАЖАТА КНОПКА: ${text}`);
-        
-        // Убираем активный класс у всех
-        document.querySelectorAll('.nav-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Добавляем текущей
-        button.classList.add('active');
-        
-        // Обновляем заголовок
-        const titleElement = document.getElementById('content-title');
-        const moduleElement = document.getElementById('module-name');
-        
-        if (titleElement) {
-            const titleText = titleElement.querySelector('.title-text');
-            if (titleText) {
-                titleText.textContent = text;
-            }
-        }
-        
-        if (moduleElement) {
-            moduleElement.textContent = text;
-        }
-        
-        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
-        
-        // ПРОСТОЙ ТЕСТ - если функция не работает
-        const content = document.getElementById('content-body');
-        if (content) {
-            // Сначала показываем тестовый контент
-            content.innerHTML = `
-                <div style="padding: 40px; text-align: center;">
-                    <h2 style="color: #c0b070; margin-bottom: 20px;">
-                        <i class="${icon}"></i> ${text}
-                    </h2>
-                    <p style="color: #8f9779; margin-bottom: 20px;">
-                        Загрузка раздела...
-                    </p>
-                    <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #4a4a3a; max-width: 500px; margin: 0 auto;">
-                        <p><strong>Пользователь:</strong> ${CURRENT_USER || 'Неизвестно'}</p>
-                        <p><strong>Ранг:</strong> ${CURRENT_RANK ? CURRENT_RANK.name : 'Неизвестно'}</p>
-                        <p><strong>Static ID:</strong> ${CURRENT_STATIC_ID || 'Неизвестно'}</p>
-                        <p><strong>Время:</strong> ${new Date().toLocaleTimeString()}</p>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Пытаемся вызвать оригинальную функцию через setTimeout
-        setTimeout(() => {
-            try {
-                if (typeof onClick === 'function') {
-                    console.log(`Вызываю функцию ${onClick.name}...`);
-                    onClick();
-                } else {
-                    console.error(`❌ onClick не является функцией:`, onClick);
-                    if (content) {
-                        content.innerHTML += `
-                            <div style="margin-top: 20px; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; color: #b43c3c;">
-                                <strong>Ошибка:</strong> Функция не найдена
-                            </div>
-                        `;
-                    }
-                }
-            } catch (error) {
-                console.error(`❌ Ошибка при вызове функции:`, error);
-                if (content) {
-                    content.innerHTML += `
-                        <div style="margin-top: 20px; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; color: #b43c3c;">
-                            <strong>Ошибка:</strong> ${error.message}
-                        </div>
-                    `;
-                }
-            }
-        }, 100);
-    };
-    
-    container.appendChild(button);
-    console.log(`✅ Добавлена кнопка: ${text}`);
-}
-
 function setupSidebar() {
-    console.log("=== setupSidebar START ===");
-    console.log("CURRENT_USER:", CURRENT_USER);
-    console.log("CURRENT_RANK:", CURRENT_RANK);
-    
     const sidebar = document.getElementById("sidebar");
     const navMenu = document.getElementById("nav-menu");
     
-    console.log("sidebar element:", sidebar);
-    console.log("navMenu element:", navMenu);
-    
-    if (!sidebar || !navMenu) {
-        console.error("ERROR: Sidebar or navMenu not found!");
-        return;
-    }
+    if (!sidebar || !navMenu) return;
     
     navMenu.innerHTML = '';
     
@@ -1745,15 +1631,11 @@ function setupSidebar() {
         staticIdElement.textContent = CURRENT_STATIC_ID;
     }
     
-    // Всегда добавляем первую кнопку
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
-    console.log("Added ОТЧЕТЫ МЛК button");
     
-    // Проверяем права и добавляем остальные кнопки
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', renderReports);
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', renderUsers);
-        console.log("Added buttons for SENIOR_CURATOR");
     }
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
@@ -1763,25 +1645,34 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', renderBanInterface);
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
-        console.log("Added buttons for ADMIN");
     }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.onclick = logout;
-        console.log("Logout button setup");
     }
-    
-    // Сразу показываем первую страницу
-    setTimeout(() => {
-        const firstButton = document.querySelector('.nav-button');
-        if (firstButton) {
-            console.log("Clicking first button automatically...");
-            firstButton.click();
+}
+
+function addNavButton(container, icon, text, onClick) {
+    const button = document.createElement('button');
+    button.className = 'nav-button';
+    button.innerHTML = `
+        <i class="${icon}"></i>
+        <span>${text}</span>
+    `;
+    button.onclick = function() {
+        document.querySelectorAll('.nav-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        button.classList.add('active');
+        onClick();
+        const titleElement = document.getElementById('content-title');
+        if (titleElement) {
+            titleElement.textContent = text;
         }
-    }, 500);
-    
-    console.log("=== setupSidebar END ===");
+        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
+    };
+    container.appendChild(button);
 }
 
 function logout() {
@@ -1856,112 +1747,31 @@ function loadReports(callback) {
 
 /* ===== СТРАНИЦА ОТЧЕТОВ МЛК ===== */
 function renderMLKScreen() {
-    console.log("🔄 ВЫЗВАНА renderMLKScreen");
-    
-    const content = document.getElementById('content-body');
-    if (!content) {
-        console.error('❌ content-body не найден');
-        showNotification('Ошибка: элемент контента не найден', 'error');
-        return;
-    }
-    
-    console.log('✅ content-body найден:', content);
-    
-    // Простой тестовый контент
-    const html = `
-        <div style="padding: 40px;">
-            <h2 style="color: #c0b070; margin-bottom: 20px; text-align: center;">
-                <i class="fas fa-file-alt"></i> ОТЧЕТЫ МЛК - РАБОТАЕТ!
-            </h2>
-            
-            <div style="background: rgba(28, 26, 23, 0.9); padding: 25px; border-radius: 8px; border: 1px solid #4a4a3a; margin-bottom: 30px;">
-                <h3 style="color: #8cb43c; margin-bottom: 15px;">✅ СИСТЕМА РАБОТАЕТ КОРРЕКТНО</h3>
-                <p style="color: #8f9779; line-height: 1.6;">
-                    Функция <strong>renderMLKScreen</strong> успешно вызвана и отображает контент.
-                </p>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #3a5a40;">
-                    <h4 style="color: #3a5a40; margin-bottom: 15px;"><i class="fas fa-user"></i> ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ</h4>
-                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Имя:</strong> ${CURRENT_USER || 'Неизвестно'}</p>
-                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Ранг:</strong> ${CURRENT_RANK ? CURRENT_RANK.name : 'Неизвестно'}</p>
-                    <p style="color: #8f9779;"><strong>Static ID:</strong> ${CURRENT_STATIC_ID || 'Неизвестно'}</p>
-                </div>
-                
-                <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #8b7355;">
-                    <h4 style="color: #8b7355; margin-bottom: 15px;"><i class="fas fa-database"></i> СТАТИСТИКА</h4>
-                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Всего отчетов:</strong> ${reports.length}</p>
-                    <p style="color: #8f9779; margin-bottom: 8px;"><strong>Всего пользователей:</strong> ${users.length}</p>
-                    <p style="color: #8f9779;"><strong>Активных банов:</strong> ${bans.filter(b => !b.unbanned).length}</p>
-                </div>
-            </div>
-            
-            <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #4a4a3a; margin-top: 20px;">
-                <h4 style="color: #c0b070; margin-bottom: 15px;"><i class="fas fa-code"></i> ТЕСТОВЫЕ ФУНКЦИИ</h4>
-                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button onclick="testFunction1()" style="padding: 10px 20px; background: #3a5a40; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        <i class="fas fa-play"></i> Тест 1
-                    </button>
-                    <button onclick="testFunction2()" style="padding: 10px 20px; background: #8b7355; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        <i class="fas fa-play"></i> Тест 2
-                    </button>
-                    <button onclick="showReportsList()" style="padding: 10px 20px; background: #8b4513; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                        <i class="fas fa-list"></i> Показать отчеты
-                    </button>
-                </div>
-            </div>
-            
-            <div style="margin-top: 30px; padding: 15px; background: rgba(28, 26, 23, 0.6); border-radius: 6px; border: 1px solid #4a4a3a;">
-                <p style="color: #8f9779; font-size: 0.9rem; text-align: center;">
-                    <i class="fas fa-info-circle"></i> Система: Курация EOD v2.7.4 | Время: ${new Date().toLocaleTimeString()}
-                </p>
-            </div>
-        </div>
-    `;
-    
-    console.log('✅ Устанавливаем HTML в content-body');
-    content.innerHTML = html;
-    console.log('✅ HTML установлен, длина: ' + html.length + ' символов');
-}
-
-// Добавь эти тестовые функции в конец файла (перед последней фигурной скобкой)
-window.testFunction1 = function() {
-    alert('✅ Тестовая функция 1 работает!');
-    console.log('✅ testFunction1 вызвана');
-};
-
-window.testFunction2 = function() {
-    alert('✅ Тестовая функция 2 работает!');
-    console.log('✅ testFunction2 вызвана');
-};
-
-window.showReportsList = function() {
-    const content = document.getElementById('content-body');
+    const content = document.getElementById("content-body");
     if (!content) return;
+    content.innerHTML = '';
     
-    let reportsHtml = '<h3 style="color: #c0b070; margin-bottom: 15px;">Список отчетов:</h3>';
-    
-    if (reports.length === 0) {
-        reportsHtml += '<p style="color: #8f9779;">Нет отчетов</p>';
-    } else {
-        reportsHtml += '<div style="max-height: 300px; overflow-y: auto;">';
-        reports.forEach((report, index) => {
-            reportsHtml += `
-                <div style="background: rgba(28, 26, 23, 0.7); padding: 15px; margin-bottom: 10px; border-radius: 4px; border: 1px solid #4a4a3a;">
-                    <p style="color: #8f9779; margin: 0;"><strong>#${index + 1}:</strong> ${report.tag || 'Без тега'} - ${report.author || 'Неизвестно'}</p>
-                </div>
-            `;
-        });
-        reportsHtml += '</div>';
+    if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+        const btnContainer = document.createElement("div");
+        btnContainer.style.display = "flex";
+        btnContainer.style.justifyContent = "flex-end";
+        btnContainer.style.marginBottom = "20px";
+        
+        const addBtn = document.createElement("button");
+        addBtn.className = "btn-primary";
+        addBtn.innerHTML = '<i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ';
+        addBtn.onclick = renderMLKForm;
+        
+        btnContainer.appendChild(addBtn);
+        content.appendChild(btnContainer);
     }
     
-    content.innerHTML += `
-        <div style="margin-top: 20px; padding: 20px; background: rgba(40, 42, 36, 0.8); border-radius: 6px; border: 1px solid #4a4a3a;">
-            ${reportsHtml}
-        </div>
-    `;
-};
+    const listDiv = document.createElement("div");
+    listDiv.id = "mlk-list";
+    content.appendChild(listDiv);
+    
+    renderMLKList();
+}
 
 function renderMLKForm() {
     const content = document.getElementById("content-body");
@@ -2847,111 +2657,113 @@ window.renderSystem = function() {
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
-        <div class="form-container" style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
-            <div class="system-stats-container">
-                <div class="zone-card" style="margin-bottom: 30px;">
+        <div class="form-container" style="padding: 20px;">
+            <h2 style="color: #c0b070; margin-bottom: 25px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
+            </h2>
+            
+            <div class="zone-card" style="margin-bottom: 30px;">
+                <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                <div class="card-value">${CURRENT_USER}</div>
+                <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
+                <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
+                    РАНГ: ${CURRENT_RANK.name}<br>
+                    STATIC ID: <span style="font-family: 'Courier New', monospace;">${CURRENT_STATIC_ID}</span>
+                </div>
+            </div>
+            
+            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
+            </h3>
+            
+            <div class="dashboard-grid" style="margin-bottom: 30px;">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-database"></i></div>
+                    <div class="card-value">${reports.length}</div>
+                    <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <div class="card-value">${users.length}</div>
+                    <div class="card-label">СТАЛКЕРОВ</div>
+                </div>
+                <div class="zone-card">
                     <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <div class="card-value">${CURRENT_USER}</div>
-                    <div class="card-label">ТЕКУЩИЙ ОПЕРАТОР</div>
-                    <div style="margin-top: 10px; color: #8cb43c; font-size: 0.9rem;">
-                        РАНГ: ${CURRENT_RANK.name}<br>
-                        STATIC ID: <span style="font-family: 'Courier New', monospace;">${CURRENT_STATIC_ID}</span>
-                    </div>
+                    <div class="card-value">${whitelist.length}</div>
+                    <div class="card-label">В СПИСКЕ ДОСТУПА</div>
                 </div>
-                
-                <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                    <i class="fas fa-chart-bar"></i> СТАТИСТИКА СИСТЕМЫ
-                </h3>
-                
-                <div class="dashboard-grid" style="margin-bottom: 30px;">
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-database"></i></div>
-                        <div class="card-value">${reports.length}</div>
-                        <div class="card-label">ВСЕГО ОТЧЕТОВ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-users"></i></div>
-                        <div class="card-value">${users.length}</div>
-                        <div class="card-label">СТАЛКЕРОВ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                        <div class="card-value">${whitelist.length}</div>
-                        <div class="card-label">В СПИСКЕ ДОСТУПА</div>
-                    </div>
-                    <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
-                        <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
-                        <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
-                        <div class="card-label">АКТИВНЫХ БАНОВ</div>
-                    </div>
+                <div class="zone-card" style="border-color: ${activeBans > 0 ? '#b43c3c' : '#4a4a3a'};">
+                    <div class="card-icon" style="color: ${activeBans > 0 ? '#b43c3c' : '#8cb43c'}"><i class="fas fa-ban"></i></div>
+                    <div class="card-value" style="color: ${activeBans > 0 ? '#b43c3c' : '#c0b070'}">${activeBans}</div>
+                    <div class="card-label">АКТИВНЫХ БАНОВ</div>
                 </div>
-                
-                <div class="dashboard-grid" style="margin-bottom: 30px;">
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-clock"></i></div>
-                        <div class="card-value">${pendingReports}</div>
-                        <div class="card-label">НА РАССМОТРЕНИИ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-check"></i></div>
-                        <div class="card-value">${confirmedReports}</div>
-                        <div class="card-label">ПОДТВЕРЖДЕНО</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-trash"></i></div>
-                        <div class="card-value">${deletedReports}</div>
-                        <div class="card-label">УДАЛЕНО</div>
-                    </div>
+            </div>
+            
+            <div class="dashboard-grid" style="margin-bottom: 30px;">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-clock"></i></div>
+                    <div class="card-value">${pendingReports}</div>
+                    <div class="card-label">НА РАССМОТРЕНИИ</div>
                 </div>
-                
-                <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
-                    <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
-                </h3>
-                
-                <div class="dashboard-grid">
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                        <div class="card-value">${adminUsers}</div>
-                        <div class="card-label">АДМИНИСТРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-star"></i></div>
-                        <div class="card-value">${seniorCurators}</div>
-                        <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user"></i></div>
-                        <div class="card-value">${curators}</div>
-                        <div class="card-label">КУРАТОРЫ</div>
-                    </div>
-                    <div class="zone-card">
-                        <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
-                        <div class="card-value">${juniorCurators}</div>
-                        <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
-                    </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-check"></i></div>
+                    <div class="card-value">${confirmedReports}</div>
+                    <div class="card-label">ПОДТВЕРЖДЕНО</div>
                 </div>
-                
-                <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
-                    <h4 style="color: #c0b070; margin-bottom: 15px;">
-                        <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
-                        <div>
-                            <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
-                            <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
-                            <div>ОПЕРАТИВНАЯ</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
-                            <div>${new Date().toLocaleDateString('ru-RU')}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
-                            <div style="color: #8cb43c;">АКТИВЕН</div>
-                        </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-trash"></i></div>
+                    <div class="card-value">${deletedReports}</div>
+                    <div class="card-label">УДАЛЕНО</div>
+                </div>
+            </div>
+            
+            <h3 style="color: #c0b070; margin-bottom: 20px; border-bottom: 1px solid #4a4a3a; padding-bottom: 10px;">
+                <i class="fas fa-users-cog"></i> РАСПРЕДЕЛЕНИЕ ПО РАНГАМ
+            </h3>
+            
+            <div class="dashboard-grid">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${adminUsers}</div>
+                    <div class="card-label">АДМИНИСТРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <div class="card-value">${seniorCurators}</div>
+                    <div class="card-label">СТАРШИЕ КУРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user"></i></div>
+                    <div class="card-value">${curators}</div>
+                    <div class="card-label">КУРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-graduate"></i></div>
+                    <div class="card-value">${juniorCurators}</div>
+                    <div class="card-label">МЛАДШИЕ КУРАТОРЫ</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 40px; padding: 20px; background: rgba(40, 42, 36, 0.8); border: 1px solid #4a4a3a;">
+                <h4 style="color: #c0b070; margin-bottom: 15px;">
+                    <i class="fas fa-info-circle"></i> ИНФОРМАЦИЯ О СИСТЕМЕ
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; color: #8f9779;">
+                    <div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">ВЕРСИЯ СИСТЕМЫ</div>
+                        <div>1.5.0 (СТАТИЧЕСКИЙ ID)</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">БАЗА ДАННЫХ</div>
+                        <div>ОПЕРАТИВНАЯ</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">ПОСЛЕДНЕЕ ОБНОВЛЕНИЕ</div>
+                        <div>${new Date().toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.9rem; color: #6a6a5a;">СТАТУС</div>
+                        <div style="color: #8cb43c;">АКТИВЕН</div>
                     </div>
                 </div>
             </div>
@@ -2959,6 +2771,7 @@ window.renderSystem = function() {
     `;
 }
 
+/* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 /* ===== ФУНКЦИЯ ДЛЯ ПРОСМОТРА IP СТАТИСТИКИ (ДЛЯ АДМИНИСТРАТОРОВ) ===== */
 window.renderIPStats = function() {
     const content = document.getElementById("content-body");
@@ -3957,39 +3770,3 @@ window.exportIPData = function() {
     });
 
 }
-
-
-/* ===== ФУНКЦИЯ ДЛЯ ДЕБАГА ОТОБРАЖЕНИЯ ===== */
-function debugContentVisibility() {
-    const contentBody = document.getElementById('content-body');
-    if (!contentBody) {
-        console.error('❌ content-body не найден в DOM');
-        return;
-    }
-    
-    console.log('=== DEBUG CONTENT-BODY ===');
-    console.log('innerHTML длина:', contentBody.innerHTML.length);
-    console.log('Дочерние элементы:', contentBody.children.length);
-    console.log('CSS display:', getComputedStyle(contentBody).display);
-    console.log('CSS visibility:', getComputedStyle(contentBody).visibility);
-    console.log('CSS opacity:', getComputedStyle(contentBody).opacity);
-    console.log('CSS height:', getComputedStyle(contentBody).height);
-    console.log('CSS max-height:', getComputedStyle(contentBody).maxHeight);
-    console.log('=======================');
-    
-    // Принудительно показываем все дочерние элементы
-    Array.from(contentBody.children).forEach(child => {
-        child.style.display = 'block';
-        child.style.visibility = 'visible';
-        child.style.opacity = '1';
-    });
-}
-
-// Вызывайте эту функцию после рендеринга любой страницы
-// Например, в renderMLKScreen добавьте в конец:
-// debugContentVisibility();
-
-
-
-
-

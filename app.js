@@ -130,7 +130,7 @@ function renderPagination(containerId, currentPage, totalPages, callback) {
 }
 
 /* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
-function changeItemsPerPage(callback, value) { // ← ДОБАВИТЬ ЗДЕСЬ
+function changeItemsPerPage(callback, value) {
     PAGINATION_CONFIG.itemsPerPage = parseInt(value);
     
     if (callback === 'renderReportsWithPagination') {
@@ -138,7 +138,7 @@ function changeItemsPerPage(callback, value) { // ← ДОБАВИТЬ ЗДЕС�
     } else if (callback === 'renderUsersWithPagination') {
         renderUsersWithPagination(1);
     } else if (callback === 'renderMLKListPaginated') {
-        renderMLKListPaginated(1);
+        renderMLKListPaginated(1); // ДОБАВЬТЕ ЭТУ СТРОКУ
     } else if (callback === 'renderWhitelistWithPagination') {
         renderWhitelistWithPagination(1);
     } else if (callback === 'renderBansWithPagination') {
@@ -981,9 +981,21 @@ window.renderMLKScreen = function() {
                         <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; margin-bottom: 5px;">АРХИВ ОТЧЕТОВ</h3>
                         <p style="color: #8f9779; font-size: 0.9rem;">СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ</p>
                     </div>
-                    <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
-                        <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
-                    </button>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="items-per-page-selector" style="margin: 0;">
+                            <span style="color: #8f9779; font-size: 0.9rem;">На странице:</span>
+                            <select onchange="changeItemsPerPage('renderMLKListPaginated', this.value)">
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="15" selected>15</option>
+                                <option value="20">20</option>
+                                <option value="30">30</option>
+                            </select>
+                        </div>
+                        <button onclick="renderMLKForm()" class="btn-primary" style="padding: 10px 20px; font-size: 0.9rem;">
+                            <i class="fas fa-plus"></i> НОВЫЙ ОТЧЕТ
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="mlk-list" class="table-container scrollable-container" style="flex: 1;">
@@ -1138,8 +1150,13 @@ function renderMLKListPaginated(page = 1) {
         listDiv.appendChild(card);
     });
     
-    if (paginationContainer && totalPages > 1) {
-        renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
+    // Добавляем пагинацию если есть больше одной страницы
+    if (paginationContainer) {
+        if (totalPages > 1) {
+            renderPagination('mlk-pagination-container', currentPage, totalPages, 'renderMLKListPaginated');
+        } else {
+            paginationContainer.innerHTML = '';
+        }
     }
 }
 

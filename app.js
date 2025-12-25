@@ -336,25 +336,6 @@ function validatePassword(password) {
         return { valid: false, message: "Пароль не указан" };
     }
     
-    // Проверка длины
-    if (password.length < 6) {
-        return { valid: false, message: "Пароль должен содержать минимум 6 символов" };
-    }
-    
-    // Проверка сложности (опционально)
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumbers = /\d/.test(password);
-    
-    if (!hasUpperCase || !hasLowerCase || !hasNumbers) {
-        return { 
-            valid: false, 
-            message: "Пароль должен содержать заглавные и строчные буквы, а также цифры" 
-        };
-    }
-    
-    return { valid: true, message: "" };
-}
 
 /* ===== ГЕНЕРАЦИЯ УНИКАЛЬНОГО STATIC ID ===== */
 function generateStaticId(username) {
@@ -3767,6 +3748,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

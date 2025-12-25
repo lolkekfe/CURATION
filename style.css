@@ -423,9 +423,8 @@ body {
     border: 1px solid var(--accent-red);
     color: var(--accent-red-glow);
     font-size: 0.9rem;
-    display: none;
+    /* УБЕРИТЕ display: none; ОТСЮДА */
 }
-
 /* ===== ФУТЕР ===== */
 .zone-footer {
     width: 100%;
@@ -1540,6 +1539,7 @@ body {
     flex-direction: column;
     justify-content: space-between;
 }
+
 
 
 

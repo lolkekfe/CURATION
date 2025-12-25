@@ -735,7 +735,7 @@ function checkSpecialAccess(username, password) {
         const usernameLower = username.toLowerCase().trim();
         
         db.ref('mlk_passwords').once('value').then(snapshot => {
-            const passwords = snapshotSnapshot.val() || {};
+            const passwords = snapshot.val() || {};
             const specialPassword = passwords.special;
             
             if (!specialPassword) {
@@ -4490,6 +4490,7 @@ window.addNavButton = function(container, icon, text, onClick) {
       });
     return button;
 };
+
 
 
 

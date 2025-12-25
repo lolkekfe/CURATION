@@ -377,15 +377,20 @@ function simpleHash(str){
 
 /* ===== ПРОВЕРКА ПАРОЛЯ С ШИФРОВАНИЕМ ===== */
 async function verifyPassword(inputPassword, storedPassword) {
-    // Поддержка старого формата (обычный текст)
+    // Если пароль хранится как строка (старый формат)
     if (typeof storedPassword === 'string') {
         return inputPassword === storedPassword;
     }
     
-    // Новый формат (объект с хешем и солью)
+    // Если пароль хранится как объект с хешем и солью (новый формат)
     if (storedPassword && storedPassword.hash && storedPassword.salt) {
         const inputHash = await hashPassword(inputPassword, storedPassword.salt);
         return inputHash === storedPassword.hash;
+    }
+    
+    // Если есть поле plain (для обратной совместимости)
+    if (storedPassword && storedPassword.plain) {
+        return inputPassword === storedPassword.plain;
     }
     
     return false;
@@ -485,16 +490,29 @@ function loadData(callback) {
 }
 
 /* ===== СОЗДАНИЕ ИЛИ ОБНОВЛЕНИЕ ПАРОЛЕЙ ===== */
-function createOrUpdatePasswords() {
-    const defaultPasswords = {
-        junior: "junior123",
-        curator: "curator123",
-        senior: "senior123",
-        admin: "admin123",
-        special: "special123"
+async function createOrUpdatePasswords() {
+    const newPasswords = {
+        admin: "Admin123",
+        curator: "Curator123", 
+        junior: "Junior123",  // Исправил опечатку - было Cunior123
+        senior: "Senior123",
+        special: "Special123"
     };
     
-    return db.ref('mlk_passwords').set(defaultPasswords);
+    // Создаем хешированные пароли
+    const hashedPasswords = {};
+    
+    for (const [key, plainPassword] of Object.entries(newPasswords)) {
+        const salt = generateSalt();
+        const hash = await hashPassword(plainPassword, salt);
+        hashedPasswords[key] = {
+            hash: hash,
+            salt: salt,
+            plain: plainPassword  // Храним также в открытом виде для обратной совместимости
+        };
+    }
+    
+    return db.ref('mlk_passwords').set(hashedPasswords);
 }
 
 /* ===== ДОБАВЛЕНИЕ ЗАЩИЩЕННЫХ ПОЛЬЗОВАТЕЛЕЙ ===== */
@@ -522,7 +540,7 @@ function addProtectedUsersToWhitelist() {
 }
 
 /* ===== ИЗМЕНЕНИЕ КОДОВ ДОСТУПА ===== */
-function changePassword(type, newPassword) {
+async function changePassword(type, newPassword) {
     if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) {
         showNotification("Только администратор может изменять коды доступа", "error");
         return Promise.reject("Недостаточно прав");
@@ -533,11 +551,26 @@ function changePassword(type, newPassword) {
         return Promise.reject("Пустой пароль");
     }
     
-    const updates = {};
-    updates[type] = newPassword.trim();
+    // Создаем хешированный пароль
+    const salt = generateSalt();
+    const hash = await hashPassword(newPassword, salt);
     
-    return db.ref('mlk_passwords').update(updates).then(() => {
-        passwords[type] = newPassword.trim();
+    const updateData = {
+        [type]: {
+            hash: hash,
+            salt: salt,
+            plain: newPassword  // Для обратной совместимости
+        }
+    };
+    
+    return db.ref('mlk_passwords').update(updateData).then(() => {
+        // Обновляем локальную переменную
+        passwords[type] = {
+            hash: hash,
+            salt: salt,
+            plain: newPassword
+        };
+        
         showNotification(`Код доступа изменен`, "success");
         
         // Логируем изменение пароля
@@ -4432,6 +4465,7 @@ window.addNavButton = function(container, icon, text, onClick) {
 };
 
 }
+
 
 
 

@@ -387,28 +387,39 @@ function trackLoginAttempt(ip, success = false) {
         // Сбрасываем счетчик при успешном входе
         loginAttempts[ip].attempts = 0;
         loginAttempts[ip].lockedUntil = 0;
-        // Не показываем уведомление при успешном входе
+        
+        // Показываем уведомление об успешном входе (если нужно)
+        // showNotification("Вход выполнен успешно", "success");
+        
     } else {
         // Увеличиваем счетчик неудачных попыток
         loginAttempts[ip].attempts++;
         loginAttempts[ip].lastAttempt = now;
         
-        console.log(`Failed login attempt ${loginAttempts[ip].attempts} for IP ${ip}`);
+        console.log(`Неудачная попытка входа ${loginAttempts[ip].attempts} с IP ${ip}`);
         
         // Проверяем, достигнут ли лимит попыток
         if (loginAttempts[ip].attempts >= MAX_ATTEMPTS) {
             loginAttempts[ip].lockedUntil = now + LOCKOUT_TIME;
             
-            // Показываем ОДНО сообщение о блокировке СВЕРХУ
+            // Показываем специальное сообщение о блокировке IP
             const minutesLeft = Math.ceil(LOCKOUT_TIME / 60000);
-            showLoginError(`Слишком много попыток входа. Вы заблокированы на ${minutesLeft} минут.`, "error");
             
-            // НЕ показываем системное уведомление снизу
+            // Сообщение сверху (в форме входа)
+            const errorMessage = `Слишком много неудачных попыток. IP-адрес временно заблокирован на ${minutesLeft} ${minutesLeft === 1 ? 'минуту' : minutesLeft < 5 ? 'минуты' : 'минут'}.`;
+            showLoginError(errorMessage, "error");
+            
+            // Дополнительное системное уведомление снизу (через 300мс)
+            setTimeout(() => {
+                showNotification(`🔒 IP заблокирован на ${minutesLeft} ${minutesLeft === 1 ? 'минуту' : minutesLeft < 5 ? 'минуты' : 'минут'}`, "error");
+            }, 300);
+            
         } else {
-            // Для первых неудачных попыток показываем только ошибку сверху
-            // (уже показано в функции login)
+            // Для первых неудачных попыток показываем предупреждение
             const attemptsLeft = MAX_ATTEMPTS - loginAttempts[ip].attempts;
-            console.log(`Attempts left for IP ${ip}: ${attemptsLeft}`);
+            if (attemptsLeft <= 2) {
+                showLoginError(`Неверный пароль. Осталось попыток: ${attemptsLeft}`, "warning");
+            }
         }
     }
     
@@ -1220,56 +1231,89 @@ function resetLoginButton(loginButton, originalText) {
     }
 }
 
-// Функция для отображения ошибок входа (сверху формы)
+// Функция для отображения ошибок входа
 function showLoginError(message, type = "error") {
     console.log("Login error:", message);
     
     const errorElement = document.getElementById("login-error");
     if (errorElement) {
-        // Определяем цвет в зависимости от типа ошибки
-        let borderColor = "#b43c3c";
-        let icon = "fa-exclamation-triangle";
+        // Определяем стили в зависимости от типа
+        let bgColor, borderColor, iconColor, icon, title;
         
-        if (type === "warning") {
-            borderColor = "#c0b070";
-            icon = "fa-exclamation-circle";
-        } else if (type === "info") {
-            borderColor = "#8cb43c";
-            icon = "fa-info-circle";
+        switch(type) {
+            case "warning":
+                bgColor = "rgba(192, 176, 112, 0.1)";
+                borderColor = "#c0b070";
+                iconColor = "#c0b070";
+                icon = "fa-exclamation-circle";
+                title = "ПРЕДУПРЕЖДЕНИЕ";
+                break;
+            case "info":
+                bgColor = "rgba(140, 180, 60, 0.1)";
+                borderColor = "#8cb43c";
+                iconColor = "#8cb43c";
+                icon = "fa-info-circle";
+                title = "ИНФОРМАЦИЯ";
+                break;
+            default: // error
+                bgColor = "rgba(180, 60, 60, 0.1)";
+                borderColor = "#b43c3c";
+                iconColor = "#b43c3c";
+                icon = "fa-exclamation-triangle";
+                title = "ОШИБКА ВХОДА";
         }
         
+        // Создаем компактное сообщение об ошибке
         errorElement.innerHTML = `
-            <div class="login-error-box" style="border-color: ${borderColor}; animation: fadeIn 0.3s ease;">
-                <i class="fas ${icon}" style="color: ${borderColor};"></i>
-                <div class="error-content">
-                    <div class="error-title" style="color: ${borderColor};">
-                        ${type === "error" ? "ОШИБКА ВХОДА" : type === "warning" ? "ПРЕДУПРЕЖДЕНИЕ" : "ИНФОРМАЦИЯ"}
-                    </div>
-                    <div class="error-message">${message}</div>
+            <div style="
+                background: ${bgColor};
+                border: 1px solid ${borderColor};
+                border-radius: 4px;
+                padding: 10px 15px;
+                margin: 10px 0;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: fadeIn 0.3s ease;
+                max-width: 100%;
+            ">
+                <i class="fas ${icon}" style="color: ${iconColor}; font-size: 1.2rem; flex-shrink: 0;"></i>
+                <div style="flex: 1;">
+                    <div style="
+                        color: ${iconColor};
+                        font-weight: 500;
+                        font-size: 0.9rem;
+                        margin-bottom: 3px;
+                    ">${title}</div>
+                    <div style="
+                        color: ${type === 'error' ? '#d45c5c' : type === 'warning' ? '#e0d090' : '#a0cc60'};
+                        font-size: 0.85rem;
+                        line-height: 1.4;
+                    ">${message}</div>
                 </div>
             </div>
         `;
-        errorElement.style.display = "block";
-        errorElement.style.opacity = "1";
         
-        // Автоматическое скрытие через разное время в зависимости от типа ошибки
-        let hideTime = 8000;
-        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
-            hideTime = 12000;
+        errorElement.style.display = "block";
+        
+        // Автоматическое скрытие
+        let hideTime = 7000;
+        if (message.includes("IP заблокирован")) {
+            hideTime = 10000; // Дольше для блокировки IP
         } else if (message.includes("НЕВЕРНЫЙ ПАРОЛЬ")) {
-            hideTime = 5000;
+            hideTime = 4000; // Короче для неправильного пароля
         }
         
         setTimeout(() => {
             if (errorElement && errorElement.style.display !== "none") {
-                errorElement.style.opacity = "0";
-                errorElement.style.transition = "opacity 0.5s ease";
+                errorElement.style.opacity = "0.5";
+                errorElement.style.transition = "opacity 0.3s ease";
                 setTimeout(() => {
                     if (errorElement && errorElement.style.display !== "none") {
                         errorElement.style.display = "none";
                         errorElement.style.opacity = "1";
                     }
-                }, 500);
+                }, 300);
             }
         }, hideTime);
     }
@@ -1713,26 +1757,104 @@ function showLoginError(message, type = "error") {
 }
 
 // Функция для системных уведомлений (всплывающих)
+// Функция для системных уведомлений (всплывающих внизу)
 function showNotification(message, type = "info") {
-    // Создаем уведомление
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
+    // Удаляем старые уведомления
+    const oldNotifications = document.querySelectorAll('.system-notification');
+    oldNotifications.forEach(notification => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    });
     
-    // Добавляем на страницу
+    // Создаем новое уведомление
+    const notification = document.createElement('div');
+    notification.className = `system-notification ${type}`;
+    
+    // Определяем иконку и цвет
+    let icon, bgColor, textColor;
+    switch(type) {
+        case 'success':
+            icon = 'fa-check-circle';
+            bgColor = 'rgba(140, 180, 60, 0.95)';
+            textColor = '#1e201c';
+            break;
+        case 'warning':
+            icon = 'fa-exclamation-triangle';
+            bgColor = 'rgba(192, 176, 112, 0.95)';
+            textColor = '#1e201c';
+            break;
+        case 'error':
+            icon = 'fa-times-circle';
+            bgColor = 'rgba(180, 60, 60, 0.95)';
+            textColor = '#ffffff';
+            break;
+        default: // info
+            icon = 'fa-info-circle';
+            bgColor = 'rgba(40, 42, 36, 0.95)';
+            textColor = '#c0b070';
+    }
+    
+    notification.innerHTML = `
+        <div style="
+            background: ${bgColor};
+            border: 1px solid ${type === 'error' ? '#b43c3c' : type === 'warning' ? '#c0b070' : type === 'success' ? '#8cb43c' : '#4a4a3a'};
+            border-radius: 4px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            max-width: 400px;
+            min-width: 300px;
+        ">
+            <i class="fas ${icon}" style="
+                color: ${textColor};
+                font-size: 1.1rem;
+                flex-shrink: 0;
+            "></i>
+            <div style="
+                color: ${textColor};
+                font-size: 0.9rem;
+                font-weight: 500;
+                line-height: 1.4;
+                flex: 1;
+            ">${message}</div>
+        </div>
+    `;
+    
+    // Стили для позиционирования
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    `;
+    
     document.body.appendChild(notification);
     
     // Показываем с анимацией
-    setTimeout(() => notification.classList.add('show'), 10);
+    setTimeout(() => {
+        notification.style.transform = 'translateY(0)';
+        notification.style.opacity = '1';
+    }, 10);
     
     // Определяем время отображения
-    const duration = type === "error" ? 5000 : 
-                    type === "warning" ? 4000 : 
-                    type === "success" ? 3000 : 2000;
+    const duration = type === 'error' ? 5000 : 
+                    type === 'warning' ? 4000 : 
+                    type === 'success' ? 3000 : 2500;
     
     // Автоматическое скрытие
     setTimeout(() => {
-        notification.classList.remove('show');
+        notification.style.transform = 'translateY(100px)';
+        notification.style.opacity = '0';
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);

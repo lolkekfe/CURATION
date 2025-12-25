@@ -3089,3 +3089,63 @@ body, html {
 .access-button.error-pulse {
     animation: errorPulse 2s infinite;
 }
+/* Анимация появления */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(-5px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes slideInUp {
+    from { 
+        transform: translateY(100px); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateY(0); 
+        opacity: 1; 
+    }
+}
+
+@keyframes slideOutDown {
+    from { 
+        transform: translateY(0); 
+        opacity: 1; 
+    }
+    to { 
+        transform: translateY(100px); 
+        opacity: 0; 
+    }
+}
+
+/* Базовые стили для ошибок входа */
+#login-error {
+    position: relative;
+    z-index: 10;
+}
+
+/* Стили для блокировки IP (специальный стиль) */
+.ip-blocked-notification {
+    background: rgba(180, 60, 60, 0.15) !important;
+    border: 1px solid #b43c3c !important;
+    border-left: 4px solid #b43c3c !important;
+}
+
+.ip-blocked-notification i {
+    color: #b43c3c !important;
+}
+
+.ip-blocked-notification .error-title {
+    color: #b43c3c !important;
+    font-weight: 600 !important;
+}
+
+.ip-blocked-notification .error-message {
+    color: #ffffff !important;
+    font-weight: 500 !important;
+}

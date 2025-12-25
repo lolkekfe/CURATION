@@ -1238,85 +1238,592 @@ function showLoginError(message, type = "error") {
     const errorElement = document.getElementById("login-error");
     if (errorElement) {
         // Определяем стили в зависимости от типа
-        let bgColor, borderColor, iconColor, icon, title;
+        let borderColor, icon, title, bgColor, textColor, iconClass;
         
         switch(type) {
             case "warning":
-                bgColor = "rgba(192, 176, 112, 0.1)";
                 borderColor = "#c0b070";
-                iconColor = "#c0b070";
-                icon = "fa-exclamation-circle";
+                icon = "fa-exclamation-triangle";
                 title = "ПРЕДУПРЕЖДЕНИЕ";
+                bgColor = "rgba(192, 176, 112, 0.1)";
+                textColor = "#e0d090";
+                iconClass = "warning";
                 break;
             case "info":
-                bgColor = "rgba(140, 180, 60, 0.1)";
                 borderColor = "#8cb43c";
-                iconColor = "#8cb43c";
                 icon = "fa-info-circle";
                 title = "ИНФОРМАЦИЯ";
+                bgColor = "rgba(140, 180, 60, 0.1)";
+                textColor = "#a0cc60";
+                iconClass = "info";
                 break;
             default: // error
-                bgColor = "rgba(180, 60, 60, 0.1)";
                 borderColor = "#b43c3c";
-                iconColor = "#b43c3c";
-                icon = "fa-exclamation-triangle";
-                title = "ОШИБКА ВХОДА";
+                icon = "fa-shield-alt";
+                title = "СИСТЕМА БЕЗОПАСНОСТИ";
+                bgColor = "rgba(180, 60, 60, 0.1)";
+                textColor = "#d45c5c";
+                iconClass = "error";
         }
         
-        // Создаем компактное сообщение об ошибке
-        errorElement.innerHTML = `
-            <div style="
-                background: ${bgColor};
-                border: 1px solid ${borderColor};
-                border-radius: 4px;
-                padding: 10px 15px;
-                margin: 10px 0;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                animation: fadeIn 0.3s ease;
-                max-width: 100%;
-            ">
-                <i class="fas ${icon}" style="color: ${iconColor}; font-size: 1.2rem; flex-shrink: 0;"></i>
-                <div style="flex: 1;">
+        // Для сообщения о блокировке IP используем специальный стиль
+        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+            title = "🔒 БЛОКИРОВКА IP";
+            icon = "fa-ban";
+            borderColor = "#b43c3c";
+            bgColor = "rgba(180, 60, 60, 0.15)";
+            textColor = "#f08080";
+            iconClass = "ip-blocked";
+            
+            errorElement.innerHTML = `
+                <div class="login-error-box ip-blocked" style="
+                    background: ${bgColor};
+                    border: 2px solid ${borderColor};
+                    border-left: 5px solid ${borderColor};
+                    border-radius: 6px;
+                    padding: 20px;
+                    margin: 20px 0;
+                    color: ${textColor};
+                    font-size: 0.95rem;
+                    animation: fadeIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                    box-shadow: 0 8px 25px rgba(180, 60, 60, 0.25);
+                    backdrop-filter: blur(10px);
+                    position: relative;
+                    overflow: hidden;
+                    z-index: 100;
+                ">
+                    <!-- Эффект пульсации -->
                     <div style="
-                        color: ${iconColor};
-                        font-weight: 500;
-                        font-size: 0.9rem;
-                        margin-bottom: 3px;
-                    ">${title}</div>
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: radial-gradient(circle at center, rgba(255,0,0,0.1) 0%, transparent 70%);
+                        animation: pulseGlow 2s infinite alternate;
+                        pointer-events: none;
+                        z-index: -1;
+                    "></div>
+                    
+                    <!-- Анимированный фон -->
                     <div style="
-                        color: ${type === 'error' ? '#d45c5c' : type === 'warning' ? '#e0d090' : '#a0cc60'};
-                        font-size: 0.85rem;
-                        line-height: 1.4;
-                    ">${message}</div>
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: repeating-linear-gradient(
+                            45deg,
+                            transparent,
+                            transparent 10px,
+                            rgba(180, 60, 60, 0.05) 10px,
+                            rgba(180, 60, 60, 0.05) 20px
+                        );
+                        z-index: -1;
+                        pointer-events: none;
+                    "></div>
+                    
+                    <div style="display: flex; align-items: flex-start; gap: 15px; position: relative; z-index: 2;">
+                        <div style="
+                            width: 50px;
+                            height: 50px;
+                            background: linear-gradient(135deg, rgba(180, 60, 60, 0.2), rgba(180, 60, 60, 0.4));
+                            border: 2px solid ${borderColor};
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                            animation: rotateIcon 3s linear infinite;
+                        ">
+                            <i class="fas ${icon}" style="
+                                color: ${borderColor};
+                                font-size: 1.3rem;
+                                text-shadow: 0 0 15px rgba(180, 60, 60, 0.7);
+                            "></i>
+                        </div>
+                        
+                        <div style="flex: 1;">
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                margin-bottom: 12px;
+                                flex-wrap: wrap;
+                                gap: 10px;
+                            ">
+                                <h4 style="
+                                    color: ${borderColor};
+                                    font-family: 'Orbitron', sans-serif;
+                                    font-weight: 700;
+                                    font-size: 1.1rem;
+                                    letter-spacing: 1px;
+                                    margin: 0;
+                                    text-transform: uppercase;
+                                ">
+                                    <i class="fas fa-lock" style="margin-right: 10px;"></i>
+                                    ${title}
+                                </h4>
+                                
+                                <div style="
+                                    background: rgba(180, 60, 60, 0.2);
+                                    color: ${borderColor};
+                                    padding: 4px 12px;
+                                    border-radius: 20px;
+                                    font-size: 0.8rem;
+                                    font-weight: 500;
+                                    letter-spacing: 1px;
+                                    border: 1px solid rgba(180, 60, 60, 0.4);
+                                ">
+                                    <i class="fas fa-clock" style="margin-right: 5px;"></i>
+                                    IP БЛОКИРОВКА
+                                </div>
+                            </div>
+                            
+                            <div style="
+                                color: ${textColor};
+                                line-height: 1.6;
+                                font-size: 0.9rem;
+                                margin-bottom: 15px;
+                                padding: 12px;
+                                background: rgba(20, 18, 15, 0.4);
+                                border-radius: 4px;
+                                border: 1px solid rgba(180, 60, 60, 0.2);
+                                font-family: 'JetBrains Mono', monospace;
+                                backdrop-filter: blur(5px);
+                            ">
+                                <i class="fas fa-exclamation-circle" style="margin-right: 8px; color: ${borderColor};"></i>
+                                ${message}
+                            </div>
+                            
+                            <div style="
+                                display: flex;
+                                align-items: center;
+                                gap: 15px;
+                                padding-top: 12px;
+                                border-top: 1px solid rgba(180, 60, 60, 0.2);
+                                color: rgba(192, 184, 168, 0.7);
+                                font-size: 0.8rem;
+                                flex-wrap: wrap;
+                            ">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-shield-alt" style="color: ${borderColor};"></i>
+                                    <span>Система безопасности активирована</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-user-secret" style="color: ${borderColor};"></i>
+                                    <span>Защита от bruteforce</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-history" style="color: ${borderColor};"></i>
+                                    <span>Авторазблокировка через 15 минут</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Прогресс-бар блокировки -->
+                            <div style="
+                                margin-top: 15px;
+                                padding: 8px;
+                                background: rgba(20, 18, 15, 0.5);
+                                border-radius: 4px;
+                                border: 1px solid rgba(180, 60, 60, 0.3);
+                            ">
+                                <div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    margin-bottom: 8px;
+                                    font-size: 0.8rem;
+                                    color: ${textColor};
+                                ">
+                                    <span>Время до разблокировки:</span>
+                                    <span id="lock-timer" style="font-family: 'Orbitron', sans-serif; font-weight: 600;">15:00</span>
+                                </div>
+                                <div style="
+                                    width: 100%;
+                                    height: 8px;
+                                    background: rgba(180, 60, 60, 0.2);
+                                    border-radius: 4px;
+                                    overflow: hidden;
+                                ">
+                                    <div id="lock-progress" style="
+                                        width: 100%;
+                                        height: 100%;
+                                        background: linear-gradient(90deg, #b43c3c, #ff6b6b);
+                                        border-radius: 4px;
+                                        animation: progressShrink 900s linear;
+                                    "></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+            
+            // Запускаем таймер обратного отсчета
+            startLockTimer();
+            
+        } else {
+            // Обычные ошибки (не блокировка IP)
+            errorElement.innerHTML = `
+                <div class="login-error-box ${type}" style="
+                    background: ${bgColor};
+                    border: 1px solid ${borderColor};
+                    border-left: 4px solid ${borderColor};
+                    border-radius: 4px;
+                    padding: 15px 20px;
+                    margin: 15px 0;
+                    color: ${textColor};
+                    font-size: 0.9rem;
+                    animation: slideIn 0.3s ease-out;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                    backdrop-filter: blur(5px);
+                ">
+                    <div style="display: flex; align-items: flex-start; gap: 12px;">
+                        <div style="
+                            width: 36px;
+                            height: 36px;
+                            background: ${bgColor};
+                            border: 1px solid ${borderColor};
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        ">
+                            <i class="fas ${icon}" style="color: ${borderColor}; font-size: 1rem;"></i>
+                        </div>
+                        
+                        <div style="flex: 1;">
+                            <div class="error-title" style="
+                                color: ${borderColor};
+                                font-weight: 600;
+                                margin-bottom: 8px;
+                                font-size: 0.95rem;
+                                letter-spacing: 0.5px;
+                            ">${title}</div>
+                            <div class="error-message" style="
+                                color: ${textColor};
+                                line-height: 1.5;
+                                font-size: 0.85rem;
+                            ">${message}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
         
         errorElement.style.display = "block";
         
-        // Автоматическое скрытие
+        // Добавляем анимацию появления
+        setTimeout(() => {
+            const box = errorElement.querySelector('.login-error-box');
+            if (box) {
+                box.style.animation = "fadeIn 0.5s ease";
+            }
+        }, 10);
+        
+        // Время отображения в зависимости от типа
         let hideTime = 7000;
-        if (message.includes("IP заблокирован")) {
-            hideTime = 10000; // Дольше для блокировки IP
+        if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+            hideTime = 30000; // 30 секунд для блокировки IP
         } else if (message.includes("НЕВЕРНЫЙ ПАРОЛЬ")) {
-            hideTime = 4000; // Короче для неправильного пароля
+            hideTime = 5000; // 5 секунд для неправильного пароля
+        } else if (type === "warning") {
+            hideTime = 6000; // 6 секунд для предупреждений
         }
         
+        // Автоматическое скрытие с плавным исчезновением
         setTimeout(() => {
             if (errorElement && errorElement.style.display !== "none") {
-                errorElement.style.opacity = "0.5";
-                errorElement.style.transition = "opacity 0.3s ease";
-                setTimeout(() => {
-                    if (errorElement && errorElement.style.display !== "none") {
-                        errorElement.style.display = "none";
-                        errorElement.style.opacity = "1";
-                    }
-                }, 300);
+                const box = errorElement.querySelector('.login-error-box');
+                if (box) {
+                    box.style.opacity = "0";
+                    box.style.transform = "translateY(-10px)";
+                    box.style.transition = "all 0.5s ease";
+                    
+                    setTimeout(() => {
+                        if (errorElement && errorElement.style.display !== "none") {
+                            errorElement.style.display = "none";
+                            // Восстанавливаем стили для следующего показа
+                            const innerBox = errorElement.querySelector('.login-error-box');
+                            if (innerBox) {
+                                innerBox.style.opacity = "1";
+                                innerBox.style.transform = "translateY(0)";
+                            }
+                        }
+                    }, 500);
+                }
             }
         }, hideTime);
     }
+    
+    // Для блокировки IP также показываем системное уведомление
+    if (message.includes("IP заблокирован") || message.includes("блокирован")) {
+        setTimeout(() => {
+            showSystemNotification(message, "error", true);
+        }, 300);
+    }
+}
+
+// Функция для таймера блокировки
+function startLockTimer() {
+    const timerElement = document.getElementById('lock-timer');
+    const progressElement = document.getElementById('lock-progress');
+    
+    if (!timerElement || !progressElement) return;
+    
+    let totalSeconds = 15 * 60; // 15 минут в секундах
+    let currentSeconds = totalSeconds;
+    
+    // Сбрасываем анимацию прогресс-бара
+    progressElement.style.animation = 'none';
+    progressElement.offsetHeight; // Trigger reflow
+    progressElement.style.animation = `progressShrink ${totalSeconds}s linear`;
+    
+    const timerInterval = setInterval(() => {
+        currentSeconds--;
+        
+        if (currentSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerElement.textContent = '00:00';
+            
+            // Обновляем сообщение
+            const errorElement = document.getElementById("login-error");
+            if (errorElement && errorElement.style.display !== "none") {
+                const messageDiv = errorElement.querySelector('.error-message');
+                if (messageDiv) {
+                    messageDiv.innerHTML = `
+                        <div style="color: #8cb43c; font-weight: 600;">
+                            <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                            Блокировка IP снята. Теперь вы можете попробовать войти снова.
+                        </div>
+                    `;
+                }
+                
+                // Меняем стиль уведомления на успешный
+                const box = errorElement.querySelector('.login-error-box');
+                if (box) {
+                    box.style.borderColor = '#8cb43c';
+                    box.style.background = 'rgba(140, 180, 60, 0.1)';
+                }
+                
+                // Скрываем через 5 секунд
+                setTimeout(() => {
+                    if (errorElement && errorElement.style.display !== "none") {
+                        errorElement.style.opacity = "0";
+                        errorElement.style.transition = "opacity 0.5s ease";
+                        setTimeout(() => {
+                            if (errorElement && errorElement.style.display !== "none") {
+                                errorElement.style.display = "none";
+                                errorElement.style.opacity = "1";
+                            }
+                        }, 500);
+                    }
+                }, 5000);
+            }
+            return;
+        }
+        
+        // Форматируем время
+        const minutes = Math.floor(currentSeconds / 60);
+        const seconds = currentSeconds % 60;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+    }, 1000);
+}
+
+// Функция для системных уведомлений (улучшенная)
+function showSystemNotification(message, type = "info", isIPBlock = false) {
+    // Удаляем старые уведомления
+    const oldNotifications = document.querySelectorAll('.system-notification');
+    oldNotifications.forEach(notification => {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    });
+    
+    // Определяем стили
+    let icon, bgColor, borderColor, textColor, title;
+    
+    if (isIPBlock) {
+        icon = 'fa-shield-alt';
+        title = 'БЛОКИРОВКА IP';
+        bgColor = 'rgba(180, 60, 60, 0.95)';
+        borderColor = '#b43c3c';
+        textColor = '#ffffff';
+    } else {
+        switch(type) {
+            case 'success':
+                icon = 'fa-check-circle';
+                title = 'УСПЕХ';
+                bgColor = 'rgba(140, 180, 60, 0.95)';
+                borderColor = '#8cb43c';
+                textColor = '#1e201c';
+                break;
+            case 'warning':
+                icon = 'fa-exclamation-triangle';
+                title = 'ПРЕДУПРЕЖДЕНИЕ';
+                bgColor = 'rgba(192, 176, 112, 0.95)';
+                borderColor = '#c0b070';
+                textColor = '#1e201c';
+                break;
+            case 'error':
+                icon = 'fa-times-circle';
+                title = 'ОШИБКА';
+                bgColor = 'rgba(180, 60, 60, 0.95)';
+                borderColor = '#b43c3c';
+                textColor = '#ffffff';
+                break;
+            default: // info
+                icon = 'fa-info-circle';
+                title = 'ИНФОРМАЦИЯ';
+                bgColor = 'rgba(40, 42, 36, 0.95)';
+                borderColor = '#4a4a3a';
+                textColor = '#c0b070';
+        }
+    }
+    
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = `system-notification ${type} ${isIPBlock ? 'ip-block' : ''}`;
+    
+    notification.innerHTML = `
+        <div style="
+            background: ${bgColor};
+            border: 2px solid ${borderColor};
+            border-radius: 8px;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            max-width: 450px;
+            min-width: 350px;
+            position: relative;
+            overflow: hidden;
+            z-index: 1000;
+        ">
+            <!-- Эффект пульсации для IP блокировки -->
+            ${isIPBlock ? `
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+                animation: pulseGlow 2s infinite alternate;
+                pointer-events: none;
+                z-index: -1;
+            "></div>
+            ` : ''}
+            
+            <div style="
+                width: 44px;
+                height: 44px;
+                background: ${isIPBlock ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)'};
+                border: 2px solid ${borderColor};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                ${isIPBlock ? 'animation: rotateIcon 3s linear infinite;' : ''}
+            ">
+                <i class="fas ${icon}" style="
+                    color: ${textColor};
+                    font-size: 1.2rem;
+                    ${isIPBlock ? 'text-shadow: 0 0 10px rgba(255,255,255,0.5);' : ''}
+                "></i>
+            </div>
+            
+            <div style="flex: 1;">
+                <div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 8px;
+                ">
+                    <h4 style="
+                        color: ${textColor};
+                        font-family: 'Orbitron', sans-serif;
+                        font-weight: 600;
+                        font-size: 1rem;
+                        margin: 0;
+                        letter-spacing: 1px;
+                    ">
+                        ${title}
+                    </h4>
+                    
+                    ${isIPBlock ? `
+                    <div style="
+                        background: rgba(255,255,255,0.2);
+                        color: ${textColor};
+                        padding: 3px 10px;
+                        border-radius: 20px;
+                        font-size: 0.7rem;
+                        font-weight: 500;
+                        letter-spacing: 1px;
+                        border: 1px solid rgba(255,255,255,0.3);
+                    ">
+                        <i class="fas fa-lock" style="margin-right: 5px;"></i>
+                        ЗАЩИТА
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div style="
+                    color: ${textColor};
+                    font-size: 0.9rem;
+                    font-weight: ${isIPBlock ? '500' : 'normal'};
+                    line-height: 1.4;
+                ">
+                    ${message}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Стили для позиционирования
+    notification.style.cssText = `
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 9999;
+        transform: translateX(150%);
+        opacity: 0;
+        transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Показываем с анимацией
+    setTimeout(() => {
+        notification.style.transform = 'translateX(0)';
+        notification.style.opacity = '1';
+    }, 10);
+    
+    // Время отображения
+    const duration = isIPBlock ? 8000 : 
+                    type === 'error' ? 6000 : 
+                    type === 'warning' ? 5000 : 
+                    type === 'success' ? 4000 : 3500;
+    
+    // Автоматическое скрытие с эффектом
+    setTimeout(() => {
+        notification.style.transform = 'translateX(150%)';
+        notification.style.opacity = '0';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 500);
+    }, duration);
 }
 
 // Функция для трекинга попыток входа

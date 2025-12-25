@@ -159,22 +159,25 @@
                 </div>
             </div>
             
-         <div class="navigation-panel">
-    <div class="panel-header">
-        <div class="header-icon">
-            <i class="fas fa-sitemap"></i>
-        </div>
-        <span>МОДУЛИ</span>
-        <div class="header-status">
-            <div class="status-led active"></div>
-            <span>ОНЛАЙН</span>
-        </div>
-    </div>
-    
-    <nav class="nav-menu" id="nav-menu">
-        <!-- Навигация через JS -->
-    </nav>
-</div>
+            <div class="navigation-panel">
+                <div class="panel-header">
+                    <div class="header-icon">
+                        <i class="fas fa-sitemap"></i>
+                    </div>
+                    <span>МОДУЛИ</span>
+                    <div class="header-status">
+                        <div class="status-led active"></div>
+                        <span>ОНЛАЙН</span>
+                    </div>
+                </div>
+                
+                <div class="module-grid">
+                    <!-- ДОБАВЬТЕ ЭТОТ DIV -->
+                    <nav class="nav-menu" id="nav-menu">
+                        <!-- Навигация через JS -->
+                    </nav>
+                </div>
+            </div>
             
             <div class="session-panel">
                 <div class="panel-header">
@@ -298,16 +301,15 @@
         </div>
     </div>
 
-    <!-- Firebase SDK (ОБЯЗАТЕЛЬНО) -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<!-- Инициализация Firebase -->
-<script src="firebase.js"></script>
-
-<!-- Основная логика сайта -->
-<script src="app.js" defer></script>
-
+    <!-- Скрипты -->
+    <!-- ВЫБЕРИТЕ ОДНУ ВЕРСИЮ FIREBASE! -->
+    
+    <!-- Вариант 1: Firebase v9 (compat версия) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="app.js"></script>
+    
     <!-- Инициализация времени -->
     <script>
         function updateTime() {
@@ -341,4 +343,3 @@
     </script>
 </body>
 </html>
-

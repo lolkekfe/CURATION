@@ -2286,6 +2286,7 @@ window.renderMLKList = function() {
     });
 }
 /* ===== УЛУЧШЕННЫЙ ИНТЕРФЕЙС ВСЕХ ОТЧЕТОВ ===== */
+/* ===== ВСЕ ОТЧЕТЫ (исправленная версия) ===== */
 function renderReports() {
     const content = document.getElementById("content-body");
     if (!content) return;
@@ -2300,7 +2301,7 @@ function renderReports() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container with-table">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-list-alt"></i> АРХИВ ОТЧЕТОВ
             </h2>
@@ -2324,32 +2325,30 @@ function renderReports() {
                 </div>
             </div>
             
-            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
-                <h4 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
-                
-                <div class="table-container" style="flex: 1; overflow-y: auto;">
-                    ${reports.length === 0 ? `
-                        <div style="text-align: center; padding: 40px; color: #8f9779;">
-                            <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                            <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
-                        </div>
-                    ` : `
-                        <table class="data-table" style="min-width: 100%;">
-                            <thead style="position: sticky; top: 0; background: #1e201c;">
-                                <tr>
-                                    <th>ИДЕНТИФИКАТОР</th>
-                                    <th>НАРУШЕНИЕ</th>
-                                    <th>АВТОР</th>
-                                    <th>ВРЕМЯ</th>
-                                    <th>СТАТУС</th>
-                                    <th>ДЕЙСТВИЯ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="all-reports-body">
-                            </tbody>
-                        </table>
-                    `}
-                </div>
+            <h4 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">ВСЕ ОТЧЕТЫ (${reports.length})</h4>
+            
+            <div class="table-container">
+                ${reports.length === 0 ? `
+                    <div style="text-align: center; padding: 40px; color: #8f9779;">
+                        <i class="fas fa-database" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>ОТЧЕТЫ ЕЩЕ НЕ СОЗДАНЫ</p>
+                    </div>
+                ` : `
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ИДЕНТИФИКАТОР</th>
+                                <th>НАРУШЕНИЕ</th>
+                                <th>АВТОР</th>
+                                <th>ВРЕМЯ</th>
+                                <th>СТАТУС</th>
+                                <th class="actions">ДЕЙСТВИЯ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="all-reports-body">
+                        </tbody>
+                    </table>
+                `}
             </div>
         </div>
     `;
@@ -2370,36 +2369,35 @@ function renderAllReportsTable() {
         let statusClass = r.deleted ? "status-deleted" : (r.confirmed ? "status-confirmed" : "status-pending");
         
         const actionsHtml = (!r.deleted && !r.confirmed && CURRENT_RANK.level >= RANKS.ADMIN.level) ?
-            `<div style="display: flex; gap: 5px;">
-                <button onclick="confirmReport('${r.id}')" class="action-btn confirm" style="padding: 4px 8px; font-size: 0.8rem;">
-                    <i class="fas fa-check"></i>
+            `<div class="action-buttons">
+                <button onclick="confirmReport('${r.id}')" class="action-btn confirm">
+                    <i class="fas fa-check"></i> Подтвердить
                 </button>
-                <button onclick="deleteReport('${r.id}')" class="action-btn delete" style="padding: 4px 8px; font-size: 0.8rem;">
-                    <i class="fas fa-trash"></i>
+                <button onclick="deleteReport('${r.id}')" class="action-btn delete">
+                    <i class="fas fa-trash"></i> Удалить
                 </button>
             </div>` : '';
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
-                <i class="fas fa-user-tag" style="margin-right: 5px; color: #8f9779;"></i>${r.tag || '—'}
+            <td style="max-width: 150px;">
+                <i class="fas fa-user-tag fa-icon"></i>${r.tag || '—'}
             </td>
-            <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;" title="${r.action || ''}">
+            <td style="max-width: 200px;" class="truncate" title="${r.action || ''}">
                 ${(r.action || '').substring(0, 50)}${r.action && r.action.length > 50 ? '...' : ''}
             </td>
             <td>${r.author || 'неизвестно'}</td>
-            <td style="font-size: 0.85rem; color: #8f9779;">${r.time || '—'}</td>
-            <td>
-                <span class="report-status ${statusClass}" style="display: inline-block; padding: 4px 8px; font-size: 0.8rem; border-radius: 3px; background: ${statusClass === 'status-confirmed' ? 'rgba(140, 180, 60, 0.1)' : statusClass === 'status-deleted' ? 'rgba(180, 60, 60, 0.1)' : 'rgba(192, 176, 112, 0.1)'}; color: ${statusClass === 'status-confirmed' ? '#8cb43c' : statusClass === 'status-deleted' ? '#b43c3c' : '#c0b070'};">
+            <td style="font-size: 0.85rem;">${r.time || '—'}</td>
+            <td class="status-cell">
+                <span class="report-status ${statusClass}">
                     ${status}
                 </span>
             </td>
-            <td>${actionsHtml}</td>
+            <td class="actions">${actionsHtml}</td>
         `;
         tableBody.appendChild(row);
     });
 }
-
 /* ===== СТРАНИЦА КОДОВ ДОСТУПА ===== */
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
@@ -3964,5 +3962,6 @@ window.addNavButton = function(container, icon, text, onClick) {
     });
     return button;
 };
+
 
 

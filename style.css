@@ -2557,6 +2557,84 @@ body, html {
     }
 }
 
+/* Стили для прокручиваемой формы отчета */
+.report-form-scrollable {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.report-creation-container {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 10px;
+    margin-right: -10px;
+}
+
+/* Стилизация скроллбара */
+.report-creation-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.report-creation-container::-webkit-scrollbar-track {
+    background: rgba(30, 32, 28, 0.3);
+    border-radius: 4px;
+}
+
+.report-creation-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #c0b070, #8cb43c);
+    border-radius: 4px;
+}
+
+.report-creation-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #d0c080, #9cc44c);
+}
+
+/* Карточки в форме должны быть компактнее на маленьких экранах */
+@media (max-height: 800px) {
+    .zone-card {
+        padding: 15px;
+        margin-bottom: 12px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .form-textarea {
+        min-height: 100px;
+        max-height: 150px;
+    }
+}
+
+/* Уменьшаем форму на очень маленьких экранах */
+@media (max-height: 700px) {
+    .zone-card {
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 10px;
+    }
+    
+    h4 {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+    
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+    
+    .form-textarea {
+        min-height: 80px;
+        max-height: 120px;
+    }
+}
 
 
 

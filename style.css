@@ -2367,4 +2367,77 @@ input:checked + .slider:before {
     .profile-tab i {
         display: none;
     }
+}/* ===== ИСПРАВЛЕНИЯ ДЛЯ АВАТАРОК ===== */
+.user-info-avatar img {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+}
+
+#avatar-preview-large {
+    width: 80px !important;
+    height: 80px !important;
+    position: relative;
+    overflow: hidden;
+}
+
+#avatar-preview-large img,
+#avatar-preview-large i {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 2rem !important;
+}
+
+#current-avatar {
+    width: 120px !important;
+    height: 120px !important;
+    position: relative;
+}
+
+#current-avatar img,
+#current-avatar i {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 3rem !important;
+}
+
+.avatar-option {
+    width: 60px !important;
+    height: 60px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.5rem !important;
+}
+
+/* Уменьшаем модальное окно аватара */
+#avatar-modal div[style*="padding: 30px"] {
+    padding: 20px !important;
+}
+
+#avatar-dropzone {
+    padding: 20px !important;
+}
+
+#avatar-dropzone i {
+    font-size: 2rem !important;
+}
+
+/* Анимации для иконок */
+@keyframes iconPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.avatar-option:hover i {
+    animation: iconPulse 0.5s ease;
 }

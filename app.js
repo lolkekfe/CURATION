@@ -4106,6 +4106,11 @@ function applyUserSettings() {
         document.body.classList.remove('compact-view');
     }
     
+    // Применение размера шрифта
+    if (USER_SETTINGS.fontSize) {
+        document.body.style.fontSize = USER_SETTINGS.fontSize + 'px';
+    }
+    
     // Обновление аватарки в сайдбаре если есть
     updateUserAvatarInSidebar();
 }
@@ -4113,8 +4118,12 @@ function applyUserSettings() {
 // Обновление аватарки в сайдбаре
 function updateUserAvatarInSidebar() {
     const sidebarUser = document.querySelector('.user-info-avatar');
-    if (sidebarUser && USER_SETTINGS.avatar) {
-        sidebarUser.innerHTML = `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+    if (sidebarUser) {
+        if (USER_SETTINGS.avatar) {
+            sidebarUser.innerHTML = `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">`;
+        } else {
+            sidebarUser.innerHTML = `<i class="fas fa-user-circle"></i>`;
+        }
     }
 }
 
@@ -4320,68 +4329,87 @@ function renderProfileInfoTab() {
             </div>
             
             <!-- АВАТАР -->
-            <div class="zone-card" style="border-color: #8cb43c;">
-                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-user-circle"></i></div>
-                <h4 style="color: #8cb43c; margin-bottom: 20px;">АВАТАР ПРОФИЛЯ</h4>
-                
-                <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
-                    <div id="current-avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #8cb43c; overflow: hidden; background: rgba(60, 62, 56, 0.8); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #8cb43c;">
-                        ${USER_SETTINGS.avatar ? 
-                            `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">` : 
-                            `<i class="fas fa-user-shield"></i>`
-                        }
+<div class="zone-card" style="border-color: #8cb43c;">
+    <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-user-circle"></i></div>
+    <h4 style="color: #8cb43c; margin-bottom: 20px;">АВАТАР ПРОФИЛЯ</h4>
+    
+    <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+        <div id="current-avatar" style="
+            width: 120px; 
+            height: 120px; 
+            border-radius: 50%; 
+            border: 4px solid #8cb43c; 
+            overflow: hidden; 
+            background: rgba(60, 62, 56, 0.8); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        ">
+            ${USER_SETTINGS.avatar ? 
+                `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" 
+                      style="width: 100%; height: 100%; object-fit: cover;">` : 
+                `<i class="fas fa-user-shield" style="font-size: 3rem; color: #8cb43c;"></i>`
+            }
+        </div>
+        
+        <div style="text-align: center; color: #8f9779; max-width: 500px; margin: 0 auto;">
+            <p>Загрузите изображение для вашего профиля. Поддерживаются форматы JPG, PNG, GIF, SVG. Максимальный размер: 2MB.</p>
+        </div>
+        
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+            <button onclick="showAvatarUploadModal()" class="btn-primary" style="border-color: #8cb43c;">
+                <i class="fas fa-upload"></i> ЗАГРУЗИТЬ
+            </button>
+            <button onclick="generateAvatar()" class="btn-secondary">
+                <i class="fas fa-robot"></i> ГЕНЕРАЦИЯ
+            </button>
+            ${USER_SETTINGS.avatar ? 
+                `<button onclick="removeAvatar()" class="btn-secondary" style="border-color: #b43c3c; color: #b43c3c;">
+                    <i class="fas fa-trash"></i> УДАЛИТЬ
+                </button>` : ''
+            }
+        </div>
+        
+        <!-- ПРЕДУСТАНОВЛЕННЫЕ АВАТАРКИ -->
+        <div style="width: 100%;">
+            <h5 style="color: #c0b070; margin-bottom: 15px; font-size: 0.95rem;">
+                <i class="fas fa-th"></i> БЫСТРЫЙ ВЫБОР
+            </h5>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                ${[
+                    { icon: 'fa-user-secret', label: 'Шпион' },
+                    { icon: 'fa-robot', label: 'Робот' },
+                    { icon: 'fa-user-ninja', label: 'Ниндзя' },
+                    { icon: 'fa-user-astronaut', label: 'Космонавт' },
+                    { icon: 'fa-user-tie', label: 'Бизнесмен' },
+                    { icon: 'fa-user-md', label: 'Доктор' }
+                ].map(item => `
+                    <div onclick="setAvatarIcon('${item.icon}')" 
+                         class="avatar-option" 
+                         title="${item.label}"
+                         style="
+                            width: 60px;
+                            height: 60px;
+                            border-radius: 50%;
+                            background: rgba(60, 62, 56, 0.8);
+                            border: 2px solid #4a4a3a;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            transition: all 0.3s;
+                            padding: 5px;
+                        ">
+                        <i class="fas ${item.icon}" style="font-size: 1.5rem; color: #8f9779; margin-bottom: 5px;"></i>
+                        <span style="font-size: 0.7rem; color: #6a6a5a;">${item.label}</span>
                     </div>
-                    
-                    <div style="text-align: center; color: #8f9779; max-width: 500px; margin: 0 auto;">
-                        <p>Загрузите изображение для вашего профиля. Поддерживаются форматы JPG, PNG, GIF. Максимальный размер: 2MB.</p>
-                    </div>
-                    
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-                        <button onclick="showAvatarUploadModal()" class="btn-primary" style="border-color: #8cb43c;">
-                            <i class="fas fa-upload"></i> ЗАГРУЗИТЬ ИЗОБРАЖЕНИЕ
-                        </button>
-                        <button onclick="generateAvatar()" class="btn-secondary">
-                            <i class="fas fa-robot"></i> СГЕНЕРИРОВАТЬ АВАТАР
-                        </button>
-                        ${USER_SETTINGS.avatar ? 
-                            `<button onclick="removeAvatar()" class="btn-secondary" style="border-color: #b43c3c; color: #b43c3c;">
-                                <i class="fas fa-trash"></i> УДАЛИТЬ
-                            </button>` : ''
-                        }
-                    </div>
-                    
-                    <!-- ПРЕДУСТАНОВЛЕННЫЕ АВАТАРКИ -->
-                    <div style="width: 100%;">
-                        <h5 style="color: #c0b070; margin-bottom: 15px; font-size: 0.95rem;">
-                            <i class="fas fa-th"></i> БЫСТРЫЙ ВЫБОР
-                        </h5>
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-                            ${['fa-user-secret', 'fa-robot', 'fa-user-ninja', 'fa-user-astronaut', 'fa-user-tie', 'fa-user-md']
-                                .map(icon => `
-                                    <div onclick="setAvatarIcon('${icon}')" class="avatar-option" style="
-                                        width: 60px;
-                                        height: 60px;
-                                        border-radius: 50%;
-                                        background: rgba(60, 62, 56, 0.8);
-                                        border: 2px solid #4a4a3a;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        cursor: pointer;
-                                        transition: all 0.3s;
-                                        font-size: 1.5rem;
-                                        color: #8f9779;
-                                    ">
-                                        <i class="fas ${icon}"></i>
-                                    </div>
-                                `).join('')
-                            }
-                        </div>
-                    </div>
-                </div>
+                `).join('')}
             </div>
         </div>
-    `;
+    </div>
+</div>
+`
 }
 
 function renderProfileSecurityTab() {
@@ -4920,22 +4948,18 @@ async function uploadAvatar() {
         return;
     }
     
-    // Проверяем, является ли это data URL
-    if (avatarUrl.startsWith('data:')) {
-        // Проверяем размер data URL
-        if (avatarUrl.length > 2 * 1024 * 1024) { // Примерная проверка
-            showNotification('Изображение слишком большое', 'error');
-            return;
-        }
-    }
-    
     // Проверяем URL
     if (avatarUrl.startsWith('http')) {
         try {
-            // Простая проверка URL
             new URL(avatarUrl);
         } catch {
             showNotification('Некорректный URL', 'error');
+            return;
+        }
+        
+        // Проверяем, что это изображение
+        if (!avatarUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
+            showNotification('URL должен вести на изображение (JPG, PNG, GIF, WebP, SVG)', 'error');
             return;
         }
     }
@@ -4943,20 +4967,38 @@ async function uploadAvatar() {
     USER_SETTINGS.avatar = avatarUrl;
     saveUserSettings();
     
-    // Обновляем превью
-    const avatarPreview = document.getElementById('avatar-preview-large');
-    const currentAvatar = document.getElementById('current-avatar');
+    // Обновляем все превью
+    updateAllAvatarPreviews(avatarUrl);
     
-    if (avatarPreview) {
-        avatarPreview.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    showNotification('Аватар обновлен', 'success');
+    
+    // Закрываем модальное окно
+    const modal = document.getElementById('avatar-modal');
+    if (modal) modal.remove();
+}
+
+function removeAvatar() {
+    USER_SETTINGS.avatar = null;
+    saveUserSettings();
+    
+    // Обновляем все превью
+    const avatarPreviewLarge = document.getElementById('avatar-preview-large');
+    const currentAvatar = document.getElementById('current-avatar');
+    const sidebarAvatar = document.querySelector('.user-info-avatar');
+    
+    if (avatarPreviewLarge) {
+        avatarPreviewLarge.innerHTML = `<i class="fas fa-user-shield"></i>`;
     }
     
     if (currentAvatar) {
-        currentAvatar.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        currentAvatar.innerHTML = `<i class="fas fa-user-shield"></i>`;
     }
     
-    showNotification('Аватар обновлен', 'success');
-    document.getElementById('avatar-modal').remove();
+    if (sidebarAvatar) {
+        sidebarAvatar.innerHTML = `<i class="fas fa-user-circle"></i>`;
+    }
+    
+    showNotification('Аватар удален', 'success');
 }
 
 function generateAvatar() {
@@ -4964,99 +5006,118 @@ function generateAvatar() {
     const colors = ['#c0b070', '#8cb43c', '#5865F2', '#b43c3c', '#8f9779', '#00ff41'];
     const color = colors[Math.floor(Math.random() * colors.length)];
     
-    // Создаем простой SVG аватар с инициалами
+    // Берем первые две буквы имени
     const initials = CURRENT_USER.substring(0, 2).toUpperCase();
     
+    // Создаем SVG аватар
     const svg = `
-        <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
             <rect width="256" height="256" fill="${color}" rx="128"/>
-            <text x="128" y="140" font-family="Arial, sans-serif" font-size="80" font-weight="bold" 
-                  text-anchor="middle" fill="#1e201c">${initials}</text>
-        </svg>
-    `;
-    
-    const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    USER_SETTINGS.avatar = url;
-    saveUserSettings();
-    
-    // Обновляем превью
-    const avatarPreview = document.getElementById('avatar-preview-large');
-    const currentAvatar = document.getElementById('current-avatar');
-    
-    if (avatarPreview) {
-        avatarPreview.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    }
-    
-    if (currentAvatar) {
-        currentAvatar.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    }
-    
-    showNotification('Сгенерирован новый аватар', 'success');
-}
-
-function removeAvatar() {
-    USER_SETTINGS.avatar = null;
-    saveUserSettings();
-    
-    // Обновляем превью
-    const avatarPreview = document.getElementById('avatar-preview-large');
-    const currentAvatar = document.getElementById('current-avatar');
-    
-    if (avatarPreview) {
-        avatarPreview.innerHTML = `<i class="fas fa-user-shield"></i>`;
-    }
-    
-    if (currentAvatar) {
-        currentAvatar.innerHTML = `<i class="fas fa-user-shield"></i>`;
-    }
-    
-    showNotification('Аватар удален', 'success');
-}
-
-function setAvatarIcon(iconClass) {
-    // Создаем SVG с иконкой
-    const color = '#c0b070';
-    const svg = `
-        <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-                <style>
-                    .icon { 
-                        font-family: 'Font Awesome 6 Free'; 
-                        font-weight: 900; 
-                        font-size: 120px; 
-                        text-anchor: middle; 
-                        dominant-baseline: middle; 
-                    }
-                </style>
-            </defs>
-            <rect width="256" height="256" fill="#1e201c" rx="128"/>
-            <text x="128" y="128" class="icon" fill="${color}">
-                ${getUnicodeForIcon(iconClass)}
+            <text x="128" y="140" 
+                  font-family="Arial, sans-serif" 
+                  font-size="80" 
+                  font-weight="bold" 
+                  text-anchor="middle" 
+                  fill="#1e201c"
+                  style="text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+                ${initials}
             </text>
         </svg>
     `;
     
-    const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
     
     USER_SETTINGS.avatar = url;
     saveUserSettings();
     
     // Обновляем превью
-    const avatarPreview = document.getElementById('avatar-preview-large');
+    updateAllAvatarPreviews(url);
+    
+    showNotification('Сгенерирован новый аватар', 'success');
+}
+
+// Новая функция для обновления всех превью аватарок
+function updateAllAvatarPreviews(avatarUrl) {
+    // Обновляем большую превьюшку в шапке
+    const avatarPreviewLarge = document.getElementById('avatar-preview-large');
+    if (avatarPreviewLarge) {
+        avatarPreviewLarge.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    // Обновляем текущий аватар во вкладке
     const currentAvatar = document.getElementById('current-avatar');
-    
-    if (avatarPreview) {
-        avatarPreview.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
-    }
-    
     if (currentAvatar) {
-        currentAvatar.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+        currentAvatar.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
     }
+    
+    // Обновляем сайдбар
+    const sidebarAvatar = document.querySelector('.user-info-avatar');
+    if (sidebarAvatar) {
+        sidebarAvatar.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">`;
+    }
+}
+
+function setAvatarIcon(iconClass) {
+    // Простой способ с Font Awesome и цветом
+    const color = '#c0b070';
+    
+    // Создаем простой HTML с иконкой
+    const avatarHTML = `
+        <div style="
+            width: 256px;
+            height: 256px;
+            background: #1e201c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        ">
+            <i class="fas ${iconClass}" style="
+                color: ${color};
+                font-size: 120px;
+            "></i>
+        </div>
+    `;
+    
+    // Создаем data URL из SVG
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+            <rect width="256" height="256" fill="#1e201c" rx="128"/>
+            <text x="128" y="140" 
+                  font-family="Arial, Helvetica, sans-serif" 
+                  font-size="80" 
+                  font-weight="bold" 
+                  text-anchor="middle" 
+                  fill="${color}">
+                ${getInitialForIcon(iconClass)}
+            </text>
+        </svg>
+    `;
+    
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    USER_SETTINGS.avatar = url;
+    saveUserSettings();
+    
+    // Обновляем превью аватарок
+    updateAllAvatarPreviews(url);
     
     showNotification('Аватар установлен', 'success');
+}
+
+// Вспомогательная функция для иконок
+function getInitialForIcon(iconClass) {
+    const iconMap = {
+        'fa-user-secret': 'S',
+        'fa-robot': 'R',
+        'fa-user-ninja': 'N',
+        'fa-user-astronaut': 'A',
+        'fa-user-tie': 'T',
+        'fa-user-md': 'M'
+    };
+    return iconMap[iconClass] || 'U';
 }
 
 function getUnicodeForIcon(iconClass) {

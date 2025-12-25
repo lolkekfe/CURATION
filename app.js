@@ -51,6 +51,26 @@ const MAX_ATTEMPTS = 3; // Максимальное количество поп�
 const LOCKOUT_TIME = 15 * 60 * 1000; // 15 минут блокировки
 let loginAttempts = {}; // Хранение попыток входа по IP
 
+/* ===== ОТЛАДКА ===== */
+console.log("=== APP.JS ЗАГРУЖЕН ===");
+
+// Проверяем, что Firebase загружен
+console.log("Firebase:", typeof firebase !== 'undefined' ? "✓" : "✗");
+console.log("Database:", typeof db !== 'undefined' ? db : "✗");
+
+// Глобальный объект для отладки
+window.DEBUG = {
+    CURRENT_USER,
+    CURRENT_RANK,
+    CURRENT_ROLE,
+    CURRENT_STATIC_ID,
+    reports: [],
+    users: [],
+    bans: [],
+    whitelist: [],
+    passwords: {}
+};
+
 /* ===== ИСПРАВЛЕННЫЙ CSS ДЛЯ КАРТОЧЕК ===== */
 const fixCSS = `
     .zone-card {
@@ -1596,6 +1616,101 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /* ===== НАВИГАЦИЯ И SIDEBAR ===== */
+/* ===== НАВИГАЦИЯ И SIDEBAR ===== */
+function addNavButton(container, icon, text, onClick) {
+    const button = document.createElement('button');
+    button.className = 'nav-button';
+    button.id = `nav-${text.replace(/\s+/g, '-').toLowerCase()}`;
+    button.innerHTML = `
+        <i class="${icon}"></i>
+        <span>${text}</span>
+    `;
+    button.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log(`🟢 НАЖАТА КНОПКА: ${text}`);
+        
+        // Убираем активный класс у всех
+        document.querySelectorAll('.nav-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Добавляем текущей
+        button.classList.add('active');
+        
+        // Обновляем заголовок
+        const titleElement = document.getElementById('content-title');
+        const moduleElement = document.getElementById('module-name');
+        
+        if (titleElement) {
+            const titleText = titleElement.querySelector('.title-text');
+            if (titleText) {
+                titleText.textContent = text;
+            }
+        }
+        
+        if (moduleElement) {
+            moduleElement.textContent = text;
+        }
+        
+        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
+        
+        // ПРОСТОЙ ТЕСТ - если функция не работает
+        const content = document.getElementById('content-body');
+        if (content) {
+            // Сначала показываем тестовый контент
+            content.innerHTML = `
+                <div style="padding: 40px; text-align: center;">
+                    <h2 style="color: #c0b070; margin-bottom: 20px;">
+                        <i class="${icon}"></i> ${text}
+                    </h2>
+                    <p style="color: #8f9779; margin-bottom: 20px;">
+                        Загрузка раздела...
+                    </p>
+                    <div style="background: rgba(28, 26, 23, 0.8); padding: 20px; border-radius: 6px; border: 1px solid #4a4a3a; max-width: 500px; margin: 0 auto;">
+                        <p><strong>Пользователь:</strong> ${CURRENT_USER || 'Неизвестно'}</p>
+                        <p><strong>Ранг:</strong> ${CURRENT_RANK ? CURRENT_RANK.name : 'Неизвестно'}</p>
+                        <p><strong>Static ID:</strong> ${CURRENT_STATIC_ID || 'Неизвестно'}</p>
+                        <p><strong>Время:</strong> ${new Date().toLocaleTimeString()}</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Пытаемся вызвать оригинальную функцию через setTimeout
+        setTimeout(() => {
+            try {
+                if (typeof onClick === 'function') {
+                    console.log(`Вызываю функцию ${onClick.name}...`);
+                    onClick();
+                } else {
+                    console.error(`❌ onClick не является функцией:`, onClick);
+                    if (content) {
+                        content.innerHTML += `
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; color: #b43c3c;">
+                                <strong>Ошибка:</strong> Функция не найдена
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error(`❌ Ошибка при вызове функции:`, error);
+                if (content) {
+                    content.innerHTML += `
+                        <div style="margin-top: 20px; padding: 15px; background: rgba(180, 60, 60, 0.1); border: 1px solid #b43c3c; border-radius: 4px; color: #b43c3c;">
+                            <strong>Ошибка:</strong> ${error.message}
+                        </div>
+                    `;
+                }
+            }
+        }, 100);
+    };
+    
+    container.appendChild(button);
+    console.log(`✅ Добавлена кнопка: ${text}`);
+}
+
 function setupSidebar() {
     console.log("=== setupSidebar START ===");
     console.log("CURRENT_USER:", CURRENT_USER);
@@ -1664,7 +1779,7 @@ function setupSidebar() {
             console.log("Clicking first button automatically...");
             firstButton.click();
         }
-    }, 100);
+    }, 500);
     
     console.log("=== setupSidebar END ===");
 }
@@ -3761,6 +3876,7 @@ window.exportIPData = function() {
     });
 
 }
+
 
 
 

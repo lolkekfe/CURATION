@@ -1877,12 +1877,12 @@ function renderMLKForm() {
     if (!content) return;
     
     content.innerHTML = `
-        <div class="form-container">
+        <div class="form-container report-form-scrollable">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
                 <i class="fas fa-file-medical"></i> СОЗДАНИЕ ОТЧЕТА
             </h2>
             
-            <div class="report-creation-container" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 10px;">
+            <div class="report-creation-container" id="report-scroll-container">
                 <div class="zone-card" style="margin-bottom: 15px;">
                     <div class="card-icon"><i class="fas fa-user-tag"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О НАРУШИТЕЛЕ</h4>
@@ -1907,7 +1907,9 @@ function renderMLKForm() {
                         </div>
                     </div>
                 </div>
-                
+             </div>
+        </div>
+    `;
                 <div class="zone-card" style="margin-bottom: 15px; border-color: #c0b070;">
                     <div class="card-icon" style="color: #c0b070;"><i class="fas fa-exclamation-triangle"></i></div>
                     <h4 style="color: #c0b070; margin-bottom: 10px;">КАТЕГОРИЯ НАРУШЕНИЯ</h4>
@@ -4375,6 +4377,7 @@ window.clearWebhook = function() {
 
 // ДОБАВЬТЕ ЭТУ СТРОКУ В САМЫЙ КОНЕЦ ФАЙЛА
 } // <-- Закрывающая скобка;
+
 
 
 

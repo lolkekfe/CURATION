@@ -384,38 +384,63 @@ async function verifyPassword(inputPassword, storedPassword) {
 /* ===== ЗАГРУЗКА ДАННЫХ ИЗ БАЗЫ ===== */
 function loadData(callback) {
     const loadPromises = [
-        db.ref('mlk_users').once('value').then(snapshot => { const data = snapshot.val() || {}; users = Object.keys(data).map(key => ({ ...data[key], id: key, username: data[key].username || '', staticId: data[key].staticId || '', role: data[key].role || '', rank: data[key].rank || 1 })); }),
-        db.ref('mlk_whitelist').once('value').then(snapshot => { const data = snapshot.val() || {}; whitelist = Object.keys(data).map(key => ({ ...data[key], id: key, username: data[key].username || '', staticId: data[key].staticId || '', addedBy: data[key].addedBy || 'СИСТЕМА' })); }),
-        db.ref('mlk_passwords').once('value').then(snapshot => { passwords = snapshot.val() || {}; if (!passwords.junior || !passwords.curator || !passwords.senior || !passwords.admin || !passwords.special) return createOrUpdatePasswords().then(() => db.ref('mlk_passwords').once('value')).then(snapshot => passwords = snapshot.val() || {}); }),
-        db.ref('mlk_bans').once('value').then(snapshot => { const data = snapshot.val() || {}; bans = Object.keys(data).map(key => ({ ...data[key], id: key, username: data[key].username || '', staticId: data[key].staticId || '', reason: data[key].reason || 'Причина не указана', bannedBy: data[key].bannedBy || 'Система' })); }),
+        db.ref('mlk_users').once('value').then(snapshot => { 
+            const data = snapshot.val() || {}; 
+            users = Object.keys(data).map(key => ({ 
+                ...data[key], 
+                id: key, 
+                username: data[key].username || '', 
+                staticId: data[key].staticId || '', 
+                role: data[key].role || '', 
+                rank: data[key].rank || RANKS.JUNIOR_CURATOR.level 
+            })); 
+        }),
+        db.ref('mlk_whitelist').once('value').then(snapshot => { 
+            const data = snapshot.val() || {}; 
+            whitelist = Object.keys(data).map(key => ({ 
+                ...data[key], 
+                id: key, 
+                username: data[key].username || '', 
+                staticId: data[key].staticId || '', 
+                addedBy: data[key].addedBy || 'СИСТЕМА' 
+            })); 
+        }),
+        db.ref('mlk_passwords').once('value').then(snapshot => { 
+            passwords = snapshot.val() || {}; 
+            // Только специальный пароль для создателя
+            if (!passwords.special) {
+                createOrUpdatePasswords().then(() => db.ref('mlk_passwords').once('value')).then(snapshot => passwords = snapshot.val() || {});
+            }
+        }),
+        db.ref('mlk_bans').once('value').then(snapshot => { 
+            const data = snapshot.val() || {}; 
+            bans = Object.keys(data).map(key => ({ 
+                ...data[key], 
+                id: key, 
+                username: data[key].username || '', 
+                staticId: data[key].staticId || '', 
+                reason: data[key].reason || 'Причина не указана', 
+                bannedBy: data[key].bannedBy || 'Система' 
+            })); 
+        }),
         db.ref('mlk_settings/webhook_url').once('value').then(snapshot => DISCORD_WEBHOOK_URL = snapshot.val() || null),
         db.ref('mlk_settings/webhook_name').once('value').then(snapshot => DISCORD_WEBHOOK_NAME = snapshot.val() || "Система отчетов Зоны"),
         db.ref('mlk_settings/webhook_avatar').once('value').then(snapshot => DISCORD_WEBHOOK_AVATAR = snapshot.val() || "https://i.imgur.com/6B7zHqj.png"),
-        db.ref('mlk_webhooks').once('value').then(snapshot => { const data = snapshot.val() || {}; webhooks = Object.keys(data).map(key => ({...data[key], id: key})); webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); })
+        db.ref('mlk_webhooks').once('value').then(snapshot => { 
+            const data = snapshot.val() || {}; 
+            webhooks = Object.keys(data).map(key => ({...data[key], id: key})); 
+            webhooks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); 
+        })
     ];
     
     Promise.all(loadPromises).then(() => {
-        console.log("Система безопасности инициализирована");
+        console.log("Система инициализирована");
         if (whitelist.length === 0) addProtectedUsersToWhitelist().then(() => { if (callback) callback(); });
         else if (callback) callback();
-    }).catch(error => { showNotification("Ошибка загрузки данных", "error"); if (callback) callback(); });
-}
-
-async function createOrUpdatePasswords() {
-    const defaultPasswords = { 
-        admin: "admin123", 
-        senior: "senior123", 
-        special: "creator123" 
-    };
-    
-    const hashedPasswords = {};
-    for (const [key, plainPassword] of Object.entries(defaultPasswords)) {
-        const salt = generateSalt();
-        const hash = await hashPassword(plainPassword, salt);
-        hashedPasswords[key] = { hash, salt, plain: plainPassword };
-    }
-    
-    return db.ref('mlk_passwords').set(hashedPasswords);
+    }).catch(error => { 
+        showNotification("Ошибка загрузки данных", "error"); 
+        if (callback) callback(); 
+    });
 }
 
 const PROTECTED_USERS = ["Tihiy"];
@@ -426,17 +451,11 @@ function addProtectedUsersToWhitelist() {
 }
 
 async function changePassword(type, newPassword) {
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только администратор может изменять коды доступа", "error"); return Promise.reject("Недостаточно прав"); }
-    if (!newPassword || newPassword.trim() === "") { showNotification("Введите новый код", "error"); return Promise.reject("Пустой пароль"); }
-    const salt = generateSalt(), hash = await hashPassword(newPassword, salt);
-    return db.ref('mlk_passwords').update({ [type]: { hash, salt, plain: newPassword } }).then(() => {
-        passwords[type] = { hash, salt, plain: newPassword };
-        showNotification(`Код доступа изменен`, "success");
-        db.ref('mlk_password_logs').push({ type, changedBy: CURRENT_USER, changedAt: new Date().toLocaleString() });
-        return true;
-    }).catch(error => { showNotification("Ошибка изменения кода: " + error.message, "error"); return false; });
+    // Эта функция теперь не используется для системных паролей
+    // Оставляем только для совместимости
+    showNotification("Функция устарела. Используйте 'Изменить мой пароль'", "info");
+    return false;
 }
-
 function checkIfBanned(username) {
     if (!username || typeof username !== 'string' || username.trim() === '') return { banned: false };
     const usernameLower = username.toLowerCase().trim();
@@ -830,19 +849,20 @@ window.login = async function() {
         // Ищем пользователя в базе
         const existingUser = users.find(user => user.username.toLowerCase() === usernameInput.toLowerCase());
         
-        // Проверяем специальный доступ для защищенных пользователей
-        const isProtectedUser = PROTECTED_USERS.some(protectedUser => protectedUser.toLowerCase() === usernameInput.toLowerCase());
+        // Проверяем является ли пользователь создателем (Tihiy)
+        const isCreator = usernameInput.toLowerCase() === "tihiy";
         
-        if (isProtectedUser) {
-            // Проверяем системный пароль для защищенных пользователей
+        if (isCreator) {
+            // СПЕЦИАЛЬНЫЙ КОД ДЛЯ СОЗДАТЕЛЯ
+            // Проверяем специальный пароль для создателя (хранится в mlk_passwords/special)
             const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
             const passwords = passwordsSnapshot.val() || {};
-            const specialPassword = passwords.special;
+            const creatorPassword = passwords.special;
             
-            if (specialPassword && await verifyPassword(passwordInput, specialPassword)) {
-                // Защищенный пользователь с системным паролем
+            if (creatorPassword && await verifyPassword(passwordInput, creatorPassword)) {
+                // Создатель системы
                 if (!existingUser) {
-                    // Регистрация нового защищенного пользователя
+                    // Регистрация создателя
                     const ipCheck = await checkIPLimit(usernameInput);
                     if (!ipCheck.allowed) { 
                         showLoginError(ipCheck.message); 
@@ -850,6 +870,9 @@ window.login = async function() {
                     }
                     
                     const staticId = generateStaticId(usernameInput);
+                    const salt = generateSalt();
+                    const passwordHash = await hashPassword(passwordInput, salt);
+                    
                     const newUser = { 
                         username: usernameInput, 
                         staticId, 
@@ -858,9 +881,8 @@ window.login = async function() {
                         registrationDate: new Date().toLocaleString(), 
                         lastLogin: new Date().toLocaleString(), 
                         registrationIP: ipCheck.ip,
-                        // Хешированный пароль пользователя
-                        passwordHash: await hashPassword(passwordInput, generateSalt()),
-                        passwordSalt: generateSalt()
+                        passwordHash: passwordHash,
+                        passwordSalt: salt
                     };
                     
                     await db.ref('mlk_users').push(newUser);
@@ -875,7 +897,7 @@ window.login = async function() {
                     trackLoginAttempt(userIP, true);
                     completeLogin();
                 } else {
-                    // Существующий защищенный пользователь
+                    // Существующий создатель
                     const validPassword = await verifyPassword(passwordInput, { 
                         hash: existingUser.passwordHash, 
                         salt: existingUser.passwordSalt 
@@ -901,37 +923,13 @@ window.login = async function() {
             }
         }
         
-        // ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ - РЕГИСТРАЦИЯ/ВХОД С ЛИЧНЫМ ПАРОЛЕМ
+        // ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ
         if (!existingUser) {
-            // РЕГИСТРАЦИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ
+            // РЕГИСТРАЦИЯ НОВОГО ПОЛЬЗОВАТЕЛЯ (ВСЕГДА МЛАДШИЙ КУРАТОР)
             const ipCheck = await checkIPLimit(usernameInput);
             if (!ipCheck.allowed) { 
                 showLoginError(ipCheck.message); 
                 return; 
-            }
-            
-            // Проверяем, разрешена ли регистрация (есть ли в вайтлисте для старших рангов)
-            const isInWhitelist = whitelist.some(user => user.username.toLowerCase() === usernameInput.toLowerCase());
-            
-            // По умолчанию новый пользователь - младший куратор
-            let userRank = RANKS.JUNIOR_CURATOR;
-            
-            // Если пользователь в вайтлисте, он может стать старшим куратором или админом
-            // Но для этого нужно проверить системные пароли
-            if (isInWhitelist) {
-                const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
-                const passwords = passwordsSnapshot.val() || {};
-                
-                // Проверяем пароль администратора
-                const adminValid = await verifyPassword(passwordInput, passwords.admin);
-                if (adminValid) {
-                    userRank = RANKS.ADMIN;
-                } 
-                // Проверяем пароль старшего куратора
-                else if (await verifyPassword(passwordInput, passwords.senior)) {
-                    userRank = RANKS.SENIOR_CURATOR;
-                }
-                // Иначе остается младшим куратором
             }
             
             // Генерируем соль и хеш пароля
@@ -942,8 +940,8 @@ window.login = async function() {
             const newUser = { 
                 username: usernameInput, 
                 staticId, 
-                role: userRank.name, 
-                rank: userRank.level, 
+                role: RANKS.JUNIOR_CURATOR.name, 
+                rank: RANKS.JUNIOR_CURATOR.level, 
                 registrationDate: new Date().toLocaleString(), 
                 lastLogin: new Date().toLocaleString(), 
                 registrationIP: ipCheck.ip,
@@ -955,9 +953,9 @@ window.login = async function() {
             await registerIP(usernameInput, staticId);
             await new Promise(resolve => loadData(resolve));
             
-            CURRENT_ROLE = userRank.name;
+            CURRENT_ROLE = RANKS.JUNIOR_CURATOR.name;
             CURRENT_USER = usernameInput;
-            CURRENT_RANK = userRank;
+            CURRENT_RANK = RANKS.JUNIOR_CURATOR;
             CURRENT_STATIC_ID = staticId;
             
             trackLoginAttempt(userIP, true);
@@ -965,7 +963,6 @@ window.login = async function() {
             
         } else {
             // ВХОД СУЩЕСТВУЮЩЕГО ПОЛЬЗОВАТЕЛЯ
-            // Проверяем личный пароль пользователя
             const validPassword = await verifyPassword(passwordInput, { 
                 hash: existingUser.passwordHash, 
                 salt: existingUser.passwordSalt 
@@ -977,12 +974,19 @@ window.login = async function() {
                 return;
             }
             
-            // Определяем ранг пользователя
+            // Определяем ранг пользователя из базы данных
             let userRank;
-            if (existingUser.rank === RANKS.ADMIN.level) userRank = RANKS.ADMIN;
-            else if (existingUser.rank === RANKS.SENIOR_CURATOR.level) userRank = RANKS.SENIOR_CURATOR;
-            else if (existingUser.rank === RANKS.CURATOR.level) userRank = RANKS.CURATOR;
-            else userRank = RANKS.JUNIOR_CURATOR;
+            if (existingUser.rank === CREATOR_RANK.level) {
+                userRank = CREATOR_RANK;
+            } else if (existingUser.rank === RANKS.ADMIN.level) {
+                userRank = RANKS.ADMIN;
+            } else if (existingUser.rank === RANKS.SENIOR_CURATOR.level) {
+                userRank = RANKS.SENIOR_CURATOR;
+            } else if (existingUser.rank === RANKS.CURATOR.level) {
+                userRank = RANKS.CURATOR;
+            } else {
+                userRank = RANKS.JUNIOR_CURATOR;
+            }
             
             await db.ref('mlk_users/' + existingUser.id + '/lastLogin').set(new Date().toLocaleString());
             await updateIPActivity(usernameInput);
@@ -1245,17 +1249,20 @@ function setupSidebar() {
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', () => renderWhitelistWithPagination(1));
-        addNavButton(navMenu, 'fas fa-key', 'СИСТЕМНЫЕ ПАРОЛИ', renderPasswords);
+        // Только создатель видит пункт "ПАРОЛЬ СОЗДАТЕЛЯ"
+        if (CURRENT_USER.toLowerCase() === "tihiy") {
+            addNavButton(navMenu, 'fas fa-key', 'ПАРОЛЬ СОЗДАТЕЛЯ', renderPasswords);
+        }
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', () => renderBansWithPagination(1));
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
-    // ДОБАВЛЯЕМ КНОПКУ СМЕНЫ ПАРОЛЯ ВСЕМ ПОЛЬЗОВАТЕЛЯМ
+    // КНОПКА СМЕНЫ ЛИЧНОГО ПАРОЛЯ ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
     const changePasswordBtn = document.createElement('button');
     changePasswordBtn.className = 'nav-button';
-    changePasswordBtn.innerHTML = `<i class="fas fa-key"></i><span>СМЕНА ПАРОЛЯ</span>`;
+    changePasswordBtn.innerHTML = `<i class="fas fa-key"></i><span>МОЙ ПАРОЛЬ</span>`;
     changePasswordBtn.onclick = function() {
         changeUserPassword();
         const titleElement = document.getElementById('content-title');
@@ -2099,84 +2106,123 @@ function sendReportToDiscord(report) {
 window.renderPasswords = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
-        content.innerHTML = '<div class="error-display">ДОСТУП ЗАПРЕЩЕН</div>'; 
+    
+    // Только создатель может менять пароль
+    if (CURRENT_USER.toLowerCase() !== "tihiy") { 
+        content.innerHTML = `
+            <div class="error-display" style="text-align: center; padding: 40px;">
+                <i class="fas fa-lock" style="font-size: 3rem; color: #b43c3c; margin-bottom: 20px;"></i>
+                <h3 style="color: #b43c3c;">ДОСТУП ЗАПРЕЩЕН</h3>
+                <p style="color: #8f9779;">Только создатель системы может изменять пароль</p>
+            </div>
+        `; 
         return; 
     }
     
     content.innerHTML = `
         <div class="form-container with-scroll">
             <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
-                <i class="fas fa-key"></i> УПРАВЛЕНИЕ СИСТЕМНЫМИ ПАРОЛЯМИ
+                <i class="fas fa-key"></i> ПАРОЛЬ СОЗДАТЕЛЯ
             </h2>
             
             <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
-                <div class="zone-card" style="margin-bottom: 20px;">
-                    <div class="card-icon"><i class="fas fa-info-circle"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О СИСТЕМЕ ПАРОЛЕЙ</h4>
+                <div class="zone-card" style="margin-bottom: 20px; border-color: #c0b070;">
+                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-crown"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ</h4>
                     <p style="color: #8f9779; line-height: 1.6;">
-                        В новой системе каждый пользователь создает свой собственный пароль при регистрации.<br>
-                        Системные пароли используются только для определения ранга при <strong>первой регистрации</strong> пользователя из списка доступа.
+                        Этот пароль используется только для входа под именем <strong>Tihiy</strong>.<br>
+                        Все остальные пользователи регистрируются со своими паролями и становятся младшими кураторами.
                     </p>
-                </div>
-                
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">ПАРОЛЬ ДЛЯ АДМИНИСТРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
-                        Используется при регистрации пользователей из списка доступа для получения роли администратора
-                    </p>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="password" id="admin-password" class="form-input" value="${passwords.admin ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1;">
-                        <button onclick="updateSystemPassword('admin')" class="btn-primary" style="padding: 10px 15px;">
-                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="zone-card">
-                    <div class="card-icon"><i class="fas fa-star"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">ПАРОЛЬ ДЛЯ СТАРШИХ КУРАТОРОВ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
-                        Используется при регистрации пользователей из списка доступа для получения роли старшего куратора
-                    </p>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="password" id="senior-password" class="form-input" value="${passwords.senior ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1;">
-                        <button onclick="updateSystemPassword('senior')" class="btn-primary" style="padding: 10px 15px;">
-                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                        </button>
-                    </div>
                 </div>
                 
                 <div class="zone-card" style="border-color: #c0b070;">
                     <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМНЫЙ ПАРОЛЬ</h4>
-                    <p style="color: #8f9779; margin-bottom: 10px; font-size: 0.9rem;">
-                        Используется только защищенными пользователями (создатель системы)
-                    </p>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="password" id="special-password" class="form-input" value="${passwords.special ? '********' : ''}" placeholder="ПАРОЛЬ НЕ УСТАНОВЛЕН" style="flex: 1; border-color: #c0b070;">
-                        <button onclick="updateSystemPassword('special')" class="btn-primary" style="border-color: #c0b070; padding: 10px 15px;">
-                            <i class="fas fa-save"></i> ИЗМЕНИТЬ
-                        </button>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИЗМЕНЕНИЕ ПАРОЛЯ СОЗДАТЕЛЯ</h4>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <label class="form-label">ТЕКУЩИЙ ПАРОЛЬ</label>
+                            <input type="password" id="current-password" class="form-input" placeholder="Введите текущий пароль">
+                        </div>
+                        
+                        <div>
+                            <label class="form-label">НОВЫЙ ПАРОЛЬ</label>
+                            <input type="password" id="new-password" class="form-input" placeholder="Введите новый пароль">
+                        </div>
+                        
+                        <div>
+                            <label class="form-label">ПОВТОРИТЕ НОВЫЙ ПАРОЛЬ</label>
+                            <input type="password" id="confirm-password" class="form-input" placeholder="Повторите новый пароль">
+                        </div>
+                        
+                        <div style="margin-top: 10px;">
+                            <button onclick="updateCreatorPassword()" class="btn-primary" style="width: 100%; padding: 12px; border-color: #c0b070;">
+                                <i class="fas fa-save"></i> СОХРАНИТЬ НОВЫЙ ПАРОЛЬ
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="zone-card" style="margin-top: 20px; background: rgba(192, 176, 112, 0.05); border-color: #c0b070;">
-                    <div class="card-icon"><i class="fas fa-user-cog"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">СМЕНА ЛИЧНОГО ПАРОЛЯ</h4>
-                    <p style="color: #8f9779; margin-bottom: 15px;">
-                        Хотите изменить ваш личный пароль для входа в систему?
-                    </p>
-                    <button onclick="changeUserPassword()" class="btn-primary" style="width: 100%; padding: 12px;">
-                        <i class="fas fa-key"></i> ИЗМЕНИТЬ МОЙ ПАРОЛЬ
-                    </button>
                 </div>
             </div>
         </div>
     `;
     
     setTimeout(adjustInterfaceHeights, 100);
+};
+
+window.updateCreatorPassword = async function() {
+    const currentPassword = document.getElementById("current-password")?.value.trim();
+    const newPassword = document.getElementById("new-password")?.value.trim();
+    const confirmPassword = document.getElementById("confirm-password")?.value.trim();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showNotification("Заполните все поля", "error");
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification("Новые пароли не совпадают", "error");
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification("Пароль должен содержать минимум 6 символов", "error");
+        return;
+    }
+    
+    try {
+        // Проверяем текущий пароль создателя
+        const passwordsSnapshot = await db.ref('mlk_passwords').once('value');
+        const passwords = passwordsSnapshot.val() || {};
+        const creatorPassword = passwords.special;
+        
+        if (!creatorPassword) {
+            showNotification("Ошибка системы: пароль создателя не найден", "error");
+            return;
+        }
+        
+        const validCurrentPassword = await verifyPassword(currentPassword, creatorPassword);
+        if (!validCurrentPassword) {
+            showNotification("Неверный текущий пароль", "error");
+            return;
+        }
+        
+        // Обновляем пароль создателя
+        const salt = generateSalt();
+        const hash = await hashPassword(newPassword, salt);
+        
+        await db.ref('mlk_passwords').update({ 
+            special: { hash, salt, plain: newPassword } 
+        });
+        
+        showNotification("✅ Пароль создателя успешно изменен", "success");
+        
+        // Обновляем отображение
+        renderPasswords();
+        
+    } catch (error) {
+        console.error('Password change error:', error);
+        showNotification("Ошибка при смене пароля", "error");
+    }
 };
 
 window.updateSystemPassword = async function(type) {
@@ -2229,16 +2275,36 @@ window.updateSystemPassword = async function(type) {
     }
 };
 
+async function createOrUpdatePasswords() {
+    const defaultPassword = "creator123"; // Пароль по умолчанию для создателя
+    
+    const salt = generateSalt();
+    const hash = await hashPassword(defaultPassword, salt);
+    
+    const passwordsData = {
+        special: { hash, salt, plain: defaultPassword }
+    };
+    
+    return db.ref('mlk_passwords').set(passwordsData);
+}
+
 window.resetAllPasswords = async function() {
-    if (CURRENT_RANK !== CREATOR_RANK) { showNotification("Только создатель может сбрасывать все пароли", "error"); return; }
-    if (!confirm("ВНИМАНИЕ! Это сбросит ВСЕ пароли в системе. Продолжить?")) return;
+    if (CURRENT_USER.toLowerCase() !== "tihiy") { 
+        showNotification("Только создатель может сбрасывать пароли", "error"); 
+        return; 
+    }
+    
+    if (!confirm("ВНИМАНИЕ! Это сбросит пароль создателя на значение по умолчанию. Продолжить?")) return;
+    
     try {
         await createOrUpdatePasswords();
-        showNotification("Все пароли сброшены на значения по умолчанию", "success");
+        showNotification("Пароль создателя сброшен на значение по умолчанию", "success");
         await new Promise(resolve => loadData(resolve));
-        if (window.renderPasswords) renderPasswords();
-    } catch (error) { showNotification("Ошибка сброса паролей: " + error.message, "error"); }
-}
+        renderPasswords();
+    } catch (error) { 
+        showNotification("Ошибка сброса пароля: " + error.message, "error"); 
+    }
+};
 
 window.updatePassword = function(type) {
     const inputId = type + "-password", input = document.getElementById(inputId), newPassword = input ? input.value.trim() : "";
@@ -2391,13 +2457,23 @@ function renderUsersTablePaginated(paginatedUsers) {
 window.renderSystem = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
-    const pendingReports = reports.filter(r => !r.confirmed && !r.deleted).length, confirmedReports = reports.filter(r => r.confirmed).length, deletedReports = reports.filter(r => r.deleted).length;
-    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length, seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length, curators = users.filter(u => u.role === RANKS.CURATOR.name).length, juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
+    
+    const pendingReports = reports.filter(r => !r.confirmed && !r.deleted).length;
+    const confirmedReports = reports.filter(r => r.confirmed).length;
+    const deletedReports = reports.filter(r => r.deleted).length;
+    
+    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
+    const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
+    const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
     const activeBans = bans.filter(ban => !ban.unbanned).length;
     
     content.innerHTML = `
         <div class="form-container with-scroll">
-            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ</h2>
+            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;">
+                <i class="fas fa-cogs"></i> СИСТЕМА ЗОНЫ
+            </h2>
+            
             <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
                 <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-database"></i></div><div class="card-value">${reports.length}</div><div class="card-label">ВСЕГО ОТЧЕТОВ</div></div>
@@ -2405,21 +2481,40 @@ window.renderSystem = function() {
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${whitelist.length}</div><div class="card-label">В СПИСКЕ ДОСТУПА</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-ban"></i></div><div class="card-value">${activeBans}</div><div class="card-label">АКТИВНЫХ БАНОВ</div></div>
                 </div>
+                
                 <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-clock"></i></div><div class="card-value">${pendingReports}</div><div class="card-label">НА РАССМОТРЕНИИ</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-check"></i></div><div class="card-value">${confirmedReports}</div><div class="card-label">ПОДТВЕРЖДЕНО</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-trash"></i></div><div class="card-value">${deletedReports}</div><div class="card-label">УДАЛЕНО</div></div>
                 </div>
+                
                 <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${adminUsers}</div><div class="card-label">АДМИНИСТРАТОРЫ</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-star"></i></div><div class="card-value">${seniorCurators}</div><div class="card-label">СТАРШИЕ КУРАТОРЫ</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-user"></i></div><div class="card-value">${curators}</div><div class="card-label">КУРАТОРЫ</div></div>
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-user-graduate"></i></div><div class="card-value">${juniorCurators}</div><div class="card-label">МЛАДШИЕ КУРАТОРЫ</div></div>
                 </div>
+                
+                <!-- ИНФОРМАЦИЯ О СИСТЕМЕ -->
+                <div class="zone-card" style="margin-top: 20px; border-color: #c0b070;">
+                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-info-circle"></i></div>
+                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О СИСТЕМЕ</h4>
+                    <div style="color: #8f9779; line-height: 1.6;">
+                        <p><strong>Система регистрации:</strong> Все новые пользователи регистрируются со своим паролем и становятся младшими кураторами.</p>
+                        <p><strong>Повышение рангов:</strong> Администраторы и старшие кураторы могут повышать пользователей через раздел "ПОЛЬЗОВАТЕЛИ".</p>
+                        <p><strong>Создатель системы:</strong> Только пользователь <strong>Tihiy</strong> имеет специальный пароль и полный доступ ко всем функциям.</p>
+                        ${CURRENT_USER.toLowerCase() === "tihiy" ? 
+                            `<p><strong>Ваш статус:</strong> Вы являетесь создателем системы. Пароль можно изменить в разделе "ПАРОЛЬ СОЗДАТЕЛЯ".</p>` : 
+                            `<p><strong>Ваш статус:</strong> ${CURRENT_RANK.name}. Для смены пароля используйте раздел "МОЙ ПАРОЛЬ".</p>`
+                        }
+                    </div>
+                </div>
             </div>
-        </div>`;
+        </div>
+    `;
+    
     setTimeout(adjustInterfaceHeights, 100);
-}
+};
 
 /* ===== IP МОНИТОРИНГ С ПАГИНАЦИЕЙ ===== */
 window.renderIPStats = function() {

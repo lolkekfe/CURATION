@@ -24,6 +24,15 @@ let webhooks = [], DISCORD_WEBHOOK_URL = null, DISCORD_WEBHOOK_NAME = "Сист�
 const MAX_ATTEMPTS = 3, LOCKOUT_TIME = 15 * 60 * 1000;
 let loginAttempts = {};
 
+/* ===== СИСТЕМА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ===== */
+let USER_SETTINGS = {
+    theme: 'default',
+    avatar: null,
+    notifications: true,
+    compactView: false,
+    language: 'ru'
+};
+
 /* ===== СИСТЕМА ПАГИНАЦИИ И ПРОКРУТКИ ===== */
 const PAGINATION_CONFIG = { itemsPerPage: 15, visiblePages: 5, maxScrollHeight: 600 };
 let currentPage = 1, totalPages = 1, currentScrollPosition = {};
@@ -2411,6 +2420,24 @@ function setupSidebar() {
     if (rankElement && CURRENT_RANK) rankElement.textContent = CURRENT_RANK.name;
     if (staticIdElement && CURRENT_STATIC_ID) staticIdElement.textContent = CURRENT_STATIC_ID;
     
+    // Загружаем настройки пользователя
+    loadUserSettings();
+    
+    // Добавляем аватар в сайдбар
+    const userInfo = document.querySelector('.user-terminal .display-line:nth-child(2)');
+    if (userInfo) {
+        userInfo.insertAdjacentHTML('beforebegin', `
+            <div class="display-line">
+                <span class="output">> АВАТАР: <span class="user-info-avatar" style="display: inline-flex; align-items: center; gap: 5px;">
+                    ${USER_SETTINGS.avatar ? 
+                        `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">` : 
+                        `<i class="fas fa-user-circle"></i>`
+                    }
+                </span></span>
+            </div>
+        `);
+    }
+    
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
     
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
@@ -2420,7 +2447,6 @@ function setupSidebar() {
     
     if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', () => renderWhitelistWithPagination(1));
-        // Только создатель видит пункт "ПАРОЛЬ СОЗДАТЕЛЯ"
         if (CURRENT_USER.toLowerCase() === "tihiy") {
             addNavButton(navMenu, 'fas fa-key', 'ПАРОЛЬ СОЗДАТЕЛЯ', renderPasswords);
         }
@@ -2430,7 +2456,21 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
-    // КНОПКА СМЕНЫ ЛИЧНОГО ПАРОЛЯ ДЛЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+    // КНОПКА ПРОФИЛЯ (для всех пользователей)
+    const profileBtn = document.createElement('button');
+    profileBtn.className = 'nav-button';
+    profileBtn.innerHTML = `<i class="fas fa-user-circle"></i><span>МОЙ ПРОФИЛЬ</span>`;
+    profileBtn.onclick = function() {
+        document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+        profileBtn.classList.add('active');
+        renderProfile();
+        const titleElement = document.getElementById('content-title');
+        if (titleElement) titleElement.textContent = 'МОЙ ПРОФИЛЬ';
+        updateSystemPrompt(`НАСТРОЙКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ`);
+    };
+    navMenu.appendChild(profileBtn);
+    
+    // Старая кнопка смены пароля (оставляем для совместимости)
     const changePasswordBtn = document.createElement('button');
     changePasswordBtn.className = 'nav-button';
     changePasswordBtn.innerHTML = `<i class="fas fa-key"></i><span>МОЙ ПАРОЛЬ</span>`;
@@ -2451,7 +2491,7 @@ function setupSidebar() {
             adjustInterfaceHeights(); 
         } 
     }, 100);
-}
+}   
 
 function addNavButton(container, icon, text, onClick) {
     const button = document.createElement('button');
@@ -4037,3 +4077,1241 @@ window.refreshLayout = function() {
     setupAutoScroll();
     showNotification("Настройки высоты обновлены", "info");
 };
+/* ===== СИСТЕМА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ===== */
+
+// Загрузка настроек из LocalStorage
+function loadUserSettings() {
+    const savedSettings = localStorage.getItem('user_settings_' + CURRENT_STATIC_ID);
+    if (savedSettings) {
+        USER_SETTINGS = { ...USER_SETTINGS, ...JSON.parse(savedSettings) };
+    }
+    applyUserSettings();
+}
+
+// Сохранение настроек
+function saveUserSettings() {
+    localStorage.setItem('user_settings_' + CURRENT_STATIC_ID, JSON.stringify(USER_SETTINGS));
+    applyUserSettings();
+}
+
+// Применение настроек к интерфейсу
+function applyUserSettings() {
+    // Применение темы
+    document.body.setAttribute('data-theme', USER_SETTINGS.theme);
+    
+    // Применение компактного вида
+    if (USER_SETTINGS.compactView) {
+        document.body.classList.add('compact-view');
+    } else {
+        document.body.classList.remove('compact-view');
+    }
+    
+    // Обновление аватарки в сайдбаре если есть
+    updateUserAvatarInSidebar();
+}
+
+// Обновление аватарки в сайдбаре
+function updateUserAvatarInSidebar() {
+    const sidebarUser = document.querySelector('.user-info-avatar');
+    if (sidebarUser && USER_SETTINGS.avatar) {
+        sidebarUser.innerHTML = `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+    }
+}
+
+/* ===== РЕНДЕР ПРОФИЛЯ ===== */
+window.renderProfile = function() {
+    const content = document.getElementById("content-body");
+    if (!content) return;
+    
+    loadUserSettings(); // Загружаем текущие настройки
+    
+    content.innerHTML = `
+        <div class="form-container" style="display: flex; flex-direction: column; height: 100%; gap: 20px;">
+            <!-- ШАПКА ПРОФИЛЯ -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(40, 42, 36, 0.7); border: 1px solid #4a4a3a; border-radius: 8px; border-left: 5px solid #c0b070;">
+                <div style="display: flex; align-items: center; gap: 20px;">
+                    <div style="position: relative;">
+                        <div id="avatar-preview-large" style="width: 80px; height: 80px; background: rgba(60, 62, 56, 0.8); border-radius: 50%; border: 3px solid #c0b070; display: flex; align-items: center; justify-content: center; overflow: hidden; font-size: 2rem; color: #c0b070;">
+                            ${USER_SETTINGS.avatar ? 
+                                `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                                `<i class="fas fa-user-shield"></i>`
+                            }
+                        </div>
+                        <div id="avatar-change-btn" style="position: absolute; bottom: 0; right: 0; width: 30px; height: 30px; background: #c0b070; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #1e201c;">
+                            <i class="fas fa-camera" style="color: #1e201c; font-size: 0.9rem;"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 style="color: #c0b070; margin: 0 0 8px 0; font-family: 'Orbitron', sans-serif; font-size: 1.5rem;">
+                            ${CURRENT_USER}
+                        </h2>
+                        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                            <span style="color: #8cb43c; background: rgba(140, 180, 60, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
+                                <i class="fas fa-crown" style="margin-right: 5px;"></i>
+                                ${CURRENT_RANK.name}
+                            </span>
+                            <span style="color: #8f9779; font-family: 'Courier New', monospace; font-size: 0.85rem;">
+                                <i class="fas fa-id-card" style="margin-right: 5px;"></i>
+                                ${CURRENT_STATIC_ID}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="renderSystem()" class="btn-secondary" style="padding: 10px 20px; font-size: 0.9rem; min-width: 120px;">
+                    <i class="fas fa-arrow-left"></i> НАЗАД
+                </button>
+            </div>
+            
+            <!-- ОСНОВНОЕ СОДЕРЖИМОЕ С ВКЛАДКАМИ -->
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 20px; overflow: hidden;">
+                <!-- ТАБЫ -->
+                <div style="display: flex; gap: 5px; border-bottom: 1px solid #4a4a3a; padding: 0 10px; overflow-x: auto;">
+                    <button class="profile-tab active" onclick="switchProfileTab('info')" style="padding: 12px 20px; min-width: 120px;">
+                        <i class="fas fa-user"></i> ПРОФИЛЬ
+                    </button>
+                    <button class="profile-tab" onclick="switchProfileTab('security')" style="padding: 12px 20px; min-width: 120px;">
+                        <i class="fas fa-shield-alt"></i> БЕЗОПАСНОСТЬ
+                    </button>
+                    <button class="profile-tab" onclick="switchProfileTab('appearance')" style="padding: 12px 20px; min-width: 120px;">
+                        <i class="fas fa-palette"></i> ВНЕШНИЙ ВИД
+                    </button>
+                    <button class="profile-tab" onclick="switchProfileTab('notifications')" style="padding: 12px 20px; min-width: 120px;">
+                        <i class="fas fa-bell"></i> УВЕДОМЛЕНИЯ
+                    </button>
+                </div>
+                
+                <!-- КОНТЕНТ ВКЛАДОК -->
+                <div id="profile-tab-content" class="scrollable-container" style="flex: 1; padding: 20px; background: rgba(30, 32, 28, 0.3); border-radius: 8px;">
+                    <!-- Контент будет загружен здесь -->
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Инициализируем первую вкладку
+    loadProfileTab('info');
+    
+    // Добавляем обработчик для смены аватарки
+    document.getElementById('avatar-change-btn').addEventListener('click', function() {
+        showAvatarUploadModal();
+    });
+    
+    setTimeout(adjustInterfaceHeights, 100);
+};
+
+/* ===== ФУНКЦИИ ДЛЯ ВКЛАДОК ПРОФИЛЯ ===== */
+function switchProfileTab(tabName) {
+    // Обновляем активную вкладку
+    document.querySelectorAll('.profile-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    event.currentTarget.classList.add('active');
+    
+    // Загружаем контент вкладки
+    loadProfileTab(tabName);
+}
+
+function loadProfileTab(tabName) {
+    const tabContent = document.getElementById('profile-tab-content');
+    if (!tabContent) return;
+    
+    switch(tabName) {
+        case 'info':
+            tabContent.innerHTML = renderProfileInfoTab();
+            break;
+        case 'security':
+            tabContent.innerHTML = renderProfileSecurityTab();
+            break;
+        case 'appearance':
+            tabContent.innerHTML = renderProfileAppearanceTab();
+            break;
+        case 'notifications':
+            tabContent.innerHTML = renderProfileNotificationsTab();
+            break;
+    }
+    
+    setTimeout(adjustInterfaceHeights, 50);
+}
+
+function renderProfileInfoTab() {
+    const currentUserData = users.find(u => u.username === CURRENT_USER);
+    
+    return `
+        <div style="display: flex; flex-direction: column; gap: 25px; max-width: 800px; margin: 0 auto;">
+            <!-- ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ -->
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-info-circle"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 20px;">ИНФОРМАЦИЯ О ПРОФИЛЕ</h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
+                    <div>
+                        <label class="form-label">ИМЯ ПОЛЬЗОВАТЕЛЯ</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="profile-username" class="form-input" value="${CURRENT_USER}" placeholder="Ваше имя пользователя" style="flex: 1;">
+                            <button onclick="updateUsername()" class="btn-secondary" style="min-width: 100px;">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                        <div style="font-size: 0.8rem; color: #8f9779; margin-top: 5px;">
+                            Можно изменить только один раз в месяц
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">EMAIL (ОПЦИОНАЛЬНО)</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="email" id="profile-email" class="form-input" placeholder="email@example.com" style="flex: 1;">
+                            <button onclick="updateEmail()" class="btn-secondary" style="min-width: 100px;">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- СТАТИСТИКА -->
+                <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 20px; margin-top: 20px;">
+                    <h5 style="color: #8cb43c; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-chart-bar"></i> СТАТИСТИКА АКТИВНОСТИ
+                    </h5>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: rgba(30, 32, 28, 0.7); border-radius: 4px;">
+                            <div style="font-size: 2rem; color: #c0b070; font-weight: bold; margin-bottom: 5px;">
+                                ${currentUserData?.reportsCreated || 0}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #8f9779;">
+                                <i class="fas fa-file-alt" style="margin-right: 5px;"></i>
+                                Отчетов создано
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 15px; background: rgba(30, 32, 28, 0.7); border-radius: 4px;">
+                            <div style="font-size: 2rem; color: #8cb43c; font-weight: bold; margin-bottom: 5px;">
+                                ${currentUserData?.reportsConfirmed || 0}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #8f9779;">
+                                <i class="fas fa-check-circle" style="margin-right: 5px;"></i>
+                                Отчетов подтверждено
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 15px; background: rgba(30, 32, 28, 0.7); border-radius: 4px;">
+                            <div style="font-size: 2rem; color: #c0b070; font-weight: bold; margin-bottom: 5px;">
+                                ${new Date(currentUserData?.registrationDate || new Date()).toLocaleDateString('ru-RU')}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #8f9779;">
+                                <i class="fas fa-calendar-alt" style="margin-right: 5px;"></i>
+                                Дата регистрации
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 15px; background: rgba(30, 32, 28, 0.7); border-radius: 4px;">
+                            <div style="font-size: 2rem; color: #8cb43c; font-weight: bold; margin-bottom: 5px;">
+                                ${currentUserData?.lastLogin || 'Недавно'}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #8f9779;">
+                                <i class="fas fa-sign-in-alt" style="margin-right: 5px;"></i>
+                                Последний вход
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- АВАТАР -->
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-user-circle"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 20px;">АВАТАР ПРОФИЛЯ</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+                    <div id="current-avatar" style="width: 120px; height: 120px; border-radius: 50%; border: 4px solid #8cb43c; overflow: hidden; background: rgba(60, 62, 56, 0.8); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: #8cb43c;">
+                        ${USER_SETTINGS.avatar ? 
+                            `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                            `<i class="fas fa-user-shield"></i>`
+                        }
+                    </div>
+                    
+                    <div style="text-align: center; color: #8f9779; max-width: 500px; margin: 0 auto;">
+                        <p>Загрузите изображение для вашего профиля. Поддерживаются форматы JPG, PNG, GIF. Максимальный размер: 2MB.</p>
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                        <button onclick="showAvatarUploadModal()" class="btn-primary" style="border-color: #8cb43c;">
+                            <i class="fas fa-upload"></i> ЗАГРУЗИТЬ ИЗОБРАЖЕНИЕ
+                        </button>
+                        <button onclick="generateAvatar()" class="btn-secondary">
+                            <i class="fas fa-robot"></i> СГЕНЕРИРОВАТЬ АВАТАР
+                        </button>
+                        ${USER_SETTINGS.avatar ? 
+                            `<button onclick="removeAvatar()" class="btn-secondary" style="border-color: #b43c3c; color: #b43c3c;">
+                                <i class="fas fa-trash"></i> УДАЛИТЬ
+                            </button>` : ''
+                        }
+                    </div>
+                    
+                    <!-- ПРЕДУСТАНОВЛЕННЫЕ АВАТАРКИ -->
+                    <div style="width: 100%;">
+                        <h5 style="color: #c0b070; margin-bottom: 15px; font-size: 0.95rem;">
+                            <i class="fas fa-th"></i> БЫСТРЫЙ ВЫБОР
+                        </h5>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                            ${['fa-user-secret', 'fa-robot', 'fa-user-ninja', 'fa-user-astronaut', 'fa-user-tie', 'fa-user-md']
+                                .map(icon => `
+                                    <div onclick="setAvatarIcon('${icon}')" class="avatar-option" style="
+                                        width: 60px;
+                                        height: 60px;
+                                        border-radius: 50%;
+                                        background: rgba(60, 62, 56, 0.8);
+                                        border: 2px solid #4a4a3a;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        cursor: pointer;
+                                        transition: all 0.3s;
+                                        font-size: 1.5rem;
+                                        color: #8f9779;
+                                    ">
+                                        <i class="fas ${icon}"></i>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderProfileSecurityTab() {
+    return `
+        <div style="display: flex; flex-direction: column; gap: 25px; max-width: 800px; margin: 0 auto;">
+            <!-- СМЕНА ПАРОЛЯ -->
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-key"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 20px;">СМЕНА ПАРОЛЯ</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div>
+                        <label class="form-label">ТЕКУЩИЙ ПАРОЛЬ</label>
+                        <input type="password" id="security-current-password" class="form-input" placeholder="Введите текущий пароль">
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">НОВЫЙ ПАРОЛЬ</label>
+                        <input type="password" id="security-new-password" class="form-input" placeholder="Введите новый пароль">
+                        <div style="font-size: 0.8rem; color: #8f9779; margin-top: 5px;">
+                            Минимум 6 символов, рекомендуется использовать буквы, цифры и специальные символы
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="form-label">ПОВТОРИТЕ НОВЫЙ ПАРОЛЬ</label>
+                        <input type="password" id="security-confirm-password" class="form-input" placeholder="Повторите новый пароль">
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <button onclick="updatePassword()" class="btn-primary" style="width: 100%; padding: 12px; border-color: #8cb43c;">
+                            <i class="fas fa-save"></i> СОХРАНИТЬ НОВЫЙ ПАРОЛЬ
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- СЕССИИ И БЕЗОПАСНОСТЬ -->
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-shield-alt"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 20px;">БЕЗОПАСНОСТЬ И СЕССИИ</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 4px;">
+                        <div>
+                            <div style="color: #c0b070; font-weight: 500; margin-bottom: 5px;">ТЕКУЩАЯ СЕССИЯ</div>
+                            <div style="color: #8f9779; font-size: 0.85rem;">
+                                <i class="fas fa-desktop" style="margin-right: 5px;"></i>
+                                ${navigator.userAgent.split(')')[0].split('(')[1] || 'Неизвестное устройство'}
+                            </div>
+                        </div>
+                        <div style="color: #8cb43c; font-weight: 500;">АКТИВНА</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="security-2fa" ${USER_SETTINGS.twoFactor ? 'checked' : ''}>
+                            <span>Двухфакторная аутентификация</span>
+                        </label>
+                        
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="security-email-notifications" ${USER_SETTINGS.emailNotifications ? 'checked' : ''}>
+                            <span>Уведомления на email о входе в аккаунт</span>
+                        </label>
+                        
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="security-logout-others" onclick="logoutOtherSessions()">
+                            <span>Завершить все другие сессии</span>
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 10px;">
+                        <button onclick="saveSecuritySettings()" class="btn-primary" style="width: 100%; padding: 12px;">
+                            <i class="fas fa-save"></i> СОХРАНИТЬ НАСТРОЙКИ БЕЗОПАСНОСТИ
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderProfileAppearanceTab() {
+    const themes = [
+        { id: 'default', name: 'СТАНДАРТНАЯ', color: '#c0b070', desc: 'Классическая тема Зоны' },
+        { id: 'dark', name: 'ТЕМНАЯ', color: '#2a2520', desc: 'Максимально темная тема' },
+        { id: 'green', name: 'ЗЕЛЕНАЯ', color: '#8cb43c', desc: 'Зеленая терминальная тема' },
+        { id: 'blue', name: 'СИНЯЯ', color: '#5865F2', desc: 'Стиль Discord' },
+        { id: 'red', name: 'КРАСНАЯ', color: '#b43c3c', desc: 'Агрессивный стиль' },
+        { id: 'matrix', name: 'МАТРИЦА', color: '#00ff41', desc: 'Стиль матрицы' }
+    ];
+    
+    return `
+        <div style="display: flex; flex-direction: column; gap: 25px; max-width: 800px; margin: 0 auto;">
+            <!-- ВЫБОР ТЕМЫ -->
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-palette"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 20px;">НАСТРОЙКА ВНЕШНЕГО ВИДА</h4>
+                
+                <div style="margin-bottom: 25px;">
+                    <h5 style="color: #8cb43c; margin-bottom: 15px; font-size: 1rem;">
+                        <i class="fas fa-fill-drip"></i> ВЫБЕРИТЕ ТЕМУ
+                    </h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        ${themes.map(theme => `
+                            <div class="theme-option ${USER_SETTINGS.theme === theme.id ? 'active' : ''}" 
+                                 onclick="selectTheme('${theme.id}')"
+                                 style="
+                                    background: ${theme.id === 'default' ? 'linear-gradient(145deg, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9))' : theme.color + '10'};
+                                    border: 2px solid ${USER_SETTINGS.theme === theme.id ? theme.color : '#4a4a3a'};
+                                    border-radius: 8px;
+                                    padding: 20px;
+                                    cursor: pointer;
+                                    transition: all 0.3s;
+                                 ">
+                                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                                    <div style="
+                                        width: 40px;
+                                        height: 40px;
+                                        background: ${theme.color};
+                                        border-radius: 50%;
+                                        border: 2px solid ${theme.color}80;
+                                    "></div>
+                                    <div>
+                                        <div style="color: ${theme.color}; font-weight: 600; font-size: 1.1rem;">${theme.name}</div>
+                                        <div style="color: #8f9779; font-size: 0.8rem; margin-top: 3px;">${theme.desc}</div>
+                                    </div>
+                                </div>
+                                ${USER_SETTINGS.theme === theme.id ? 
+                                    `<div style="text-align: center; margin-top: 10px;">
+                                        <span style="color: ${theme.color}; font-size: 0.8rem;">
+                                            <i class="fas fa-check-circle"></i> ВЫБРАНА
+                                        </span>
+                                    </div>` : ''
+                                }
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ -->
+                <div>
+                    <h5 style="color: #8cb43c; margin-bottom: 15px; font-size: 1rem;">
+                        <i class="fas fa-sliders-h"></i> ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ
+                    </h5>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="appearance-compact" ${USER_SETTINGS.compactView ? 'checked' : ''}>
+                            <span>Компактный режим (меньше отступов)</span>
+                        </label>
+                        
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="appearance-animations" ${USER_SETTINGS.animations !== false ? 'checked' : ''}>
+                            <span>Анимации интерфейса</span>
+                        </label>
+                        
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="appearance-shadows" ${USER_SETTINGS.shadows !== false ? 'checked' : ''}>
+                            <span>Тени элементов</span>
+                        </label>
+                    </div>
+                    
+                    <!-- НАСТРОЙКА ШРИФТА -->
+                    <div style="margin-bottom: 20px;">
+                        <label class="form-label">РАЗМЕР ШРИФТА</label>
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <span style="color: #8f9779; font-size: 0.85rem;">Мелкий</span>
+                            <input type="range" id="font-size-slider" min="12" max="18" value="${USER_SETTINGS.fontSize || 14}" 
+                                   style="flex: 1; height: 6px; background: #4a4a3a; border-radius: 3px; outline: none;">
+                            <span style="color: #8f9779; font-size: 0.85rem;">Крупный</span>
+                        </div>
+                    </div>
+                    
+                    <!-- КНОПКА СОХРАНЕНИЯ -->
+                    <div>
+                        <button onclick="saveAppearanceSettings()" class="btn-primary" style="width: 100%; padding: 12px; border-color: #c0b070;">
+                            <i class="fas fa-save"></i> ПРИМЕНИТЬ НАСТРОЙКИ ВНЕШНЕГО ВИДА
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ПРЕВЬЮ ТЕМЫ -->
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-eye"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 20px;">ПРЕДПРОСМОТР</h4>
+                
+                <div id="theme-preview" style="
+                    background: ${USER_SETTINGS.theme === 'default' ? 'linear-gradient(145deg, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9))' : 
+                                 USER_SETTINGS.theme === 'green' ? 'linear-gradient(145deg, rgba(20, 25, 15, 0.9), rgba(15, 20, 10, 0.9))' :
+                                 USER_SETTINGS.theme === 'blue' ? 'linear-gradient(145deg, rgba(20, 20, 40, 0.9), rgba(15, 15, 35, 0.9))' :
+                                 USER_SETTINGS.theme === 'red' ? 'linear-gradient(145deg, rgba(40, 20, 20, 0.9), rgba(35, 15, 15, 0.9))' :
+                                 USER_SETTINGS.theme === 'matrix' ? 'linear-gradient(145deg, rgba(0, 20, 0, 0.9), rgba(0, 15, 0, 0.9))' :
+                                 'linear-gradient(145deg, rgba(15, 15, 15, 0.9), rgba(10, 10, 10, 0.9))'};
+                    border: 1px solid ${USER_SETTINGS.theme === 'default' ? '#4a4a3a' :
+                                     USER_SETTINGS.theme === 'green' ? '#8cb43c' :
+                                     USER_SETTINGS.theme === 'blue' ? '#5865F2' :
+                                     USER_SETTINGS.theme === 'red' ? '#b43c3c' :
+                                     USER_SETTINGS.theme === 'matrix' ? '#00ff41' : '#4a4a3a'};
+                    border-radius: 8px;
+                    padding: 20px;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid ${USER_SETTINGS.theme === 'default' ? '#4a4a3a40' :
+                                                                                           USER_SETTINGS.theme === 'green' ? '#8cb43c40' :
+                                                                                           USER_SETTINGS.theme === 'blue' ? '#5865F240' :
+                                                                                           USER_SETTINGS.theme === 'red' ? '#b43c3c40' :
+                                                                                           USER_SETTINGS.theme === 'matrix' ? '#00ff4140' : '#4a4a3a40'};">
+                        <div style="color: ${USER_SETTINGS.theme === 'default' ? '#c0b070' :
+                                        USER_SETTINGS.theme === 'green' ? '#8cb43c' :
+                                        USER_SETTINGS.theme === 'blue' ? '#5865F2' :
+                                        USER_SETTINGS.theme === 'red' ? '#b43c3c' :
+                                        USER_SETTINGS.theme === 'matrix' ? '#00ff41' : '#c0b070'}; font-weight: 600;">
+                            ПРИМЕР ЭЛЕМЕНТА
+                        </div>
+                        <div style="color: #8f9779; font-size: 0.85rem;">
+                            <i class="fas fa-check-circle"></i> Активно
+                        </div>
+                    </div>
+                    
+                    <div style="color: #8f9779; line-height: 1.5; margin-bottom: 20px;">
+                        Это пример того, как будет выглядеть интерфейс с выбранной темой.
+                    </div>
+                    
+                    <div style="display: flex; gap: 10px;">
+                        <button style="
+                            background: ${USER_SETTINGS.theme === 'default' ? 'rgba(192, 176, 112, 0.1)' :
+                                         USER_SETTINGS.theme === 'green' ? 'rgba(140, 180, 60, 0.1)' :
+                                         USER_SETTINGS.theme === 'blue' ? 'rgba(88, 101, 242, 0.1)' :
+                                         USER_SETTINGS.theme === 'red' ? 'rgba(180, 60, 60, 0.1)' :
+                                         USER_SETTINGS.theme === 'matrix' ? 'rgba(0, 255, 65, 0.1)' : 'rgba(192, 176, 112, 0.1)'};
+                            border: 1px solid ${USER_SETTINGS.theme === 'default' ? '#c0b070' :
+                                             USER_SETTINGS.theme === 'green' ? '#8cb43c' :
+                                             USER_SETTINGS.theme === 'blue' ? '#5865F2' :
+                                             USER_SETTINGS.theme === 'red' ? '#b43c3c' :
+                                             USER_SETTINGS.theme === 'matrix' ? '#00ff41' : '#c0b070'};
+                            color: ${USER_SETTINGS.theme === 'default' ? '#c0b070' :
+                                    USER_SETTINGS.theme === 'green' ? '#8cb43c' :
+                                    USER_SETTINGS.theme === 'blue' ? '#5865F2' :
+                                    USER_SETTINGS.theme === 'red' ? '#b43c3c' :
+                                    USER_SETTINGS.theme === 'matrix' ? '#00ff41' : '#c0b070'};
+                            padding: 8px 16px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                        ">
+                            КНОПКА
+                        </button>
+                        
+                        <div style="
+                            background: rgba(40, 42, 36, 0.5);
+                            border: 1px solid #4a4a3a;
+                            border-radius: 4px;
+                            padding: 8px 12px;
+                            color: #8f9779;
+                            font-size: 0.9rem;
+                            flex: 1;
+                        ">
+                            Поле ввода
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function renderProfileNotificationsTab() {
+    return `
+        <div style="display: flex; flex-direction: column; gap: 25px; max-width: 800px; margin: 0 auto;">
+            <!-- НАСТРОЙКИ УВЕДОМЛЕНИЙ -->
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-bell"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 20px;">НАСТРОЙКИ УВЕДОМЛЕНИЙ</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <label class="form-label">ОБЩИЕ НАСТРОЙКИ</label>
+                        <div style="display: flex; flex-direction: column; gap: 12px; padding: 15px; background: rgba(40, 42, 36, 0.5); border-radius: 6px;">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="notifications-enabled" ${USER_SETTINGS.notifications !== false ? 'checked' : ''}>
+                                <span>Включить уведомления</span>
+                            </label>
+                            
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="notifications-sound" ${USER_SETTINGS.soundNotifications !== false ? 'checked' : ''}>
+                                <span>Звуковые уведомления</span>
+                            </label>
+                            
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="notifications-desktop" ${USER_SETTINGS.desktopNotifications ? 'checked' : ''}>
+                                <span>Desktop-уведомления</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- ТИПЫ УВЕДОМЛЕНИЙ -->
+                    <div>
+                        <label class="form-label">ТИПЫ УВЕДОМЛЕНИЙ</label>
+                        <div style="display: flex; flex-direction: column; gap: 10px; padding: 20px; background: rgba(40, 42, 36, 0.5); border-radius: 6px;">
+                            ${[
+                                { id: 'notify-reports', label: 'Новые отчеты в системе', checked: true },
+                                { id: 'notify-confirmations', label: 'Подтверждение ваших отчетов', checked: true },
+                                { id: 'notify-system', label: 'Системные сообщения', checked: true },
+                                { id: 'notify-updates', label: 'Обновления системы', checked: true },
+                                { id: 'notify-security', label: 'События безопасности', checked: true }
+                            ].map(notif => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(74, 74, 58, 0.3);">
+                                    <span style="color: #8f9779; font-size: 0.9rem;">${notif.label}</span>
+                                    <label class="switch">
+                                        <input type="checkbox" id="${notif.id}" ${notif.checked ? 'checked' : ''}>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- ЧАСТОТА УВЕДОМЛЕНИЙ -->
+                    <div>
+                        <label class="form-label">ЧАСТОТА УВЕДОМЛЕНИЙ</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            ${['Сразу', 'Каждые 30 мин', 'Каждый час', 'Только важные'].map((freq, i) => `
+                                <label class="radio-option">
+                                    <input type="radio" name="frequency" value="${i}" ${i === 0 ? 'checked' : ''}>
+                                    <span>${freq}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- КНОПКА СОХРАНЕНИЯ -->
+                    <div style="margin-top: 20px;">
+                        <button onclick="saveNotificationSettings()" class="btn-primary" style="width: 100%; padding: 12px; border-color: #8cb43c;">
+                            <i class="fas fa-save"></i> СОХРАНИТЬ НАСТРОЙКИ УВЕДОМЛЕНИЙ
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ИСТОРИЯ УВЕДОМЛЕНИЙ -->
+            <div class="zone-card" style="border-color: #c0b070;">
+                <div class="card-icon" style="color: #c0b070;"><i class="fas fa-history"></i></div>
+                <h4 style="color: #c0b070; margin-bottom: 20px;">ИСТОРИЯ УВЕДОМЛЕНИЙ</h4>
+                
+                <div id="notifications-history" class="scrollable-container" style="
+                    max-height: 200px;
+                    background: rgba(20, 18, 15, 0.5);
+                    border-radius: 4px;
+                    padding: 15px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                ">
+                    <div style="text-align: center; padding: 20px; color: #6a6a5a;">
+                        <i class="fas fa-bell-slash" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>История уведомлений пуста</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button onclick="clearNotifications()" class="btn-secondary" style="flex: 1;">
+                        <i class="fas fa-trash"></i> ОЧИСТИТЬ ИСТОРИЮ
+                    </button>
+                    <button onclick="testNotification()" class="btn-secondary" style="flex: 1;">
+                        <i class="fas fa-bell"></i> ТЕСТ УВЕДОМЛЕНИЯ
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/* ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ПРОФИЛЕМ ===== */
+
+// Модальное окно загрузки аватарки
+function showAvatarUploadModal() {
+    const modal = document.createElement('div');
+    modal.id = 'avatar-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(10, 8, 5, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(10px);
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(145deg, rgba(28, 26, 23, 0.98), rgba(20, 18, 15, 0.98));
+            border: 2px solid #c0b070;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; margin: 0;">
+                    <i class="fas fa-user-circle"></i> ЗАГРУЗКА АВАТАРА
+                </h3>
+                <button onclick="document.getElementById('avatar-modal').remove()" style="
+                    background: none;
+                    border: none;
+                    color: #8f9779;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    padding: 5px;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <label class="form-label">ВЫБЕРИТЕ ИЗОБРАЖЕНИЕ</label>
+                <div style="
+                    border: 2px dashed #4a4a3a;
+                    border-radius: 8px;
+                    padding: 40px 20px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                    margin-bottom: 20px;
+                " id="avatar-dropzone">
+                    <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #4a4a3a; margin-bottom: 15px;"></i>
+                    <div style="color: #8f9779; margin-bottom: 10px;">
+                        <strong>Перетащите изображение сюда</strong>
+                    </div>
+                    <div style="color: #6a6a5a; font-size: 0.9rem;">
+                        или нажмите для выбора файла
+                    </div>
+                </div>
+                <input type="file" id="avatar-file-input" accept="image/*" style="display: none;">
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <label class="form-label">ИЛИ ВВЕДИТЕ URL</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="avatar-url" class="form-input" placeholder="https://example.com/avatar.jpg" style="flex: 1;">
+                    <button onclick="loadAvatarFromURL()" class="btn-secondary" style="min-width: 100px;">
+                        Загрузить
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 30px; padding: 20px; background: rgba(40, 42, 36, 0.5); border-radius: 8px;">
+                <div style="color: #8cb43c; font-weight: 500; margin-bottom: 10px;">
+                    <i class="fas fa-info-circle"></i> ТРЕБОВАНИЯ
+                </div>
+                <ul style="color: #8f9779; font-size: 0.9rem; padding-left: 20px; margin: 0;">
+                    <li>Форматы: JPG, PNG, GIF, WebP</li>
+                    <li>Максимальный размер: 2 MB</li>
+                    <li>Рекомендуемый размер: 256×256 пикселей</li>
+                    <li>Изображение будет обрезано до квадрата</li>
+                </ul>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                <button onclick="document.getElementById('avatar-modal').remove()" class="btn-secondary" style="padding: 12px 24px;">
+                    ОТМЕНА
+                </button>
+                <button onclick="uploadAvatar()" class="btn-primary" style="padding: 12px 24px; border-color: #8cb43c;">
+                    <i class="fas fa-upload"></i> ЗАГРУЗИТЬ
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Обработчики для drag & drop
+    const dropzone = document.getElementById('avatar-dropzone');
+    const fileInput = document.getElementById('avatar-file-input');
+    
+    dropzone.addEventListener('click', () => fileInput.click());
+    
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = '#8cb43c';
+        dropzone.style.background = 'rgba(140, 180, 60, 0.05)';
+    });
+    
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.style.borderColor = '#4a4a3a';
+        dropzone.style.background = 'transparent';
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.style.borderColor = '#4a4a3a';
+        dropzone.style.background = 'transparent';
+        
+        if (e.dataTransfer.files.length > 0) {
+            handleAvatarFile(e.dataTransfer.files[0]);
+        }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleAvatarFile(e.target.files[0]);
+        }
+    });
+}
+
+function handleAvatarFile(file) {
+    if (!file.type.startsWith('image/')) {
+        showNotification('Выберите файл изображения', 'error');
+        return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+        showNotification('Файл слишком большой (макс. 2 MB)', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('avatar-url').value = e.target.result;
+        showNotification('Изображение загружено', 'success');
+    };
+    reader.readAsDataURL(file);
+}
+
+async function uploadAvatar() {
+    const urlInput = document.getElementById('avatar-url');
+    const avatarUrl = urlInput ? urlInput.value.trim() : '';
+    
+    if (!avatarUrl) {
+        showNotification('Выберите изображение', 'error');
+        return;
+    }
+    
+    // Проверяем, является ли это data URL
+    if (avatarUrl.startsWith('data:')) {
+        // Проверяем размер data URL
+        if (avatarUrl.length > 2 * 1024 * 1024) { // Примерная проверка
+            showNotification('Изображение слишком большое', 'error');
+            return;
+        }
+    }
+    
+    // Проверяем URL
+    if (avatarUrl.startsWith('http')) {
+        try {
+            // Простая проверка URL
+            new URL(avatarUrl);
+        } catch {
+            showNotification('Некорректный URL', 'error');
+            return;
+        }
+    }
+    
+    USER_SETTINGS.avatar = avatarUrl;
+    saveUserSettings();
+    
+    // Обновляем превью
+    const avatarPreview = document.getElementById('avatar-preview-large');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarPreview) {
+        avatarPreview.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    if (currentAvatar) {
+        currentAvatar.innerHTML = `<img src="${avatarUrl}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    showNotification('Аватар обновлен', 'success');
+    document.getElementById('avatar-modal').remove();
+}
+
+function generateAvatar() {
+    // Генерируем случайный цвет для аватара
+    const colors = ['#c0b070', '#8cb43c', '#5865F2', '#b43c3c', '#8f9779', '#00ff41'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
+    // Создаем простой SVG аватар с инициалами
+    const initials = CURRENT_USER.substring(0, 2).toUpperCase();
+    
+    const svg = `
+        <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+            <rect width="256" height="256" fill="${color}" rx="128"/>
+            <text x="128" y="140" font-family="Arial, sans-serif" font-size="80" font-weight="bold" 
+                  text-anchor="middle" fill="#1e201c">${initials}</text>
+        </svg>
+    `;
+    
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    USER_SETTINGS.avatar = url;
+    saveUserSettings();
+    
+    // Обновляем превью
+    const avatarPreview = document.getElementById('avatar-preview-large');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarPreview) {
+        avatarPreview.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    if (currentAvatar) {
+        currentAvatar.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    showNotification('Сгенерирован новый аватар', 'success');
+}
+
+function removeAvatar() {
+    USER_SETTINGS.avatar = null;
+    saveUserSettings();
+    
+    // Обновляем превью
+    const avatarPreview = document.getElementById('avatar-preview-large');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarPreview) {
+        avatarPreview.innerHTML = `<i class="fas fa-user-shield"></i>`;
+    }
+    
+    if (currentAvatar) {
+        currentAvatar.innerHTML = `<i class="fas fa-user-shield"></i>`;
+    }
+    
+    showNotification('Аватар удален', 'success');
+}
+
+function setAvatarIcon(iconClass) {
+    // Создаем SVG с иконкой
+    const color = '#c0b070';
+    const svg = `
+        <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <style>
+                    .icon { 
+                        font-family: 'Font Awesome 6 Free'; 
+                        font-weight: 900; 
+                        font-size: 120px; 
+                        text-anchor: middle; 
+                        dominant-baseline: middle; 
+                    }
+                </style>
+            </defs>
+            <rect width="256" height="256" fill="#1e201c" rx="128"/>
+            <text x="128" y="128" class="icon" fill="${color}">
+                ${getUnicodeForIcon(iconClass)}
+            </text>
+        </svg>
+    `;
+    
+    const svgBlob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    USER_SETTINGS.avatar = url;
+    saveUserSettings();
+    
+    // Обновляем превью
+    const avatarPreview = document.getElementById('avatar-preview-large');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarPreview) {
+        avatarPreview.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    if (currentAvatar) {
+        currentAvatar.innerHTML = `<img src="${url}" alt="${CURRENT_USER}" style="width: 100%; height: 100%; object-fit: cover;">`;
+    }
+    
+    showNotification('Аватар установлен', 'success');
+}
+
+function getUnicodeForIcon(iconClass) {
+    const iconMap = {
+        'fa-user-secret': '\\f21b',
+        'fa-robot': '\\f544',
+        'fa-user-ninja': '\\f504',
+        'fa-user-astronaut': '\\f4fb',
+        'fa-user-tie': '\\f508',
+        'fa-user-md': '\\f0f0'
+    };
+    return iconMap[iconClass] || '\\f007';
+}
+
+// Функции для настроек
+function selectTheme(themeId) {
+    USER_SETTINGS.theme = themeId;
+    
+    // Обновляем активную тему в интерфейсе
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.classList.remove('active');
+    });
+    
+    event.currentTarget.classList.add('active');
+    
+    // Обновляем превью темы
+    updateThemePreview();
+    
+    // Автоматически сохраняем
+    saveUserSettings();
+}
+
+function updateThemePreview() {
+    const preview = document.getElementById('theme-preview');
+    if (!preview) return;
+    
+    const theme = USER_SETTINGS.theme;
+    
+    let bgColor, borderColor, textColor;
+    
+    switch(theme) {
+        case 'dark':
+            bgColor = 'linear-gradient(145deg, rgba(15, 15, 15, 0.9), rgba(10, 10, 10, 0.9))';
+            borderColor = '#2a2520';
+            textColor = '#c0b070';
+            break;
+        case 'green':
+            bgColor = 'linear-gradient(145deg, rgba(20, 25, 15, 0.9), rgba(15, 20, 10, 0.9))';
+            borderColor = '#8cb43c';
+            textColor = '#8cb43c';
+            break;
+        case 'blue':
+            bgColor = 'linear-gradient(145deg, rgba(20, 20, 40, 0.9), rgba(15, 15, 35, 0.9))';
+            borderColor = '#5865F2';
+            textColor = '#5865F2';
+            break;
+        case 'red':
+            bgColor = 'linear-gradient(145deg, rgba(40, 20, 20, 0.9), rgba(35, 15, 15, 0.9))';
+            borderColor = '#b43c3c';
+            textColor = '#b43c3c';
+            break;
+        case 'matrix':
+            bgColor = 'linear-gradient(145deg, rgba(0, 20, 0, 0.9), rgba(0, 15, 0, 0.9))';
+            borderColor = '#00ff41';
+            textColor = '#00ff41';
+            break;
+        default: // default
+            bgColor = 'linear-gradient(145deg, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9))';
+            borderColor = '#4a4a3a';
+            textColor = '#c0b070';
+    }
+    
+    preview.style.background = bgColor;
+    preview.style.borderColor = borderColor;
+    
+    // Обновляем цвета внутри превью
+    const header = preview.querySelector('div:first-child > div:first-child');
+    if (header) header.style.color = textColor;
+    
+    const button = preview.querySelector('button');
+    if (button) {
+        button.style.background = textColor + '10';
+        button.style.borderColor = textColor;
+        button.style.color = textColor;
+    }
+}
+
+function saveAppearanceSettings() {
+    USER_SETTINGS.compactView = document.getElementById('appearance-compact').checked;
+    USER_SETTINGS.animations = document.getElementById('appearance-animations').checked;
+    USER_SETTINGS.shadows = document.getElementById('appearance-shadows').checked;
+    USER_SETTINGS.fontSize = document.getElementById('font-size-slider').value;
+    
+    saveUserSettings();
+    showNotification('Настройки внешнего вида сохранены', 'success');
+    
+    // Применяем настройки шрифта
+    document.body.style.fontSize = USER_SETTINGS.fontSize + 'px';
+}
+
+function saveSecuritySettings() {
+    USER_SETTINGS.twoFactor = document.getElementById('security-2fa').checked;
+    USER_SETTINGS.emailNotifications = document.getElementById('security-email-notifications').checked;
+    
+    saveUserSettings();
+    showNotification('Настройки безопасности сохранены', 'success');
+}
+
+function saveNotificationSettings() {
+    USER_SETTINGS.notifications = document.getElementById('notifications-enabled').checked;
+    USER_SETTINGS.soundNotifications = document.getElementById('notifications-sound').checked;
+    USER_SETTINGS.desktopNotifications = document.getElementById('notifications-desktop').checked;
+    
+    saveUserSettings();
+    showNotification('Настройки уведомлений сохранены', 'success');
+}
+
+async function updateUsername() {
+    const newUsername = document.getElementById('profile-username').value.trim();
+    
+    if (!newUsername) {
+        showNotification('Введите имя пользователя', 'error');
+        return;
+    }
+    
+    if (newUsername === CURRENT_USER) {
+        showNotification('Имя пользователя не изменилось', 'info');
+        return;
+    }
+    
+    // Проверяем валидацию
+    const validation = validateUsername(newUsername);
+    if (!validation.valid) {
+        showNotification(validation.message, 'error');
+        return;
+    }
+    
+    // Проверяем, занято ли имя
+    const usernameExists = users.some(u => u.username.toLowerCase() === newUsername.toLowerCase());
+    if (usernameExists) {
+        showNotification('Это имя пользователя уже занято', 'error');
+        return;
+    }
+    
+    if (!confirm(`Изменить имя пользователя с "${CURRENT_USER}" на "${newUsername}"?`)) {
+        return;
+    }
+    
+    try {
+        // Находим пользователя в базе
+        const currentUser = users.find(u => u.username === CURRENT_USER);
+        if (!currentUser) {
+            showNotification('Пользователь не найден', 'error');
+            return;
+        }
+        
+        // Обновляем в базе
+        await db.ref('mlk_users/' + currentUser.id).update({
+            username: newUsername,
+            usernameChangedAt: new Date().toLocaleString()
+        });
+        
+        // Обновляем текущую сессию
+        CURRENT_USER = newUsername;
+        localStorage.setItem('mlk_session', JSON.stringify({
+            user: CURRENT_USER,
+            role: CURRENT_ROLE,
+            rank: CURRENT_RANK.level,
+            staticId: CURRENT_STATIC_ID,
+            timestamp: new Date().getTime()
+        }));
+        
+        // Обновляем сайдбар
+        const usernameElement = document.getElementById('current-username');
+        if (usernameElement) {
+            usernameElement.textContent = CURRENT_USER.toUpperCase();
+        }
+        
+        // Перезагружаем данные
+        await new Promise(resolve => loadData(resolve));
+        
+        showNotification(`Имя пользователя изменено на "${newUsername}"`, 'success');
+        
+        // Обновляем интерфейс профиля
+        renderProfile();
+        
+    } catch (error) {
+        showNotification('Ошибка при изменении имени: ' + error.message, 'error');
+    }
+}
+
+async function updatePassword() {
+    const currentPassword = document.getElementById('security-current-password').value.trim();
+    const newPassword = document.getElementById('security-new-password').value.trim();
+    const confirmPassword = document.getElementById('security-confirm-password').value.trim();
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showNotification('Заполните все поля', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification('Новые пароли не совпадают', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification('Пароль должен содержать минимум 6 символов', 'error');
+        return;
+    }
+    
+    if (newPassword === currentPassword) {
+        showNotification('Новый пароль должен отличаться от старого', 'error');
+        return;
+    }
+    
+    try {
+        // Находим текущего пользователя
+        const currentUser = users.find(u => u.username === CURRENT_USER);
+        if (!currentUser) {
+            showNotification('Пользователь не найден', 'error');
+            return;
+        }
+        
+        // Проверяем текущий пароль
+        const validCurrentPassword = await verifyPassword(currentPassword, {
+            hash: currentUser.passwordHash,
+            salt: currentUser.passwordSalt
+        });
+        
+        if (!validCurrentPassword) {
+            showNotification('Неверный текущий пароль', 'error');
+            return;
+        }
+        
+        // Генерируем новый хеш пароля
+        const newSalt = generateSalt();
+        const newHash = await hashPassword(newPassword, newSalt);
+        
+        // Обновляем пароль в базе данных
+        await db.ref('mlk_users/' + currentUser.id).update({
+            passwordHash: newHash,
+            passwordSalt: newSalt,
+            passwordChangedAt: new Date().toLocaleString()
+        });
+        
+        // Очищаем поля
+        document.getElementById('security-current-password').value = '';
+        document.getElementById('security-new-password').value = '';
+        document.getElementById('security-confirm-password').value = '';
+        
+        showNotification('✅ Пароль успешно изменен', 'success');
+        
+    } catch (error) {
+        console.error('Password change error:', error);
+        showNotification('Ошибка при смене пароля', 'error');
+    }
+}

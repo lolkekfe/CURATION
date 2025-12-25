@@ -2069,3 +2069,302 @@ body {
         gap: 25px;
     }
 }
+/* ===== СТИЛИ ДЛЯ ПРОФИЛЯ ===== */
+.profile-tab {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #8f9779;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 12px 20px;
+    white-space: nowrap;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.profile-tab:hover {
+    color: #c0b070;
+    background: rgba(192, 176, 112, 0.05);
+}
+
+.profile-tab.active {
+    color: #c0b070;
+    border-bottom-color: #c0b070;
+    background: rgba(192, 176, 112, 0.1);
+    font-weight: 500;
+}
+
+/* ЧЕКБОКСЫ И РАДИО КНОПКИ */
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    color: #8f9779;
+    font-size: 0.9rem;
+    user-select: none;
+}
+
+.form-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.form-checkbox span {
+    position: relative;
+    padding-left: 30px;
+}
+
+.form-checkbox span:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid #4a4a3a;
+    border-radius: 4px;
+    background: rgba(40, 42, 36, 0.8);
+    transition: all 0.3s;
+}
+
+.form-checkbox input:checked + span:before {
+    background: #8cb43c;
+    border-color: #8cb43c;
+}
+
+.form-checkbox input:checked + span:after {
+    content: '✓';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #1e201c;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #4a4a3a;
+    transition: .4s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+    background-color: #1e201c;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #8cb43c;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 16px;
+    background: rgba(40, 42, 36, 0.8);
+    border: 1px solid #4a4a3a;
+    border-radius: 4px;
+    color: #8f9779;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.radio-option:hover {
+    border-color: #8f9779;
+    color: #c0b070;
+}
+
+.radio-option input {
+    display: none;
+}
+
+.radio-option input:checked + span {
+    color: #8cb43c;
+    font-weight: 500;
+}
+
+/* ТЕМЫ */
+.theme-option {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-option:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.theme-option.active {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.theme-option.active:after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 12px;
+    height: 12px;
+    background: currentColor;
+    border-radius: 50%;
+}
+
+/* АВАТАРЫ */
+.avatar-option {
+    transition: all 0.3s;
+}
+
+.avatar-option:hover {
+    transform: scale(1.1);
+    border-color: #8cb43c !important;
+    color: #8cb43c !important;
+    box-shadow: 0 0 15px rgba(140, 180, 60, 0.3);
+}
+
+/* ТЕМЫ ДЛЯ САЙТА */
+[data-theme="dark"] {
+    --primary-dark: #0a0a0a;
+    --secondary-dark: #141414;
+    --tertiary-dark: #1c1c1c;
+    --accent-green: #2a5a30;
+    --accent-green-glow: #3a6a40;
+    --accent-yellow: #7b6355;
+    --accent-yellow-glow: #8b7365;
+    --text-primary: #d0c8b8;
+    --text-secondary: #9a9488;
+}
+
+[data-theme="green"] {
+    --primary-dark: #0a0f05;
+    --secondary-dark: #141f0f;
+    --tertiary-dark: #1c2f17;
+    --accent-green: #4a7a50;
+    --accent-green-glow: #5a8a60;
+    --accent-yellow: #8cb43c;
+    --accent-yellow-glow: #9cc44c;
+    --text-primary: #c0d8a8;
+    --text-secondary: #8a9c78;
+}
+
+[data-theme="blue"] {
+    --primary-dark: #05080f;
+    --secondary-dark: #0f1420;
+    --tertiary-dark: #171c2f;
+    --accent-green: #5865F2;
+    --accent-green-glow: #6875FF;
+    --accent-yellow: #7289DA;
+    --accent-yellow-glow: #8299EA;
+    --text-primary: #c0c8f8;
+    --text-secondary: #8a92d8;
+}
+
+[data-theme="red"] {
+    --primary-dark: #0f0505;
+    --secondary-dark: #200f0f;
+    --tertiary-dark: #2f1717;
+    --accent-green: #b43c3c;
+    --accent-green-glow: #c44c4c;
+    --accent-yellow: #d45c5c;
+    --accent-yellow-glow: #e46c6c;
+    --text-primary: #f8c0c0;
+    --text-secondary: #d88a8a;
+}
+
+[data-theme="matrix"] {
+    --primary-dark: #000a00;
+    --secondary-dark: #001400;
+    --tertiary-dark: #001e00;
+    --accent-green: #00ff41;
+    --accent-green-glow: #20ff61;
+    --accent-yellow: #00cc33;
+    --accent-yellow-glow: #20dc53;
+    --text-primary: #c0ffd0;
+    --text-secondary: #80cc90;
+}
+
+/* КОМПАКТНЫЙ РЕЖИМ */
+.compact-view .zone-card {
+    padding: 15px !important;
+    margin-bottom: 10px !important;
+}
+
+.compact-view .form-container {
+    gap: 10px !important;
+}
+
+.compact-view .profile-tab {
+    padding: 8px 15px !important;
+    font-size: 0.85rem !important;
+}
+
+.compact-view .scrollable-container {
+    padding: 10px !important;
+}
+
+/* АДАПТИВНОСТЬ ПРОФИЛЯ */
+@media (max-width: 768px) {
+    .profile-tab {
+        min-width: 100px;
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+    
+    .theme-option {
+        padding: 15px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-tab {
+        min-width: auto;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+    }
+    
+    .profile-tab i {
+        display: none;
+    }
+}

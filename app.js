@@ -511,8 +511,8 @@ function restoreSession() {
             staticId: CURRENT_STATIC_ID
         });
         
-        if (CURRENT_USER && CURRENT_RANK && CURRENT_STATIC_ID) {
-            // Обновляем timestamp сессии при восстановлении
+        if (CURRENT_USER && CURRENT_RANK) {
+            // Obновляем timestamp сессии при восстановлении
             const updatedSession = {
                 user: CURRENT_USER,
                 role: CURRENT_ROLE,

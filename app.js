@@ -464,6 +464,8 @@ function generateStaticId(username) {
 /* ===== ВОССТАНОВЛЕНИЕ СЕССИИ ===== */
 function restoreSession() {
     const savedSession = localStorage.getItem('mlk_session');
+    console.log('Checking localStorage for mlk_session:', savedSession);
+    
     if (!savedSession) {
         console.log('No saved session found');
         return false;
@@ -471,10 +473,15 @@ function restoreSession() {
     
     try {
         const session = JSON.parse(savedSession);
+        console.log('Parsed session:', session);
+        
         const currentTime = new Date().getTime();
         const maxAge = 8 * 60 * 60 * 1000; // 8 часов
+        const sessionAge = currentTime - session.timestamp;
         
-        if (currentTime - session.timestamp > maxAge) { 
+        console.log('Session age (ms):', sessionAge, 'Max age (ms):', maxAge);
+        
+        if (sessionAge > maxAge) { 
             console.log('Session expired');
             localStorage.removeItem('mlk_session'); 
             return false; 
@@ -497,19 +504,28 @@ function restoreSession() {
             }
         }
         
+        console.log('Restored user data:', {
+            user: CURRENT_USER,
+            role: CURRENT_ROLE,
+            rank: CURRENT_RANK,
+            staticId: CURRENT_STATIC_ID
+        });
+        
         if (CURRENT_USER && CURRENT_RANK && CURRENT_STATIC_ID) {
             // Обновляем timestamp сессии при восстановлении
-            localStorage.setItem('mlk_session', JSON.stringify({
+            const updatedSession = {
                 user: CURRENT_USER,
                 role: CURRENT_ROLE,
                 rank: CURRENT_RANK.level,
                 staticId: CURRENT_STATIC_ID,
                 timestamp: currentTime
-            }));
-            console.log('Session restored for user:', CURRENT_USER);
+            };
+            localStorage.setItem('mlk_session', JSON.stringify(updatedSession));
+            console.log('Session restored and updated for user:', CURRENT_USER);
             return true;
         }
         
+        console.log('Session validation failed - missing required fields');
         return false;
         
     } catch (e) { 
@@ -1932,18 +1948,29 @@ function completeLogin() {
     const loginScreen = document.getElementById("login-screen");
     const terminal = document.getElementById("terminal");
     
+    console.log('completeLogin called with:', {
+        user: CURRENT_USER,
+        role: CURRENT_ROLE,
+        rank: CURRENT_RANK,
+        staticId: CURRENT_STATIC_ID
+    });
+    
     if (loginScreen && terminal) {
         loginScreen.style.display = "none";
         terminal.style.display = "flex";
         
         // Сохраняем сессию
-        localStorage.setItem('mlk_session', JSON.stringify({
+        const sessionData = {
             user: CURRENT_USER,
             role: CURRENT_ROLE,
-            rank: CURRENT_RANK.level,
+            rank: CURRENT_RANK ? CURRENT_RANK.level : null,
             staticId: CURRENT_STATIC_ID,
             timestamp: new Date().getTime()
-        }));
+        };
+        
+        console.log('Saving session:', sessionData);
+        localStorage.setItem('mlk_session', JSON.stringify(sessionData));
+        console.log('Session saved to localStorage');
         
         // Настраиваем интерфейс
         setupSidebar();
@@ -1960,6 +1987,8 @@ function completeLogin() {
         
         // Настраиваем высоту интерфейса
         setTimeout(adjustInterfaceHeights, 100);
+    } else {
+        console.error('Login screen or terminal not found');
     }
 }
 

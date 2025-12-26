@@ -525,6 +525,38 @@ body {
     overflow: hidden;
 }
 
+/* Keep the overall interface fixed to viewport and prevent the sidebar from creating page scroll
+   Sidebar internal areas will scroll instead (use min-height:0 on flex children) */
+html, body, .zone-interface {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.zone-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Make the navigation/content area inside sidebar scrollable without affecting document scroll */
+.zone-sidebar .navigation-panel,
+.zone-sidebar .scrollable-container,
+.zone-sidebar .info-content,
+.zone-sidebar .admin-list {
+    flex: 1 1 auto;
+    min-height: 0; /* allow proper flex overflow */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.zone-sidebar .sidebar-header,
+.zone-sidebar .session-panel {
+    flex: 0 0 auto;
+}
+
 /* Fix: ensure sidebar truly stretches to viewport bottom and remove stray gap */
 .zone-interface {
     align-items: stretch;

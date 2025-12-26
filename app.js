@@ -1994,10 +1994,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 // Исправленная версия обработчика blur
+const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById('password');
+const loginButton = document.getElementById("login-btn");
+
 if (passwordInput) {
     passwordInput.addEventListener('blur', function() {
-        const usernameInput = document.getElementById("username"); // Добавить здесь
         const validation = validatePassword(this.value);
         if (!validation.valid) {
             this.style.borderColor = "#b43c3c";

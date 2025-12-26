@@ -3007,3 +3007,23 @@ html, body, .zone-interface, .zone-sidebar {
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
 }
+
+/* Info split: make the two info cards stretch to fill their grid cell */
+.dashboard-grid.info-split {
+    align-items: stretch;
+}
+.dashboard-grid.info-split .zone-card.info-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    box-sizing: border-box;
+}
+.dashboard-grid.info-split .zone-card.info-card .info-content {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+.dashboard-grid.info-split .zone-card.info-card .info-content > div:last-child {
+    margin-top: 6px;
+}

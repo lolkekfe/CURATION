@@ -3796,6 +3796,7 @@ window.renderSystem = function() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
+    const adminList = users.filter(u => u.role === RANKS.ADMIN.name).map(u => u.user).slice(0, 12).join(', ');
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
     const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
@@ -3828,18 +3829,29 @@ window.renderSystem = function() {
                     <div class="zone-card"><div class="card-icon"><i class="fas fa-user-graduate"></i></div><div class="card-value">${juniorCurators}</div><div class="card-label">МЛАДШИЕ КУРАТОРЫ</div></div>
                 </div>
                 
-                <!-- ИНФОРМАЦИЯ О СИСТЕМЕ -->
-                <div class="zone-card" style="margin-top: 20px; border-color: #c0b070;">
-                    <div class="card-icon" style="color: #c0b070;"><i class="fas fa-info-circle"></i></div>
-                    <h4 style="color: #c0b070; margin-bottom: 10px;">ИНФОРМАЦИЯ О СИСТЕМЕ</h4>
-                    <div style="color: #8f9779; line-height: 1.6;">
-                        <p><strong>Система регистрации:</strong> Все новые пользователи регистрируются со своим паролем и становятся младшими кураторами.</p>
-                        <p><strong>Повышение рангов:</strong> Администраторы и старшие кураторы могут повышать пользователей через раздел "ПОЛЬЗОВАТЕЛИ".</p>
-                        <p><strong>Создатель системы:</strong> Только пользователь <strong>Tihiy</strong> имеет специальный пароль и полный доступ ко всем функциям.</p>
-                        ${CURRENT_USER.toLowerCase() === "tihiy" ? 
-                            `<p><strong>Ваш статус:</strong> Вы являетесь создателем системы. Пароль можно изменить в разделе "ПАРОЛЬ СОЗДАТЕЛЯ".</p>` : 
-                            `<p><strong>Ваш статус:</strong> ${CURRENT_RANK.name}. Для смены пароля используйте раздел "МОЙ ПАРОЛЬ".</p>`
-                        }
+                <!-- ИНФОРМАЦИЯ О СИСТЕМЕ (РАЗДЕЛЕНИЕ НА КАТЕГОРИИ) -->
+                <div class="dashboard-grid info-split" style="margin-top: 20px; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div class="zone-card info-card" style="border-color: #c0b070;">
+                        <div class="card-icon" style="color: #c0b070;"><i class="fas fa-info-circle"></i></div>
+                        <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМА</h4>
+                        <div class="info-content" style="color: #8f9779; line-height: 1.6;">
+                            <p><strong>Система регистрации:</strong> Все новые пользователи регистрируются со своим паролем и становятся младшими кураторами.</p>
+                            <p><strong>Повышение рангов:</strong> Администраторы и старшие кураторы могут повышать пользователей через раздел "ПОЛЬЗОВАТЕЛИ".</p>
+                            <p><strong>Создатель системы:</strong> Только пользователь <strong>Tihiy</strong> имеет специальный пароль и полный доступ ко всем функциям.</p>
+                            ${CURRENT_USER.toLowerCase() === "tihiy" ? 
+                                `<p><strong>Ваш статус:</strong> Вы являетесь создателем системы. Пароль можно изменить в разделе "ПАРОЛЬ СОЗДАТЕЛЯ".</p>` : 
+                                `<p><strong>Ваш статус:</strong> ${CURRENT_RANK.name}. Для смены пароля используйте раздел "МОЙ ПАРОЛЬ".</p>`
+                            }
+                        </div>
+                    </div>
+
+                    <div class="zone-card info-card" style="border-color: #8cb43c;">
+                        <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-user-shield"></i></div>
+                        <h4 style="color: #8cb43c; margin-bottom: 10px;">АДМИНЫ</h4>
+                        <div class="info-content" style="color: #8f9779; line-height: 1.6; display:flex; flex-direction:column;">
+                            <div style="flex:0 0 auto; margin-bottom:10px;"><strong>Всего админов:</strong> ${adminUsers}</div>
+                            <div style="flex:1 1 auto; overflow:auto; color: var(--text-secondary); font-size:0.9rem;">${adminList || '—'}</div>
+                        </div>
                     </div>
                 </div>
             </div>

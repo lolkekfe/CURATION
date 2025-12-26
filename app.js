@@ -2399,7 +2399,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
     }
     
-    // КНОПКА ПРОФИЛЯ (для всех пользователей)
+     // КНОПКА ПРОФИЛЯ (для всех пользователей)
     const profileBtn = document.createElement('button');
     profileBtn.className = 'nav-button';
     profileBtn.innerHTML = `<i class="fas fa-user-circle"></i><span>МОЙ ПРОФИЛЬ</span>`;
@@ -2413,17 +2413,7 @@ function setupSidebar() {
     };
     navMenu.appendChild(profileBtn);
     
-    // Старая кнопка смены пароля (оставляем для совместимости)
-    const changePasswordBtn = document.createElement('button');
-    changePasswordBtn.className = 'nav-button';
-    changePasswordBtn.innerHTML = `<i class="fas fa-key"></i><span>МОЙ ПАРОЛЬ</span>`;
-    changePasswordBtn.onclick = function() {
-        changeUserPassword();
-        const titleElement = document.getElementById('content-title');
-        if (titleElement) titleElement.textContent = 'СМЕНА ПАРОЛЯ';
-        updateSystemPrompt(`СМЕНА ЛИЧНОГО ПАРОЛЯ`);
-    };
-    navMenu.appendChild(changePasswordBtn);
+    // Кнопка "МОЙ ПАРОЛЬ" удалена - функция теперь в профиле
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.onclick = logout;
@@ -2434,7 +2424,7 @@ function setupSidebar() {
             adjustInterfaceHeights(); 
         } 
     }, 100);
-}   
+}  
 
 function addNavButton(container, icon, text, onClick) {
     const button = document.createElement('button');

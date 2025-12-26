@@ -524,6 +524,9 @@ body {
     flex-direction: column;
     position: relative;
     justify-content: space-between;
+    /* ensure sidebar fills viewport height so bottom area can be anchored */
+    height: 100vh;
+    box-sizing: border-box;
 }
 
 .sidebar-header {
@@ -2938,13 +2941,4 @@ input:checked + .slider:before {
         padding: 10px 15px;
         font-size: 0.8rem;
     }
-html, body {
-  height: auto !important;
-  min-height: 100vh;
-}
-
-body {
-  overflow-y: auto;
-}
-
 }

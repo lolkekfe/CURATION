@@ -8,6 +8,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="footer-contact.css">
+    <style>
+        /* Ensure footer left area expands and contact sits on the left */
+        .content-footer { display: flex; gap: 12px; align-items: center; }
+        .footer-left { flex: 1 1 auto; display: flex; gap: 12px; align-items: center; }
+        .footer-right { flex: 0 0 auto; }
+        .footer-contact { margin-left: 0; }
+        @media (max-width: 800px) { .content-footer { flex-direction: column; align-items: stretch; } }
+    </style>
 </head>
 <body>
     <!-- Фон системы -->
@@ -285,6 +293,13 @@
                             <span class="log-message">>> СИСТЕМА: <span id="system-prompt">ОЖИДАНИЕ КОМАНД</span></span>
                         </div>
                     </div>
+                    <div class="footer-contact">
+                        <div class="contact-info">
+                            <i class="fas fa-comments"></i>
+                            <span>Связь с нами? Заходите на наш</span>
+                            <a href="https://discord.gg/BnmBdhKY" target="_blank" rel="noopener">Discord сервер</a>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="footer-right">
@@ -293,14 +308,6 @@
                         <div class="prompt-input">
                             <span class="input-text">ИСПОЛЬЗУЙТЕ НАВИГАЦИЮ</span>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="footer-contact">
-                    <div class="contact-info">
-                        <i class="fas fa-comments"></i>
-                        <span>Связь с нами? Заходите на наш</span>
-                        <a href="https://discord.gg/BnmBdhKY" target="_blank" rel="noopener">Discord сервер</a>
                     </div>
                 </div>
             </div>

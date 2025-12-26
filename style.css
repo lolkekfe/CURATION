@@ -713,6 +713,31 @@ body {
     margin-bottom: 25px;
 }
 
+/* Ensure left sidebar always fills the viewport height and has no bottom gap */
+html, body {
+    height: 100%;
+}
+
+#terminal, .zone-interface {
+    min-height: 100vh;
+}
+
+.zone-sidebar {
+    height: 100vh;
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding-bottom: 0 !important;
+}
+
+.zone-sidebar .navigation-panel {
+    /* allow the navigation area to scroll if content overflows */
+    overflow-y: auto;
+}
+
+.sidebar-discord {
+    margin-bottom: 8px;
+}
+
 .title-container h2 {
     font-family: 'Orbitron', sans-serif;
     font-size: 1.8rem;

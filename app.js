@@ -2381,39 +2381,140 @@ function setupSidebar() {
         `);
     }
     
-    addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', renderMLKScreen);
+    // === КАТЕГОРИЯ: ПОЛЬЗОВАТЕЛЬСКИЙ УГОЛОК ===
+    addCategoryHeader(navMenu, 'ПОЛЬЗОВАТЕЛЬСКИЙ УГОЛОК', 'fa-user-circle');
     
-    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-        addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', () => renderReportsWithPagination(1));
-        addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', () => renderUsersWithPagination(1));
-    }
-    
-    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
-        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', () => renderWhitelistWithPagination(1));
-        if (CURRENT_USER.toLowerCase() === "tihiy") {
-            addNavButton(navMenu, 'fas fa-key', 'ПАРОЛЬ СОЗДАТЕЛЯ', renderPasswords);
-        }
-        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', renderSystem);
-        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', () => renderBansWithPagination(1));
-        addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', renderIPStats);
-        addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', renderWebhookManager);
-    }
-    
-     // КНОПКА ПРОФИЛЯ (для всех пользователей)
-    const profileBtn = document.createElement('button');
-    profileBtn.className = 'nav-button';
-    profileBtn.innerHTML = `<i class="fas fa-user-circle"></i><span>МОЙ ПРОФИЛЬ</span>`;
-    profileBtn.onclick = function() {
+    // Мой профиль (для всех пользователей)
+    addNavButton(navMenu, 'fas fa-user-circle', 'МОЙ ПРОФИЛЬ', function() {
         document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
-        profileBtn.classList.add('active');
+        this.classList.add('active');
         renderProfile();
         const titleElement = document.getElementById('content-title');
         if (titleElement) titleElement.textContent = 'МОЙ ПРОФИЛЬ';
         updateSystemPrompt(`НАСТРОЙКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ`);
-    };
-    navMenu.appendChild(profileBtn);
+        setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+    });
     
-    // Кнопка "МОЙ ПАРОЛЬ" удалена - функция теперь в профиле
+    // Пароль создателя (только для создателя)
+    if (CURRENT_USER.toLowerCase() === "tihiy") {
+        addNavButton(navMenu, 'fas fa-crown', 'ПАРОЛЬ СОЗДАТЕЛЯ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderPasswords();
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'ПАРОЛЬ СОЗДАТЕЛЯ';
+            updateSystemPrompt(`УПРАВЛЕНИЕ ПАРОЛЕМ СОЗДАТЕЛЯ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // === КАТЕГОРИЯ: НАСТРОЙКИ СИСТЕМЫ ===
+    addCategoryHeader(navMenu, 'НАСТРОЙКИ СИСТЕМЫ', 'fa-cogs');
+    
+    // Список доступа (только для администраторов и создателя)
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderWhitelistWithPagination(1);
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'СПИСОК ДОСТУПА';
+            updateSystemPrompt(`УПРАВЛЕНИЕ СПИСКОМ ДОСТУПА`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // Система (только для администраторов и создателя)
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderSystem();
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'СИСТЕМА';
+            updateSystemPrompt(`ОБЩАЯ СТАТИСТИКА И ИНФОРМАЦИЯ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // Баны (только для администраторов и создателя)
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderBansWithPagination(1);
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'БАНЫ';
+            updateSystemPrompt(`УПРАВЛЕНИЕ СИСТЕМОЙ БЛОКИРОВКИ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // IP Мониторинг (только для администраторов и создателя)
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderIPStats();
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'IP МОНИТОРИНГ';
+            updateSystemPrompt(`МОНИТОРИНГ IP АДРЕСОВ И БЕЗОПАСНОСТЬ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // Пользователи (только для старших кураторов и выше)
+    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderUsersWithPagination(1);
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'ПОЛЬЗОВАТЕЛИ';
+            updateSystemPrompt(`УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ И РАНГАМИ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // Discord вебхуки (только для администраторов и создателя)
+    if (CURRENT_RANK.level >= RANKS.ADMIN.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderWebhookManager();
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'DISCORD ВЕБХУКИ';
+            updateSystemPrompt(`НАСТРОЙКА ИНТЕГРАЦИИ С DISCORD`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
+    
+    // === КАТЕГОРИЯ: РАБОТА ===
+    addCategoryHeader(navMenu, 'РАБОТА', 'fa-briefcase');
+    
+    // Отчеты МЛК (для всех пользователей)
+    addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', function() {
+        document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        renderMLKScreen();
+        const titleElement = document.getElementById('content-title');
+        if (titleElement) titleElement.textContent = 'ОТЧЕТЫ МЛК';
+        updateSystemPrompt(`СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ`);
+        setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+    });
+    
+    // Все отчеты (только для старших кураторов и выше)
+    if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
+        addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', function() {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            renderReportsWithPagination(1);
+            const titleElement = document.getElementById('content-title');
+            if (titleElement) titleElement.textContent = 'ВСЕ ОТЧЕТЫ';
+            updateSystemPrompt(`ПОЛНЫЙ АРХИВ ОТЧЕТОВ`);
+            setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        });
+    }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.onclick = logout;
@@ -2424,7 +2525,29 @@ function setupSidebar() {
             adjustInterfaceHeights(); 
         } 
     }, 100);
-}  
+}
+
+/* ===== ФУНКЦИЯ ДЛЯ СОЗДАНИЯ ЗАГОЛОВКОВ КАТЕГОРИЙ ===== */
+function addCategoryHeader(container, title, icon = 'fa-folder') {
+    const header = document.createElement('div');
+    header.className = 'nav-category-header';
+    header.innerHTML = `
+        <div class="category-icon">
+            <i class="fas ${icon}"></i>
+        </div>
+        <span>${title}</span>
+    `;
+    container.appendChild(header);
+}
+
+/* ===== ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ КНОПОК НАВИГАЦИИ ===== */
+function addNavButton(container, icon, text, onClick) {
+    const button = document.createElement('button');
+    button.className = 'nav-button';
+    button.innerHTML = `<i class="${icon}"></i><span>${text}</span>`;
+    button.onclick = onClick;
+    container.appendChild(button);
+} 
 
 function addNavButton(container, icon, text, onClick) {
     const button = document.createElement('button');

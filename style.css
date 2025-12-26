@@ -2854,3 +2854,87 @@ input:checked + .slider:before {
         font-size: 0.65rem !important;
     }
 }
+/* ===== КАТЕГОРИИ В НАВИГАЦИИ ===== */
+.nav-category-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    color: var(--accent-yellow);
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    background: rgba(28, 26, 23, 0.6);
+    border-left: 3px solid var(--accent-yellow);
+    border-top: 1px solid var(--border-dark);
+    border-bottom: 1px solid var(--border-dark);
+    user-select: none;
+}
+
+.nav-category-header:first-child {
+    margin-top: 0;
+}
+
+.nav-category-header .category-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-yellow);
+    font-size: 0.9rem;
+}
+
+/* Обновляем стили кнопок навигации для лучшего визуального разделения */
+.nav-button {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 12px 20px;
+    background: rgba(28, 26, 23, 0.6);
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 2px;
+}
+
+.nav-button:hover {
+    background: rgba(28, 26, 23, 0.8);
+    border-color: var(--accent-green);
+    color: var(--text-primary);
+}
+
+.nav-button.active {
+    background: rgba(74, 122, 80, 0.1);
+    border-left-color: var(--accent-green);
+    color: var(--text-primary);
+}
+
+.nav-button i {
+    width: 20px;
+    text-align: center;
+    color: var(--accent-green);
+    font-size: 0.9rem;
+}
+
+/* Улучшаем отображение для мобильных устройств */
+@media (max-width: 992px) {
+    .nav-category-header {
+        padding: 12px 15px;
+        font-size: 0.75rem;
+    }
+    
+    .nav-button {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+}

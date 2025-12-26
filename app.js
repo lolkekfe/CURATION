@@ -66,6 +66,13 @@ function adjustInterfaceHeights() {
     }
     
     if (sidebar) sidebar.style.maxHeight = (window.innerHeight - 100) + 'px', sidebar.style.overflowY = 'auto';
+
+    // Prevent forcing internal scrolling for main content areas so modules can expand naturally
+    if (contentBody) {
+        contentBody.style.minHeight = '';
+        contentBody.style.maxHeight = '';
+        contentBody.style.overflowY = '';
+    }
 }
 
 function setupAutoScroll() {
@@ -84,13 +91,16 @@ function addScrollStyles() {
         const style = document.createElement('style');
         style.id = 'scroll-styles';
         style.textContent = `
-            .scrollable-container{overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:#4a4a3a #1e201c;padding-right:10px}
+            /* Prefer document scrolling; only specific small lists keep internal scroll */
+            .scrollable-container{overflow:visible;overflow-x:hidden;padding-right:10px}
             .scrollable-container::-webkit-scrollbar{width:8px}.scrollable-container::-webkit-scrollbar-track{background:#1e201c;border-radius:4px}
             .scrollable-container::-webkit-scrollbar-thumb{background:#4a4a3a;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb:hover{background:#5a5a4a}
             .table-container thead{position:sticky;top:0;background:#1e201c;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.3)}
             .report-form-scrollable{display:flex;flex-direction:column;height:100%}.report-creation-container{flex:1;overflow-y:auto;padding-right:10px}
-            .form-container.with-scroll{display:flex;flex-direction:column;height:100%;overflow:hidden}
-            .form-container.with-scroll>.table-container{flex:1;min-height:0}.scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}
+            /* Allow forms and modules to expand naturally instead of forcing height/hidden overflow */
+            .form-container.with-scroll{display:flex;flex-direction:column;height:auto;overflow:visible}
+            .form-container.with-scroll>.table-container{flex:1;min-height:0}
+            .scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}
             .scroll-btn:hover{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;transform:scale(1.1)}#scroll-to-top{bottom:70px;right:20px}#scroll-to-bottom{bottom:20px;right:20px}
             
             /* Стили для пагинации */
@@ -103,7 +113,7 @@ function addScrollStyles() {
             .items-per-page-selector{display:flex;align-items:center;gap:8px;color:#8f9779;font-size:0.85rem;}
             .items-per-page-selector select{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;padding:4px 8px;border-radius:3px;font-size:0.85rem;}
             .scroll-indicator{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:#4a4a3a;font-size:0.8rem;pointer-events:none}
-            
+
             /* Стили для контейнера с отчетами */
             .reports-container{display:flex;flex-direction:column;gap:12px;padding:5px;}
             .report-card{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;border-radius:4px;padding:15px;transition:all 0.2s;}
@@ -2472,19 +2482,22 @@ function setupSidebar() {
     // Загружаем настройки пользователя
     loadUserSettings();
     
-    // Добавляем аватар в сайдбар
+    // Добавляем аватар в сайдбар (только один раз, не дублируем при повторном входе)
     const userInfo = document.querySelector('.user-terminal .display-line:nth-child(2)');
-    if (userInfo) {
-        userInfo.insertAdjacentHTML('beforebegin', `
-            <div class="display-line">
-                <span class="output">> АВАТАР: <span class="user-info-avatar" style="display: inline-flex; align-items: center; gap: 5px;">
-                    ${USER_SETTINGS.avatar ? 
-                        `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">` : 
-                        `<i class="fas fa-user-circle"></i>`
-                    }
-                </span></span>
-            </div>
-        `);
+    const avatarLine = document.querySelector('.user-terminal .display-line[data-avatar="true"]');
+    if (userInfo && !avatarLine) {
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'display-line';
+        avatarDiv.setAttribute('data-avatar', 'true');
+        avatarDiv.innerHTML = `
+            <span class="output">> АВАТАР: <span class="user-info-avatar" style="display: inline-flex; align-items: center; gap: 5px;">
+                ${USER_SETTINGS.avatar ? 
+                    `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">` : 
+                    `<i class="fas fa-user-circle"></i>`
+                }
+            </span></span>
+        `;
+        userInfo.parentNode.insertBefore(avatarDiv, userInfo);
     }
     
     // === КАТЕГОРИЯ: ПОЛЬЗОВАТЕЛЬСКИЙ УГОЛОК ===

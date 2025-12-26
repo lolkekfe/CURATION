@@ -515,9 +515,10 @@ body {
 /* ОСНОВНОЙ ИНТЕРФЕЙС */
 .zone-interface {
     display: flex;
-    height: 100vh;
     position: relative;
-    overflow: hidden;
+    /* allow document-level scrolling so panels can expand naturally */
+    overflow: visible;
+    min-height: 100vh;
 }
 
 /* Allow page scrolling so 'СИСТЕМА ЗОНЫ' content can be fully visible without internal scroll.
@@ -536,8 +537,10 @@ html, body {
 .zone-sidebar {
     position: sticky;
     top: 0;
-    height: 100vh;
-    overflow: hidden;
+    /* allow sidebar to size naturally and not force internal clipping */
+    height: auto;
+    min-height: 0;
+    overflow: visible;
     display: flex;
     flex-direction: column;
 }
@@ -567,7 +570,7 @@ html, body {
 .zone-sidebar {
     /* allow sidebar to stretch with its parent and avoid forcing extra viewport calculations */
     height: auto !important;
-    min-height: 100vh !important;
+    min-height: 0 !important;
     align-self: stretch !important;
     padding-bottom: 0 !important;
     margin-bottom: 0 !important;
@@ -582,7 +585,7 @@ html, body {
     flex-direction: column;
     position: relative;
     justify-content: space-between;
-    height: 100vh;
+    height: auto;
     box-sizing: border-box;
 }
 
@@ -744,7 +747,7 @@ html, body {
     display: flex;
     flex-direction: column;
     background: linear-gradient(to bottom, rgba(10, 8, 5, 0.97), rgba(15, 13, 10, 0.97));
-    overflow: hidden;
+    overflow: visible;
 }
 
 .content-header {
@@ -908,10 +911,11 @@ html, body {
 .content-body {
     flex: 1;
     padding: 30px;
-    overflow-y: auto;
+    /* allow the content area to grow and use page scroll instead of an internal scroll */
+    overflow: visible;
     position: relative;
     z-index: 2;
-    min-height: calc(100vh - 300px);
+    min-height: auto;
     display: flex;
     flex-direction: column;
 }

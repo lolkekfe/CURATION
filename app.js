@@ -1947,43 +1947,52 @@ function completeLogin() {
 
 // Инициализация обработчиков событий при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const loginButton = document.getElementById('login-btn');
-    
-    // Очистка ошибок при вводе
-    if (usernameInput) {
-        usernameInput.addEventListener('input', function() {
-            const errorElement = document.getElementById("login-error");
-            if (errorElement && errorElement.style.display !== "none") {
-                errorElement.style.display = "none";
-            }
-            this.style.borderColor = "";
-            this.style.boxShadow = "";
-        });
+    function updateTime() {
+        const now = new Date(), timeElement = document.getElementById('current-time'), dateElement = document.getElementById('current-date');
+        if (timeElement) timeElement.textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+        if (dateElement) dateElement.textContent = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
+    setInterval(updateTime, 1000);
+    updateTime();
     
-    if (passwordInput) {
-        passwordInput.addEventListener('input', function() {
-            const errorElement = document.getElementById("login-error");
-            if (errorElement && errorElement.style.display !== "none") {
-                errorElement.style.display = "none";
+    if (restoreSession()) {
+        loadData(() => {
+            const loginScreen = document.getElementById("login-screen"), terminal = document.getElementById("terminal");
+            if (loginScreen && terminal) { 
+                loginScreen.style.display = "none"; 
+                terminal.style.display = "flex"; 
             }
-            this.style.borderColor = "";
-            this.style.boxShadow = "";
-        });
-    }
-    
-    // Подсветка невалидных полей
-    if (usernameInput) {
-        usernameInput.addEventListener('blur', function() {
-            const validation = validateUsername(this.value);
-            if (!validation.valid) {
-                this.style.borderColor = "#b43c3c";
-                this.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
+            setupSidebar();
+            updateSystemPrompt(`СЕССИЯ ВОССТАНОВЛЕНА. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
+            if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+                loadReports(renderSystem);
+            } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+                loadReports(renderMLKScreen);
+            } else {
+                loadReports(renderMLKScreen);
             }
         });
+    } else {
+        const loginBtn = document.getElementById('login-btn');
+        if (loginBtn) {
+            loginBtn.onclick = function() { 
+                loginBtn.style.transform = 'scale(0.98)'; 
+                setTimeout(() => { 
+                    loginBtn.style.transform = ''; 
+                    login(); 
+                }, 150); 
+            };
+        }
+        document.addEventListener('keypress', function(e) { 
+            if (e.key === 'Enter') { 
+                const activeElement = document.activeElement; 
+                if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) 
+                    login(); 
+            } 
+        });
+        loadData();
     }
+});
     
     if (passwordInput) {
         passwordInput.addEventListener('blur', function() {
@@ -2023,7 +2032,6 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = '';
         });
     }
-});
     
 window.changeUserPassword = async function() {
     if (!CURRENT_USER) {

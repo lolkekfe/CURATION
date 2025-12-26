@@ -1,0 +1,38 @@
+/* КОНТАКТЫ В ФУТЕРЕ */
+.footer-contact {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(28, 26, 23, 0.6);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+}
+
+.contact-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.contact-info i {
+    color: var(--accent-green);
+    font-size: 1.1rem;
+}
+
+.contact-info a {
+    color: var(--accent-green);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border-bottom: 1px solid var(--accent-green);
+}
+
+.contact-info a:hover {
+    color: #00ff88;
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    border-bottom-color: #00ff88;
+}

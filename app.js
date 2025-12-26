@@ -2580,7 +2580,7 @@ function addNavButton(container, icon, text, onClick) {
     container.appendChild(button);
 }
 
-function logout() {
+window.logout = function logout() {
     CURRENT_ROLE = null, CURRENT_USER = null, CURRENT_RANK = null, CURRENT_STATIC_ID = null;
     localStorage.removeItem('mlk_session');
     const terminal = document.getElementById('terminal'), loginScreen = document.getElementById('login-screen');

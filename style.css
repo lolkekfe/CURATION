@@ -525,6 +525,21 @@ body {
     overflow: hidden;
 }
 
+/* Fix: ensure sidebar truly stretches to viewport bottom and remove stray gap */
+.zone-interface {
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+.zone-sidebar {
+    /* allow sidebar to stretch with its parent and avoid forcing extra viewport calculations */
+    height: auto !important;
+    min-height: 100vh !important;
+    align-self: stretch !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
 /* БОКОВАЯ ПАНЕЛЬ */
 .zone-sidebar {
     width: 300px;
@@ -2976,4 +2991,19 @@ input:checked + .slider:before {
         padding: 10px 15px;
         font-size: 0.8rem;
     }
+}
+/* Final override: ensure sidebar stretches to bottom and cannot be overridden by earlier declarations */
+html, body, .zone-interface, .zone-sidebar {
+    height: 100%;
+    min-height: 100vh;
+}
+.zone-interface {
+    align-items: stretch !important;
+}
+.zone-sidebar {
+    height: auto !important;
+    min-height: 100vh !important;
+    align-self: stretch !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
 }

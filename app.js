@@ -464,7 +464,10 @@ function generateStaticId(username) {
 /* ===== ВОССТАНОВЛЕНИЕ СЕССИИ ===== */
 function restoreSession() {
     const savedSession = localStorage.getItem('mlk_session');
-    if (!savedSession) return false;
+    if (!savedSession) {
+        console.log('No saved session found');
+        return false;
+    }
     
     try {
         const session = JSON.parse(savedSession);
@@ -472,6 +475,7 @@ function restoreSession() {
         const maxAge = 8 * 60 * 60 * 1000; // 8 часов
         
         if (currentTime - session.timestamp > maxAge) { 
+            console.log('Session expired');
             localStorage.removeItem('mlk_session'); 
             return false; 
         }
@@ -493,9 +497,23 @@ function restoreSession() {
             }
         }
         
-        return CURRENT_USER && CURRENT_RANK && CURRENT_STATIC_ID;
+        if (CURRENT_USER && CURRENT_RANK && CURRENT_STATIC_ID) {
+            // Обновляем timestamp сессии при восстановлении
+            localStorage.setItem('mlk_session', JSON.stringify({
+                user: CURRENT_USER,
+                role: CURRENT_ROLE,
+                rank: CURRENT_RANK.level,
+                staticId: CURRENT_STATIC_ID,
+                timestamp: currentTime
+            }));
+            console.log('Session restored for user:', CURRENT_USER);
+            return true;
+        }
+        
+        return false;
         
     } catch (e) { 
+        console.log('Error restoring session:', e);
         localStorage.removeItem('mlk_session'); 
         return false; 
     }
@@ -1955,7 +1973,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTime, 1000);
     updateTime();
     
+    console.log('DOMContentLoaded: Attempting to restore session...');
+    
     if (restoreSession()) {
+        console.log('Session restored successfully, loading data...');
         loadData(() => {
             const loginScreen = document.getElementById("login-screen"), terminal = document.getElementById("terminal");
             if (loginScreen && terminal) { 
@@ -1973,13 +1994,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     } else {
+        console.log('No valid session found, showing login screen');
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
             loginBtn.onclick = function() { 
                 loginBtn.style.transform = 'scale(0.98)'; 
                 setTimeout(() => { 
                     loginBtn.style.transform = ''; 
-                    login(); 
+                    window.login(); 
                 }, 150); 
             };
         }
@@ -1987,7 +2009,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Enter') { 
                 const activeElement = document.activeElement; 
                 if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) 
-                    login(); 
+                    window.login(); 
             } 
         });
         loadData();

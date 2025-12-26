@@ -1993,16 +1993,20 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData();
     }
 });
-    
-    if (passwordInput) {
-        passwordInput.addEventListener('blur', function() {
-            const validation = validatePassword(this.value);
-            if (!validation.valid) {
-                this.style.borderColor = "#b43c3c";
-                this.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
-            }
-        });
-    }
+// 1. Сначала получаем элемент
+const passwordInput = document.getElementById('password');
+
+// 2. Проверяем, что элемент существует
+if (passwordInput) {
+    // 3. Только тогда добавляем обработчик
+    passwordInput.addEventListener('blur', function() {
+        const validation = validatePassword(this.value);
+        if (!validation.valid) {
+            this.style.borderColor = "#b43c3c";
+            this.style.boxShadow = "0 0 0 2px rgba(180, 60, 60, 0.2)";
+        }
+    });
+}
     
     // Обработка нажатия Enter
     function handleEnterKey(event) {

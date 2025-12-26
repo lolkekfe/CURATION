@@ -2938,4 +2938,13 @@ input:checked + .slider:before {
         padding: 10px 15px;
         font-size: 0.8rem;
     }
+html, body {
+  height: auto !important;
+  min-height: 100vh;
+}
+
+body {
+  overflow-y: auto;
+}
+
 }

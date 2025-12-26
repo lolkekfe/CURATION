@@ -176,15 +176,20 @@ body {
 .login-container {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
     align-items: center;
-    height: 100vh;
+
+    /* ИСПРАВЛЕНИЕ */
+    height: auto;
+    min-height: 100vh;
+    justify-content: center;
+
     padding: 15px 30px;
     background: rgba(10, 8, 5, 0.95);
     z-index: 10;
     position: relative;
     border: 1px solid var(--border-dark);
 }
+
 
 .zone-header {
     text-align: center;
@@ -489,7 +494,7 @@ body {
 .zone-footer {
     width: 100%;
     max-width: 900px;
-    margin-top: 40px;
+    margin-top: 20px;
 }
 
 .footer-info {

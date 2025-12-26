@@ -2624,14 +2624,6 @@ function addNavButton(container, icon, text, onClick) {
     const button = document.createElement('button');
     button.className = 'nav-button';
     button.innerHTML = `<i class="${icon}"></i><span>${text}</span>`;
-    button.onclick = onClick;
-    container.appendChild(button);
-} 
-
-function addNavButton(container, icon, text, onClick) {
-    const button = document.createElement('button');
-    button.className = 'nav-button';
-    button.innerHTML = `<i class="${icon}"></i><span>${text}</span>`;
     button.onclick = function() {
         document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');

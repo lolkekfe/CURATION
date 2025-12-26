@@ -3796,7 +3796,7 @@ window.renderSystem = function() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
-    const adminItemsHtml = users.filter(u => u.role === RANKS.ADMIN.name).map(u => `<div class="admin-name">${u.user}</div>`).join('');
+    const adminItemsHtml = users.filter(u => u.role === RANKS.ADMIN.name).map(u => `<div class="admin-name">${(u.username || u.user) ?? '—'}</div>`).join('');
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
     const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
@@ -3809,25 +3809,7 @@ window.renderSystem = function() {
             </h2>
             
             <div class="scrollable-container" style="flex: 1; padding-right: 10px;">
-                <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-database"></i></div><div class="card-value">${reports.length}</div><div class="card-label">ВСЕГО ОТЧЕТОВ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-users"></i></div><div class="card-value">${users.length}</div><div class="card-label">ПОЛЬЗОВАТЕЛЕЙ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${whitelist.length}</div><div class="card-label">В СПИСКЕ ДОСТУПА</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-ban"></i></div><div class="card-value">${activeBans}</div><div class="card-label">АКТИВНЫХ БАНОВ</div></div>
-                </div>
-                
-                <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-clock"></i></div><div class="card-value">${pendingReports}</div><div class="card-label">НА РАССМОТРЕНИИ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-check"></i></div><div class="card-value">${confirmedReports}</div><div class="card-label">ПОДТВЕРЖДЕНО</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-trash"></i></div><div class="card-value">${deletedReports}</div><div class="card-label">УДАЛЕНО</div></div>
-                </div>
-                
-                <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${adminUsers}</div><div class="card-label">АДМИНИСТРАТОРЫ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-star"></i></div><div class="card-value">${seniorCurators}</div><div class="card-label">СТАРШИЕ КУРАТОРЫ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-user"></i></div><div class="card-value">${curators}</div><div class="card-label">КУРАТОРЫ</div></div>
-                    <div class="zone-card"><div class="card-icon"><i class="fas fa-user-graduate"></i></div><div class="card-value">${juniorCurators}</div><div class="card-label">МЛАДШИЕ КУРАТОРЫ</div></div>
-                </div>
+                <!-- Main metrics moved into the left 'СИСТЕМА' card; old small grids removed -->
                 
                 <!-- ИНФОРМАЦИЯ О СИСТЕМЕ (РАЗДЕЛЕНИЕ НА КАТЕГОРИИ) -->
                 <div class="dashboard-grid info-split" style="margin-top: 20px; grid-template-columns: 1fr 1fr; gap:16px;">

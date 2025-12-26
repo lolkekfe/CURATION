@@ -3027,3 +3027,45 @@ html, body, .zone-interface, .zone-sidebar {
 .dashboard-grid.info-split .zone-card.info-card .info-content > div:last-child {
     margin-top: 6px;
 }
+
+/* Metrics grid inside left card */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    width: 100%;
+    align-items: stretch;
+}
+.metric-tile {
+    background: linear-gradient(145deg, rgba(20,18,15,0.9), rgba(18,16,13,0.9));
+    border: 1px solid rgba(42,40,31,0.6);
+    padding: 18px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 86px;
+}
+.metric-tile .card-icon { color: var(--accent-yellow); margin-bottom: 6px; }
+.metric-tile .card-value { font-family: 'Orbitron', sans-serif; font-size: 2rem; margin-bottom: 6px; color: var(--text-primary); }
+.metric-tile .card-label { font-size: 0.78rem; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; }
+
+/* Admin list: display names in wrapped columns to fill card instead of scrolling */
+.admin-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    align-items: flex-start;
+}
+.admin-name {
+    background: rgba(28,26,23,0.6);
+    border: 1px solid var(--border-dark);
+    padding: 8px 10px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    flex: 1 0 45%;
+    box-sizing: border-box;
+}
+.admin-card .admin-list { margin-top: 6px; }

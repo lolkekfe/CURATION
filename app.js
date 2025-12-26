@@ -3796,7 +3796,7 @@ window.renderSystem = function() {
     const deletedReports = reports.filter(r => r.deleted).length;
     
     const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
-    const adminList = users.filter(u => u.role === RANKS.ADMIN.name).map(u => u.user).slice(0, 12).join(', ');
+    const adminItemsHtml = users.filter(u => u.role === RANKS.ADMIN.name).map(u => `<div class="admin-name">${u.user}</div>`).join('');
     const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
     const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
     const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
@@ -3831,26 +3831,34 @@ window.renderSystem = function() {
                 
                 <!-- ИНФОРМАЦИЯ О СИСТЕМЕ (РАЗДЕЛЕНИЕ НА КАТЕГОРИИ) -->
                 <div class="dashboard-grid info-split" style="margin-top: 20px; grid-template-columns: 1fr 1fr; gap:16px;">
-                    <div class="zone-card info-card" style="border-color: #c0b070;">
+                    <div class="zone-card info-card metrics-card" style="border-color: #c0b070;">
                         <div class="card-icon" style="color: #c0b070;"><i class="fas fa-info-circle"></i></div>
                         <h4 style="color: #c0b070; margin-bottom: 10px;">СИСТЕМА</h4>
-                        <div class="info-content" style="color: #8f9779; line-height: 1.6;">
-                            <p><strong>Система регистрации:</strong> Все новые пользователи регистрируются со своим паролем и становятся младшими кураторами.</p>
-                            <p><strong>Повышение рангов:</strong> Администраторы и старшие кураторы могут повышать пользователей через раздел "ПОЛЬЗОВАТЕЛИ".</p>
-                            <p><strong>Создатель системы:</strong> Только пользователь <strong>Tihiy</strong> имеет специальный пароль и полный доступ ко всем функциям.</p>
-                            ${CURRENT_USER.toLowerCase() === "tihiy" ? 
-                                `<p><strong>Ваш статус:</strong> Вы являетесь создателем системы. Пароль можно изменить в разделе "ПАРОЛЬ СОЗДАТЕЛЯ".</p>` : 
-                                `<p><strong>Ваш статус:</strong> ${CURRENT_RANK.name}. Для смены пароля используйте раздел "МОЙ ПАРОЛЬ".</p>`
-                            }
+                        <div class="info-content">
+                            <div class="metric-grid">
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-database"></i></div><div class="card-value">${reports.length}</div><div class="card-label">ВСЕГО ОТЧЁТОВ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-users"></i></div><div class="card-value">${users.length}</div><div class="card-label">ПОЛЬЗОВАТЕЛЕЙ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${whitelist.length}</div><div class="card-label">В СПИСКЕ ДОСТУПА</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-ban"></i></div><div class="card-value">${activeBans}</div><div class="card-label">АКТИВНЫХ БАНОВ</div></div>
+
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-clock"></i></div><div class="card-value">${pendingReports}</div><div class="card-label">НА РАССМОТРЕНИИ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-check"></i></div><div class="card-value">${confirmedReports}</div><div class="card-label">ПОДТВЕРЖДЕНО</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-trash"></i></div><div class="card-value">${deletedReports}</div><div class="card-label">УДАЛЕНО</div></div>
+
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${adminUsers}</div><div class="card-label">АДМИНИСТРАТОРЫ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-star"></i></div><div class="card-value">${seniorCurators}</div><div class="card-label">СТАРШИЕ КУРАТОРЫ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-user"></i></div><div class="card-value">${curators}</div><div class="card-label">КУРАТОРЫ</div></div>
+                                <div class="metric-tile"><div class="card-icon"><i class="fas fa-user-graduate"></i></div><div class="card-value">${juniorCurators}</div><div class="card-label">МЛАДШИЕ КУРАТОРЫ</div></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="zone-card info-card" style="border-color: #8cb43c;">
+                    <div class="zone-card info-card admin-card" style="border-color: #8cb43c;">
                         <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-user-shield"></i></div>
                         <h4 style="color: #8cb43c; margin-bottom: 10px;">АДМИНЫ</h4>
-                        <div class="info-content" style="color: #8f9779; line-height: 1.6; display:flex; flex-direction:column;">
-                            <div style="flex:0 0 auto; margin-bottom:10px;"><strong>Всего админов:</strong> ${adminUsers}</div>
-                            <div style="flex:1 1 auto; overflow:auto; color: var(--text-secondary); font-size:0.9rem;">${adminList || '—'}</div>
+                        <div class="info-content">
+                            <div class="admin-count" style="font-weight:600; color:var(--text-primary); margin-bottom:8px;">Всего: ${adminUsers}</div>
+                            <div class="admin-list">${adminItemsHtml || '<div class="admin-name">—</div>'}</div>
                         </div>
                     </div>
                 </div>

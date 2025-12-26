@@ -9,23 +9,23 @@
 }
 
 :root {
-    --primary-dark: #0a0805;
-    --secondary-dark: #14120f;
-    --tertiary-dark: #1c1a17;
-    --accent-green: #3a5a40;
-    --accent-green-glow: #4a7a50;
-    --accent-yellow: #8b7355;
-    --accent-yellow-glow: #9b8365;
-    --accent-red: #8b4513;
-    --accent-red-glow: #9b5523;
-    --text-primary: #c0b8a8;
-    --text-secondary: #8a8478;
-    --text-dim: #5a564d;
-    --glow-green: rgba(74, 122, 80, 0.3);
-    --glow-yellow: rgba(155, 131, 101, 0.3);
-    --border-dark: #2a281f;
-    --border-light: #4a483f;
-    --scan-color: rgba(74, 122, 80, 0.1);
+    --primary-dark: #0d0d0d;
+    --secondary-dark: #1a1a1a;
+    --tertiary-dark: #262626;
+    --accent-green: #2a7a4a;
+    --accent-green-glow: #3a9a5a;
+    --accent-yellow: #5a5555;
+    --accent-yellow-glow: #7a7575;
+    --accent-red: #6b3333;
+    --accent-red-glow: #8b4343;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --text-dim: #707070;
+    --glow-green: rgba(42, 122, 74, 0.2);
+    --glow-yellow: rgba(90, 85, 85, 0.2);
+    --border-dark: #323232;
+    --border-light: #4a4a4a;
+    --scan-color: rgba(42, 122, 74, 0.05);
 }
 
 body {
@@ -43,17 +43,14 @@ body {
 }
 
 
-/* ФОН */
+/* ФОН - МИНИМАЛИСТИЧНЫЙ */
 .zone-bg {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
-        radial-gradient(ellipse at 20% 20%, rgba(20, 18, 15, 0.8) 0%, transparent 40%),
-        radial-gradient(ellipse at 80% 80%, rgba(40, 36, 28, 0.6) 0%, transparent 40%),
-        linear-gradient(180deg, var(--primary-dark) 0%, var(--secondary-dark) 50%, var(--primary-dark) 100%);
+    background: var(--primary-dark);
     z-index: -2;
 }
 
@@ -63,10 +60,10 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(58, 44, 31, 0.03) 2px, rgba(58, 44, 31, 0.03) 4px);
+    background: transparent;
     z-index: -1;
     pointer-events: none;
-    opacity: 0.3;
+    opacity: 0;
 }
 
 .scan-lines {
@@ -75,11 +72,10 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom, transparent 50%, rgba(74, 122, 80, 0.02) 50%);
-    background-size: 100% 4px;
+    background: transparent;
     z-index: -1;
     pointer-events: none;
-    animation: scanMove 8s linear infinite;
+    opacity: 0;
 }
 
 /* АНИМАЦИИ */
@@ -300,21 +296,21 @@ body {
 
 .terminal-frame {
     position: relative;
-    padding: 2px;
-    background: linear-gradient(45deg, var(--border-dark), var(--tertiary-dark), var(--border-dark));
-    border-radius: 4px;
+    padding: 0;
+    background: var(--tertiary-dark);
+    border-radius: 2px;
 }
 
 .terminal-screen {
-    background: rgba(15, 13, 10, 0.95);
+    background: var(--secondary-dark);
     border: 1px solid var(--border-dark);
     border-radius: 2px;
     overflow: hidden;
 }
 
 .screen-header {
-    background: linear-gradient(to right, rgba(20, 18, 15, 0.9), rgba(28, 26, 23, 0.9));
-    padding: 15px 25px;
+    background: var(--tertiary-dark);
+    padding: 12px 20px;
     border-bottom: 1px solid var(--border-dark);
     display: flex;
     justify-content: space-between;
@@ -450,24 +446,23 @@ body {
 
 .access-button {
     width: 100%;
-    background: linear-gradient(to right, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9));
+    background: var(--tertiary-dark);
     border: 1px solid var(--border-dark);
     color: var(--text-primary);
     font-family: 'Orbitron', sans-serif;
     font-size: 1rem;
     text-transform: uppercase;
-    letter-spacing: 3px;
-    padding: 20px;
+    letter-spacing: 2px;
+    padding: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease;
     position: relative;
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .access-button:hover {
     border-color: var(--accent-green);
-    box-shadow: 0 0 40px var(--glow-green);
 }
 
 .button-inner {
@@ -581,35 +576,34 @@ html, body {
 /* БОКОВАЯ ПАНЕЛЬ */
 .zone-sidebar {
     width: 300px;
-    background: linear-gradient(to bottom, rgba(10, 8, 5, 0.95), rgba(20, 18, 15, 0.95));
-    border-right: 2px solid var(--border-dark);
+    background: var(--secondary-dark);
+    border-right: 1px solid var(--border-dark);
     display: flex;
     flex-direction: column;
     position: relative;
     justify-content: space-between;
-    /* ensure sidebar fills viewport height so bottom area can be anchored */
     height: 100vh;
     box-sizing: border-box;
 }
 
 .sidebar-header {
-    padding: 25px;
-    background: rgba(15, 13, 10, 0.9);
+    padding: 20px;
+    background: var(--tertiary-dark);
     border-bottom: 1px solid var(--border-dark);
 }
 
 .header-panel {
     position: relative;
-    padding: 20px;
-    background: rgba(20, 18, 15, 0.8);
+    padding: 15px;
+    background: var(--tertiary-dark);
     border: 1px solid var(--border-dark);
     border-radius: 2px;
 }
 
 .terminal-display {
-    background: rgba(10, 8, 5, 0.9);
-    border: 1px solid rgba(42, 40, 31, 0.5);
-    padding: 15px;
+    background: var(--secondary-dark);
+    border: 1px solid var(--border-dark);
+    padding: 12px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.85rem;
     line-height: 1.6;
@@ -754,9 +748,9 @@ html, body {
 }
 
 .content-header {
-    padding: 20px 35px;
-    background: linear-gradient(to bottom, rgba(20, 18, 15, 0.95), rgba(15, 13, 10, 0.95));
-    border-bottom: 2px solid var(--border-dark);
+    padding: 18px 30px;
+    background: var(--tertiary-dark);
+    border-bottom: 1px solid var(--border-dark);
 }
 
 .header-main {
@@ -1007,9 +1001,9 @@ html, body {
 
 /* ФУТЕР КОНТЕНТА */
 .content-footer {
-    padding: 10px 35px;
-    background: linear-gradient(to top, rgba(20, 18, 15, 0.95), rgba(15, 13, 10, 0.95));
-    border-top: 2px solid var(--border-dark);
+    padding: 8px 30px;
+    background: var(--tertiary-dark);
+    border-top: 1px solid var(--border-dark);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1072,11 +1066,11 @@ html, body {
 }
 
 .zone-card {
-    background: linear-gradient(145deg, rgba(28, 26, 23, 0.9), rgba(20, 18, 15, 0.9));
+    background: var(--tertiary-dark);
     border: 1px solid var(--border-dark);
-    border-radius: 6px;
-    padding: 25px;
-    transition: all 0.3s ease;
+    border-radius: 4px;
+    padding: 20px;
+    transition: border-color 0.2s ease;
     position: relative;
     z-index: 4;
 }

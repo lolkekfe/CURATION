@@ -2341,22 +2341,66 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTime, 1000);
     updateTime();
     
+    // ОПРЕДЕЛЯЕМ ПЕРЕМЕННЫЕ В ВЕРХНЕМ УРОВНЕ ОБЛАСТИ ВИДИМОСТИ
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const loginButton = document.getElementById('login-btn');
+    
+    // Функция для обработки Enter
+    function handleEnterKey(event) { 
+        if (event.key === 'Enter') { 
+            const activeElement = document.activeElement; 
+            if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) 
+                login(); 
+        } 
+    }
+    
+    // Назначаем обработчики событий для полей ввода
+    if (usernameInput) usernameInput.addEventListener('keypress', handleEnterKey);
+    if (passwordInput) passwordInput.addEventListener('keypress', handleEnterKey);
+    
+    // Назначаем обработчик для кнопки
+    if (loginButton) {
+        loginButton.onclick = function() { 
+            loginButton.style.transform = 'scale(0.98)'; 
+            setTimeout(() => { 
+                loginButton.style.transform = ''; 
+                login(); 
+            }, 150); 
+        };
+        
+        // Анимация нажатия кнопки (опционально)
+        loginButton.addEventListener('mousedown', function() {
+            this.style.transform = 'scale(0.98)';
+        });
+        
+        loginButton.addEventListener('mouseup', function() {
+            this.style.transform = '';
+        });
+        
+        loginButton.addEventListener('mouseleave', function() {
+            this.style.transform = '';
+        });
+    }
+    
     if (restoreSession()) {
         loadData(() => {
             const loginScreen = document.getElementById("login-screen"), terminal = document.getElementById("terminal");
-            if (loginScreen && terminal) { loginScreen.style.display = "none"; terminal.style.display = "flex"; }
+            if (loginScreen && terminal) { 
+                loginScreen.style.display = "none"; 
+                terminal.style.display = "flex"; 
+            }
             setupSidebar();
             updateSystemPrompt(`СЕССИЯ ВОССТАНОВЛЕНА. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
-            if (CURRENT_RANK.level >= RANKS.ADMIN.level) loadReports(renderSystem);
-            else if (CURRENT_RANK.level >= RANKS.CURATOR.level) loadReports(renderMLKScreen);
-            else loadReports(renderMLKScreen);
+            if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+                loadReports(renderSystem);
+            } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
+                loadReports(renderMLKScreen);
+            } else {
+                loadReports(renderMLKScreen);
+            }
         });
     } else {
-        const loginBtn = document.getElementById('login-btn');
-        if (loginBtn) {
-            loginBtn.onclick = function() { loginBtn.style.transform = 'scale(0.98)'; setTimeout(() => { loginBtn.style.transform = ''; login(); }, 150); };
-        }
-        document.addEventListener('keypress', function(e) { if (e.key === 'Enter') { const activeElement = document.activeElement; if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) login(); } });
         loadData();
     }
 });

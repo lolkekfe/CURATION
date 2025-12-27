@@ -37,6 +37,46 @@ let USER_SETTINGS = {
 const PAGINATION_CONFIG = { itemsPerPage: 15, visiblePages: 5, maxScrollHeight: 600 };
 let currentPage = 1, totalPages = 1, currentScrollPosition = {};
 
+// Функция для тестирования входа
+window.debugLogin = function() {
+    console.log('=== DEBUG LOGIN ===');
+    console.log('CURRENT_USER:', CURRENT_USER);
+    console.log('CURRENT_RANK:', CURRENT_RANK);
+    console.log('Login screen:', document.getElementById('login-screen'));
+    console.log('Terminal:', document.getElementById('terminal'));
+    
+    // Принудительно показываем терминал
+    const loginScreen = document.getElementById("login-screen");
+    const terminal = document.getElementById("terminal");
+    
+    if (loginScreen) {
+        loginScreen.style.display = "none";
+        loginScreen.style.visibility = "hidden";
+        loginScreen.style.opacity = "0";
+    }
+    
+    if (terminal) {
+        terminal.style.display = "flex";
+        terminal.style.visibility = "visible";
+        terminal.style.opacity = "1";
+    }
+    
+    // Если есть пользователь, показываем интерфейс
+    if (CURRENT_USER) {
+        setupSidebar();
+        renderSystem();
+    }
+};
+
+// Тестовая функция для быстрого входа
+window.testLogin = async function(username, password) {
+    document.getElementById('username').value = username;
+    document.getElementById('password').value = password;
+    await login();
+};
+
+// Вызовите в консоли: testLogin('Tihiy', 'creator123')
+
 /* ===== УЛУЧШЕННАЯ АДАПТИВНОСТЬ И СКРОЛЛ ===== */
 function adjustInterfaceHeights() {
     const scrollableContainers = document.querySelectorAll('.scrollable-container');
@@ -214,8 +254,82 @@ function addScrollStyles() {
             @keyframes slideIn {
                 from { transform: translateY(100px); opacity: 0; }
                 to { transform: translateY(0); opacity: 1; }
+                // В функцию addScrollStyles() добавьте:
+.action-buttons .action-btn.delete {
+    background: rgba(180, 60, 60, 0.2) !important;
+    border-color: #b43c3c !important;
+    color: #b43c3c !important;
+    transition: all 0.2s;
+}
 
-            }
+.action-buttons .action-btn.delete:hover {
+    background: rgba(180, 60, 60, 0.3) !important;
+    transform: scale(1.05);
+}
+// В функцию addScrollStyles() добавьте:
+.action-buttons .delete-btn {
+    background: rgba(180, 60, 60, 0.2) !important;
+    border: 1px solid #b43c3c !important;
+    color: #b43c3c !important;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.action-buttons .delete-btn:hover {
+    background: rgba(180, 60, 60, 0.4) !important;
+    border-color: #ff4d4d !important;
+    color: #ff4d4d !important;
+    transform: scale(1.05);
+}
+
+.action-buttons .delete-btn:active {
+    transform: scale(0.95);
+}
+    // Добавьте в addScrollStyles():
+/* Кнопка удаления всех пользователей */
+.btn-delete-all {
+    background: linear-gradient(145deg, rgba(180, 60, 60, 0.2), rgba(160, 50, 50, 0.1)) !important;
+    border: 2px solid #b43c3c !important;
+    color: #b43c3c !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-delete-all:hover {
+    background: linear-gradient(145deg, rgba(180, 60, 60, 0.3), rgba(160, 50, 50, 0.2)) !important;
+    border-color: #ff4d4d !important;
+    color: #ff4d4d !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(180, 60, 60, 0.3);
+}
+
+.btn-delete-all:active {
+    transform: translateY(0);
+}
+
+.btn-delete-all::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.btn-delete-all:hover::before {
+    left: 100%;
+}
+
+/* Модальное окно удаления всех */
+#delete-all-confirmation:focus {
+    border-color: #b43c3c;
+    box-shadow: 0 0 0 2px rgba(180, 60, 60, 0.2);
+}
         `;
         document.head.appendChild(style);
     }
@@ -472,76 +586,59 @@ function generateStaticId(username) {
 }
 
 /* ===== ВОССТАНОВЛЕНИЕ СЕССИИ ===== */
+// ВАЖНО: Исправьте восстановление сессии
 function restoreSession() {
-    const savedSession = localStorage.getItem('mlk_session');
-    console.log('Checking localStorage for mlk_session:', savedSession);
+    console.log('=== RESTORE SESSION ===');
     
+    const savedSession = localStorage.getItem('mlk_session');
     if (!savedSession) {
-        console.log('No saved session found');
+        console.log('No saved session');
         return false;
     }
     
     try {
         const session = JSON.parse(savedSession);
-        console.log('Parsed session:', session);
+        console.log('Session data:', session);
         
-        const currentTime = new Date().getTime();
-        const maxAge = 8 * 60 * 60 * 1000; // 8 часов
-        const sessionAge = currentTime - session.timestamp;
-        
-        console.log('Session age (ms):', sessionAge, 'Max age (ms):', maxAge);
-        
-        if (sessionAge > maxAge) { 
-            console.log('Session expired');
-            localStorage.removeItem('mlk_session'); 
-            return false; 
+        // Проверяем обязательные поля
+        if (!session.user || session.rank === undefined) {
+            console.log('Invalid session data');
+            localStorage.removeItem('mlk_session');
+            return false;
         }
         
+        // Устанавливаем глобальные переменные
         CURRENT_USER = session.user;
         CURRENT_ROLE = session.role;
-        CURRENT_RANK = null;
         CURRENT_STATIC_ID = session.staticId;
         
         // Определяем ранг
         if (session.rank === CREATOR_RANK.level) {
             CURRENT_RANK = CREATOR_RANK;
         } else {
-            for (const rankKey in RANKS) {
-                if (RANKS[rankKey].level === session.rank) { 
-                    CURRENT_RANK = RANKS[rankKey]; 
-                    break; 
+            // Ищем ранг по уровню
+            for (const key in RANKS) {
+                if (RANKS[key].level === session.rank) {
+                    CURRENT_RANK = RANKS[key];
+                    break;
                 }
+            }
+            // Если не нашли - ставим младшего куратора
+            if (!CURRENT_RANK) {
+                CURRENT_RANK = RANKS.JUNIOR_CURATOR;
             }
         }
         
-        console.log('Restored user data:', {
-            user: CURRENT_USER,
-            role: CURRENT_ROLE,
-            rank: CURRENT_RANK,
-            staticId: CURRENT_STATIC_ID
-        });
+        console.log('Session restored successfully');
+        console.log('User:', CURRENT_USER);
+        console.log('Rank:', CURRENT_RANK.name);
         
-        if (CURRENT_USER && CURRENT_RANK) {
-            // Obновляем timestamp сессии при восстановлении
-            const updatedSession = {
-                user: CURRENT_USER,
-                role: CURRENT_ROLE,
-                rank: CURRENT_RANK.level,
-                staticId: CURRENT_STATIC_ID,
-                timestamp: currentTime
-            };
-            localStorage.setItem('mlk_session', JSON.stringify(updatedSession));
-            console.log('Session restored and updated for user:', CURRENT_USER);
-            return true;
-        }
+        return true;
         
-        console.log('Session validation failed - missing required fields');
+    } catch (e) {
+        console.error('Error restoring session:', e);
+        localStorage.removeItem('mlk_session');
         return false;
-        
-    } catch (e) { 
-        console.log('Error restoring session:', e);
-        localStorage.removeItem('mlk_session'); 
-        return false; 
     }
 }
 /* ===== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ТАБЛИЦ ===== */
@@ -927,60 +1024,236 @@ window.addBanByStaticId = function() {
     banByStaticId(staticId, reason).then(success => { if (success) { if (staticIdInput) staticIdInput.value = ""; if (reasonInput) reasonInput.value = ""; } });
 }
 
-window.promoteToAdminByStaticId = function(staticId) {
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только администратор может повышать до администратора", "error"); return; }
+window.promoteToAdminByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только администратор может повышать до администратора", "error"); 
+        return; 
+    }
     if (!confirm("Повысить пользователя до администратора?")) return;
     const user = users.find(u => u.staticId === staticId);
     if (!user) { showNotification("Пользователь не найден", "error"); return; }
-    db.ref('mlk_users/' + user.id).update({ role: RANKS.ADMIN.name, rank: RANKS.ADMIN.level }).then(() => {
-        loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь повышен до администратора", "success"); });
-    }).catch(error => showNotification("Ошибка: " + error.message, "error"));
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.ADMIN.name, 
+            rank: RANKS.ADMIN.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ
+        updateTabAccessForUser(user.username, RANKS.ADMIN.level, RANKS.ADMIN.access);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        showNotification("Пользователь повышен до администратора", "success");
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
 }
 
-window.promoteToSeniorByStaticId = function(staticId) {
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только администратор может повышать до старшего куратора", "error"); return; }
+window.promoteToSeniorByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только администратор может повышать до старшего куратора", "error"); 
+        return; 
+    }
     if (!confirm("Повысить пользователя до старшего куратора?")) return;
     const user = users.find(u => u.staticId === staticId);
     if (!user) { showNotification("Пользователь не найден", "error"); return; }
-    db.ref('mlk_users/' + user.id).update({ role: RANKS.SENIOR_CURATOR.name, rank: RANKS.SENIOR_CURATOR.level }).then(() => {
-        loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь повышен до старшего куратора", "success"); });
-    }).catch(error => showNotification("Ошибка: " + error.message, "error"));
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.SENIOR_CURATOR.name, 
+            rank: RANKS.SENIOR_CURATOR.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ
+        updateTabAccessForUser(user.username, RANKS.SENIOR_CURATOR.level, RANKS.SENIOR_CURATOR.access);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        showNotification("Пользователь повышен до старшего куратора", "success");
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
 }
 
-window.promoteToCuratorByStaticId = function(staticId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только старший куратор или выше может повышать до куратора", "error"); return; }
-    if (!confirm("Повысить пользователя до куратора?")) return;
+window.setToCuratorByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только старший куратор или выше может назначать кураторов", "error"); 
+        return; 
+    }
     const user = users.find(u => u.staticId === staticId);
     if (!user) { showNotification("Пользователь не найден", "error"); return; }
-    if (user.rank >= RANKS.CURATOR.level) { showNotification("Пользователь уже имеет ранг куратора или выше", "warning"); return; }
-    db.ref('mlk_users/' + user.id).update({ role: RANKS.CURATOR.name, rank: RANKS.CURATOR.level }).then(() => {
-        loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь повышен до куратора", "success"); });
-    }).catch(error => showNotification("Ошибка: " + error.message, "error"));
-}
-
-window.demoteToCuratorByStaticId = function(staticId) {
-    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только администратор может понижать до куратора", "error"); return; }
-    const user = users.find(u => u.staticId === staticId);
-    if (!user) { showNotification("Пользователь не найден", "error"); return; }
-    if (user.rank <= RANKS.CURATOR.level) { showNotification("Пользователь уже имеет ранг куратора или ниже", "warning"); return; }
-    if (!confirm(`Понизить пользователя ${user.username} до куратора?`)) return;
-    db.ref('mlk_users/' + user.id).update({ role: RANKS.CURATOR.name, rank: RANKS.CURATOR.level }).then(() => {
-        loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь понижен до куратора", "success"); });
-    }).catch(error => showNotification("Ошибка: " + error.message, "error"));
-}
-
-window.setToCuratorByStaticId = function(staticId) {
-    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { showNotification("Только старший куратор или выше может назначать кураторов", "error"); return; }
-    const user = users.find(u => u.staticId === staticId);
-    if (!user) { showNotification("Пользователь не найден", "error"); return; }
-    if (user.rank === RANKS.CURATOR.level) { showNotification("Пользователь уже является куратором", "info"); return; }
+    if (user.rank === RANKS.CURATOR.level) { 
+        showNotification("Пользователь уже является куратором", "info"); 
+        return; 
+    }
     let message = `Назначить пользователя ${user.username} куратором?`;
     if (user.rank > RANKS.CURATOR.level) message = `Понизить пользователя ${user.username} до куратора?`;
     else if (user.rank < RANKS.CURATOR.level) message = `Повысить пользователя ${user.username} до куратора?`;
     if (!confirm(message)) return;
-    db.ref('mlk_users/' + user.id).update({ role: RANKS.CURATOR.name, rank: RANKS.CURATOR.level }).then(() => {
-        loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь назначен куратором", "success"); });
-    }).catch(error => showNotification("Ошибка: " + error.message, "error"));
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.CURATOR.name, 
+            rank: RANKS.CURATOR.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ
+        updateTabAccessForUser(user.username, RANKS.CURATOR.level, RANKS.CURATOR.access);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        showNotification("Пользователь назначен куратором", "success");
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
+}
+
+window.demoteToCuratorByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только администратор может понижать до куратора", "error"); 
+        return; 
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) { 
+        showNotification("Пользователь не найден", "error"); 
+        return; 
+    }
+    
+    if (user.rank <= RANKS.CURATOR.level) { 
+        showNotification("Пользователь уже имеет ранг куратора или ниже", "warning"); 
+        return; 
+    }
+    
+    if (!confirm(`Понизить пользователя ${user.username} до куратора?`)) return;
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.CURATOR.name, 
+            rank: RANKS.CURATOR.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ - КЛЮЧЕВАЯ ЧАСТЬ!
+        updateTabAccessForUser(user.username, RANKS.CURATOR.level, RANKS.CURATOR.access);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        showNotification(`Пользователь ${user.username} понижен до куратора`, "success");
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
+}
+
+window.demoteToJuniorByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только старший куратор или выше может понижать", "error"); 
+        return; 
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) { 
+        showNotification("Пользователь не найден", "error"); 
+        return; 
+    }
+    
+    // Проверяем, не пытаемся ли понизить уже младшего куратора
+    if (user.rank <= RANKS.JUNIOR_CURATOR.level) { 
+        showNotification("Пользователь уже имеет ранг младшего куратора или ниже", "warning"); 
+        return; 
+    }
+    
+    // Определяем какие права будут удалены
+    let removedRights = "";
+    if (user.rank === RANKS.ADMIN.level) {
+        removedRights = "администратора (whitelist, webhooks, system, bans, ip_monitoring, all_reports, users)";
+    } else if (user.rank === RANKS.SENIOR_CURATOR.level) {
+        removedRights = "старшего куратора (system, bans, ip_monitoring, all_reports, users)";
+    } else if (user.rank === RANKS.CURATOR.level) {
+        removedRights = "куратора (all_reports, users)";
+    }
+    
+    if (!confirm(`Понизить пользователя ${user.username} до младшего куратора?\n\nЭто действие:\n• Удалит все права ${removedRights}\n• Оставит только доступ к отчетам МЛК\n• Вкладки пользователя будут перезагружены с новыми правами`)) return;
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.JUNIOR_CURATOR.name, 
+            rank: RANKS.JUNIOR_CURATOR.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ - КЛЮЧЕВОЕ ИЗМЕНЕНИЕ!
+        // Используем ТОЛЬКО права младшего куратора
+        const juniorAccess = RANKS.JUNIOR_CURATOR.access;
+        updateTabAccessForUser(user.username, RANKS.JUNIOR_CURATOR.level, juniorAccess);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        
+        showNotification(
+            `Пользователь ${user.username} понижен до младшего куратора. ` +
+            `Доступ только к отчетам МЛК.`, 
+            "success"
+        );
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
+};
+
+window.setToCuratorByStaticId = async function(staticId) {
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK !== CREATOR_RANK) { 
+        showNotification("Только старший куратор или выше может назначать кураторов", "error"); 
+        return; 
+    }
+    
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) { 
+        showNotification("Пользователь не найден", "error"); 
+        return; 
+    }
+    
+    if (user.rank === RANKS.CURATOR.level) { 
+        showNotification("Пользователь уже является куратором", "info"); 
+        return; 
+    }
+    
+    let message = `Назначить пользователя ${user.username} куратором?`;
+    let isDemotion = false;
+    
+    if (user.rank > RANKS.CURATOR.level) {
+        message = `Понизить пользователя ${user.username} до куратора?`;
+        isDemotion = true;
+    } else if (user.rank < RANKS.CURATOR.level) {
+        message = `Повысить пользователя ${user.username} до куратора?`;
+    }
+    
+    if (!confirm(message)) return;
+    
+    try {
+        await db.ref('mlk_users/' + user.id).update({ 
+            role: RANKS.CURATOR.name, 
+            rank: RANKS.CURATOR.level 
+        });
+        
+        // ОБНОВЛЯЕМ ВКЛАДКУ ЭТОГО ПОЛЬЗОВАТЕЛЯ
+        updateTabAccessForUser(user.username, RANKS.CURATOR.level, RANKS.CURATOR.access);
+        
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1); 
+        
+        showNotification(
+            isDemotion ? `Пользователь ${user.username} понижен до куратора` : 
+                        `Пользователь ${user.username} назначен куратором`, 
+            "success"
+        );
+        
+    } catch (error) { 
+        showNotification("Ошибка: " + error.message, "error"); 
+    }
 }
 
 window.demoteToJuniorByStaticId = function(staticId) {
@@ -991,6 +1264,110 @@ window.demoteToJuniorByStaticId = function(staticId) {
     db.ref('mlk_users/' + user.id).update({ role: RANKS.JUNIOR_CURATOR.name, rank: RANKS.JUNIOR_CURATOR.level }).then(() => {
         loadData(() => { renderUsersWithPagination(1); showNotification("Пользователь понижен до младшего куратора", "success"); });
     }).catch(error => showNotification("Ошибка: " + error.message, "error"));
+}
+
+function getAccessByRankLevel(rankLevel) {
+    // ВАЖНО: Эта функция должна всегда возвращать правильные права
+    switch(rankLevel) {
+        case CREATOR_RANK.level:
+            return [...CREATOR_RANK.access];
+        case RANKS.ADMIN.level:
+            return [...RANKS.ADMIN.access];
+        case RANKS.SENIOR_CURATOR.level:
+            return [...RANKS.SENIOR_CURATOR.access];
+        case RANKS.CURATOR.level:
+            return [...RANKS.CURATOR.access];
+        case RANKS.JUNIOR_CURATOR.level:
+            return ["mlk_reports"]; // ТОЧНО ТАК
+        default:
+            return ["mlk_reports"];
+    }
+}
+
+function updateTabAccessForUser(username, rankLevel, access) {
+    console.log(`Обновление прав вкладки для ${username} до ранга ${rankLevel}`);
+    
+    // Находим все вкладки этого пользователя
+    const tabsToUpdate = accountTabs.filter(tab => 
+        tab.login && tab.login.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (tabsToUpdate.length === 0) {
+        console.log(`Вкладок для пользователя ${username} не найдено`);
+        return;
+    }
+    
+    const rankName = getRankDisplayName(rankLevel);
+    
+    tabsToUpdate.forEach(tab => {
+        // Сохраняем старые данные
+        const oldRank = tab.rankName;
+        const oldAccess = tab.access || [];
+        
+        // Обновляем данные вкладки
+        tab.rankLevel = rankLevel;
+        tab.rankName = rankName;
+        
+        // Устанавливаем правильные права
+        if (Array.isArray(access)) {
+            tab.access = [...access];
+        } else {
+            tab.access = getAccessByRankLevel(rankLevel);
+        }
+        
+        // Обновляем сохраненные данные пользователя
+        if (tab.savedUserData) {
+            tab.savedUserData.rankLevel = rankLevel;
+            tab.savedUserData.rankName = rankName;
+        }
+        
+        console.log(`Вкладка "${tab.name}" обновлена: ${oldRank} (${oldAccess.length} прав) → ${rankName} (${tab.access.length} прав)`);
+        
+        // Логируем изменения прав
+        const removedAccess = oldAccess.filter(x => !tab.access.includes(x));
+        const addedAccess = tab.access.filter(x => !oldAccess.includes(x));
+        
+        if (removedAccess.length > 0) {
+            console.log(`Удалены права: ${removedAccess.map(a => getAccessDisplayName(a)).join(', ')}`);
+        }
+        if (addedAccess.length > 0) {
+            console.log(`Добавлены права: ${addedAccess.map(a => getAccessDisplayName(a)).join(', ')}`);
+        }
+        
+        // Если эта вкладка активна - обновляем сайдбар
+        if (accountTabs[activeAccountTab]?.id === tab.id) {
+            setTimeout(() => {
+                updateSidebarForTab(tab);
+                
+                let message = `Права вкладки обновлены: ${oldRank} → ${rankName}`;
+                if (removedAccess.length > 0) {
+                    message += `\nУдалены: ${removedAccess.map(a => getAccessDisplayName(a)).join(', ')}`;
+                }
+                
+                showNotification(message, "info");
+            }, 100);
+        }
+    });
+    
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
+    
+    // Обновляем отображение вкладок
+    setTimeout(renderAccountTabs, 50);
+}
+
+function getAccessByRankLevel(rankLevel) {
+    if (rankLevel === CREATOR_RANK.level) {
+        return [...CREATOR_RANK.access];
+    } else if (rankLevel === RANKS.ADMIN.level) {
+        return [...RANKS.ADMIN.access];
+    } else if (rankLevel === RANKS.SENIOR_CURATOR.level) {
+        return [...RANKS.SENIOR_CURATOR.access];
+    } else if (rankLevel === RANKS.CURATOR.level) {
+        return [...RANKS.CURATOR.access];
+    } else {
+        return [...RANKS.JUNIOR_CURATOR.access];
+    }
 }
 
 window.login = async function() {
@@ -1958,16 +2335,28 @@ function completeLogin() {
     const loginScreen = document.getElementById("login-screen");
     const terminal = document.getElementById("terminal");
     
-    console.log('completeLogin called with:', {
-        user: CURRENT_USER,
-        role: CURRENT_ROLE,
-        rank: CURRENT_RANK,
-        staticId: CURRENT_STATIC_ID
-    });
+    console.log('=== COMPLETE LOGIN START ===');
+    console.log('Login screen found:', !!loginScreen);
+    console.log('Terminal found:', !!terminal);
     
     if (loginScreen && terminal) {
-        loginScreen.style.display = "none";
-        terminal.style.display = "flex";
+        // ПРИМЕНЯЕМ CSS КЛАССЫ вместо прямого style
+        loginScreen.classList.add('hidden');
+        loginScreen.classList.remove('visible');
+        
+        terminal.classList.remove('hidden');
+        terminal.classList.add('visible');
+        
+        // Принудительно устанавливаем стили
+        loginScreen.style.display = 'none';
+        loginScreen.style.visibility = 'hidden';
+        loginScreen.style.opacity = '0';
+        
+        terminal.style.display = 'flex';
+        terminal.style.visibility = 'visible';
+        terminal.style.opacity = '1';
+        
+        console.log('Screens switched');
         
         // Сохраняем сессию
         const sessionData = {
@@ -1978,80 +2367,1491 @@ function completeLogin() {
             timestamp: new Date().getTime()
         };
         
-        console.log('Saving session:', sessionData);
         localStorage.setItem('mlk_session', JSON.stringify(sessionData));
-        console.log('Session saved to localStorage');
         
-        // Настраиваем интерфейс
-        setupSidebar();
-        updateSystemPrompt(`ПОДКЛЮЧЕНИЕ УСПЕШНО. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
+        // Загружаем данные и инициализируем интерфейс
+        loadData(() => {
+            console.log('Data loaded after login');
+            
+            // Загружаем вкладки
+            loadAccountTabsFromStorage();
+            addMainAccountTab();
+            
+            // Настраиваем интерфейс
+            setupSidebar();
+            updateSystemPrompt(`ПОДКЛЮЧЕНИЕ УСПЕШНО. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
+            
+            // Показываем начальный экран
+            if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
+                renderSystem();
+            } else {
+                renderMLKScreen();
+            }
+            
+            // Принудительное обновление
+            setTimeout(() => {
+                if (loginScreen.style.display !== 'none') {
+                    console.warn('Login screen still visible, forcing hide');
+                    loginScreen.style.display = 'none';
+                    loginScreen.style.visibility = 'hidden';
+                }
+                
+                if (terminal.style.display === 'none') {
+                    console.warn('Terminal hidden, forcing show');
+                    terminal.style.display = 'flex';
+                }
+                
+                adjustInterfaceHeights();
+            }, 100);
+        });
         
-        // Загружаем данные в зависимости от ранга
-        if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
-            loadReports(renderSystem);
-        } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
-            loadReports(renderMLKScreen);
+    } else {
+        console.error('ERROR: Login screen or terminal not found');
+        console.log('Login screen:', loginScreen);
+        console.log('Terminal:', terminal);
+    }
+    
+    console.log('=== COMPLETE LOGIN END ===');
+}
+
+/* ===== ФУНКЦИИ УПРАВЛЕНИЯ ВКЛАДКАМИ ===== */
+
+window.manageAccountTabs = function() {
+    const modal = document.createElement('div');
+    modal.id = 'tabs-management-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(10, 8, 5, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(10px);
+    `;
+    
+    const mainTabs = accountTabs.filter(tab => tab.isMain);
+    const additionalTabs = accountTabs.filter(tab => !tab.isMain);
+    
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(145deg, rgba(28, 26, 23, 0.98), rgba(20, 18, 15, 0.98));
+            border: 2px solid #c0b070;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="color: #c0b070; font-family: 'Orbitron', sans-serif; margin: 0;">
+                    <i class="fas fa-layer-group"></i> УПРАВЛЕНИЕ ВКЛАДКАМИ
+                </h3>
+                <button onclick="document.getElementById('tabs-management-modal').remove()" style="
+                    background: none;
+                    border: none;
+                    color: #8f9779;
+                    font-size: 1.2rem;
+                    cursor: pointer;
+                    padding: 5px;
+                ">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #8cb43c; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-info-circle"></i> СТАТИСТИКА
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 15px; text-align: center;">
+                        <div style="color: #c0b070; font-size: 2rem; font-weight: bold;">${accountTabs.length}</div>
+                        <div style="color: #8f9779; font-size: 0.9rem;">Всего вкладок</div>
+                    </div>
+                    <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 15px; text-align: center;">
+                        <div style="color: #8cb43c; font-size: 2rem; font-weight: bold;">${mainTabs.length}</div>
+                        <div style="color: #8f9779; font-size: 0.9rem;">Основных</div>
+                    </div>
+                    <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 15px; text-align: center;">
+                        <div style="color: #c0b070; font-size: 2rem; font-weight: bold;">${additionalTabs.length}</div>
+                        <div style="color: #8f9779; font-size: 0.9rem;">Дополнительных</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #8cb43c; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="fas fa-list"></i> СОХРАНЕННЫЕ ВКЛАДКИ</span>
+                    <span style="color: #8f9779; font-size: 0.9rem;">${accountTabs.length} шт.</span>
+                </h4>
+                
+                <div class="scrollable-container" style="max-height: 300px; background: rgba(30, 32, 28, 0.3); border-radius: 6px; padding: 15px;">
+                    ${accountTabs.length === 0 ? 
+                        `<div style="text-align: center; padding: 40px; color: #6a6a5a;">
+                            <i class="fas fa-folder-open" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                            <p>Нет сохраненных вкладок</p>
+                        </div>` :
+                        accountTabs.map((tab, index) => `
+                            <div style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                padding: 12px 15px;
+                                margin-bottom: 10px;
+                                background: ${index === activeAccountTab ? 'rgba(192, 176, 112, 0.1)' : 'rgba(40, 42, 36, 0.5)'};
+                                border: 1px solid ${index === activeAccountTab ? '#c0b070' : '#4a4a3a'};
+                                border-radius: 4px;
+                                cursor: pointer;
+                            " onclick="switchAccount(${index}); document.getElementById('tabs-management-modal').remove()">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="
+                                        width: 36px;
+                                        height: 36px;
+                                        background: ${tab.isMain ? 'rgba(192, 176, 112, 0.2)' : 'rgba(140, 180, 60, 0.2)'};
+                                        border-radius: 50%;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        color: ${tab.isMain ? '#c0b070' : '#8cb43c'};
+                                    ">
+                                        <i class="fas ${tab.isMain ? 'fa-home' : 'fa-user'}"></i>
+                                    </div>
+                                    <div>
+                                        <div style="color: ${tab.isMain ? '#c0b070' : '#8cb43c'}; font-weight: 500;">
+                                            ${tab.name}
+                                            ${tab.isMain ? ' <span style="color: #8f9779; font-size: 0.8rem;">(Основной)</span>' : ''}
+                                        </div>
+                                        <div style="color: #8f9779; font-size: 0.8rem;">
+                                            <i class="fas fa-crown"></i> ${tab.rankName || 'Без ранга'}
+                                            • <i class="far fa-calendar"></i> ${tab.createdAt ? new Date(tab.createdAt).toLocaleDateString() : 'Неизвестно'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    ${!tab.isMain ? `
+                                    <button onclick="event.stopPropagation(); closeAccountTab('${tab.id}')" 
+                                            style="background: rgba(180, 60, 60, 0.2); border: 1px solid #b43c3c; color: #b43c3c; padding: 4px 8px; border-radius: 3px; font-size: 0.8rem; cursor: pointer;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                <button onclick="exportAccountTabs()" class="btn-secondary" style="padding: 10px 20px;">
+                    <i class="fas fa-download"></i> ЭКСПОРТ
+                </button>
+                <button onclick="clearAllAccountTabs()" class="btn-primary" style="padding: 10px 20px; border-color: #b43c3c; color: #b43c3c;">
+                    <i class="fas fa-trash"></i> ОЧИСТИТЬ ВСЕ
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Функции для управления вкладками
+function exportAccountTabs() {
+    const tabsData = {
+        exportedAt: new Date().toLocaleString(),
+        exportedBy: CURRENT_USER,
+        tabs: accountTabs
+    };
+    
+    const dataStr = JSON.stringify(tabsData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `account-tabs-${new Date().toISOString().slice(0,10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+    
+    showNotification('Вкладки экспортированы в JSON файл', 'success');
+}
+
+function clearAllAccountTabs() {
+    if (!confirm('Очистить ВСЕ сохраненные вкладки?\n\nЭто удалит все дополнительные вкладки и сбросит основную.\n\nДействие нельзя отменить!')) {
+        return;
+    }
+    
+    // Оставляем только основную вкладку
+    const mainTab = accountTabs.find(tab => tab.isMain);
+    accountTabs = mainTab ? [mainTab] : [];
+    activeAccountTab = 0;
+    
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
+    
+    // Обновляем интерфейс
+    renderAccountTabs();
+    
+    // Закрываем модальное окно
+    const modal = document.getElementById('tabs-management-modal');
+    if (modal) modal.remove();
+    
+    showNotification('Все вкладки очищены, оставлена только основная', 'success');
+}
+
+/* ===== ФУНКЦИИ УДАЛЕНИЯ АККАУНТОВ ===== */
+
+window.deleteUserByStaticId = async function(staticId) {
+    console.log('Удаление пользователя с staticId:', staticId);
+    
+    // Проверяем права доступа
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK.level !== CREATOR_RANK.level) { 
+        showNotification("Только старший куратор или выше может удалять пользователей", "error"); 
+        return false; 
+    }
+    
+    // Находим пользователя
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) { 
+        showNotification("Пользователь не найден", "error"); 
+        return false; 
+    }
+    
+    // Проверяем, не пытаемся ли удалить себя
+    if (user.username === CURRENT_USER) {
+        showNotification("Нельзя удалить свой собственный аккаунт", "error");
+        return false;
+    }
+    
+    // Проверяем, не является ли пользователь защищенным
+    const isProtected = PROTECTED_USERS.some(protectedUser => 
+        protectedUser.toLowerCase() === user.username.toLowerCase()
+    );
+    if (isProtected) {
+        showNotification("Нельзя удалить защищенного пользователя", "error");
+        return false;
+    }
+    
+    if (!confirm(`❌ ВНИМАНИЕ!\n\nВы собираетесь удалить пользователя:\n\nИмя: ${user.username}\nStatic ID: ${staticId}\nРанг: ${user.role}\n\nЭто действие:\n• Удалит пользователя из базы данных\n• Удалит все связанные данные\n• Закроет все вкладки пользователя\n• Нельзя отменить!\n\nПродолжить?`)) {
+        return false;
+    }
+    
+    try {
+        showNotification("Удаление пользователя...", "info");
+        
+        // Удаляем пользователя из базы
+        await db.ref('mlk_users/' + user.id).remove();
+        
+        // Удаляем связанные записи
+        await deleteUserRelatedData(user.username, staticId);
+        
+        // Закрываем вкладки этого пользователя
+        closeUserTabs(staticId);
+        
+        // Обновляем локальные данные
+        await new Promise(resolve => loadData(resolve));
+        
+        // Обновляем отображение
+        renderUsersWithPagination(1);
+        
+        showNotification(`✅ Пользователь "${user.username}" полностью удален из системы`, "success");
+        
+        // Логируем удаление
+        await db.ref('mlk_audit_log').push({
+            action: 'USER_DELETED',
+            targetUser: user.username,
+            targetStaticId: staticId,
+            performedBy: CURRENT_USER,
+            timestamp: new Date().toLocaleString(),
+            details: `Пользователь удален полностью из системы`
+        });
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Ошибка удаления пользователя:', error);
+        showNotification(`Ошибка удаления: ${error.message}`, "error");
+        return false;
+    }
+}
+
+/* ===== БЫСТРОЕ УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЕЙ ОДНОГО РАНГА ===== */
+
+window.deleteUsersByRank = async function(rankLevel) {
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+        showNotification("Только администратор может массово удалять пользователей", "error");
+        return;
+    }
+    
+    const rankName = getRankDisplayName(rankLevel);
+    const usersToDelete = users.filter(user => {
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
+        );
+        const isCurrentUser = user.username === CURRENT_USER;
+        return user.rank === rankLevel && !isProtected && !isCurrentUser;
+    });
+    
+    if (usersToDelete.length === 0) {
+        showNotification(`Нет пользователей ранга "${rankName}" для удаления`, "info");
+        return;
+    }
+    
+    if (!confirm(`Удалить всех пользователей ранга "${rankName}"?\n\nКоличество: ${usersToDelete.length}\n\nЭто действие нельзя отменить!`)) {
+        return;
+    }
+    
+    try {
+        showNotification(`Удаление ${usersToDelete.length} пользователей ранга "${rankName}"...`, "warning");
+        
+        const deletePromises = usersToDelete.map(user => 
+            db.ref('mlk_users/' + user.id).remove()
+        );
+        
+        await Promise.all(deletePromises);
+        
+        // Закрываем вкладки
+        usersToDelete.forEach(user => closeUserTabs(user.staticId));
+        
+        // Обновляем данные
+        await new Promise(resolve => loadData(resolve));
+        renderUsersWithPagination(1);
+        
+        showNotification(`✅ Удалено ${usersToDelete.length} пользователей ранга "${rankName}"`, "success");
+        
+    } catch (error) {
+        console.error('Ошибка удаления пользователей по рангу:', error);
+        showNotification(`Ошибка удаления: ${error.message}`, "error");
+    }
+};
+
+/* ===== ФУНКЦИЯ УДАЛЕНИЯ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ ===== */
+
+window.deleteAllUsersConfirm = function() {
+    // Проверяем права - только АДМИНИСТРАТОР
+    if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+        showNotification("Только администратор может удалять всех пользователей", "error");
+        return;
+    }
+    
+    // Фильтруем пользователей, которых можно удалить
+    const usersToDelete = users.filter(user => {
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
+        );
+        const isCurrentUser = user.username === CURRENT_USER;
+        return !isProtected && !isCurrentUser;
+    });
+    
+    if (usersToDelete.length === 0) {
+        showNotification("Нет пользователей для удаления", "info");
+        return;
+    }
+    
+    // Создаем подробное сообщение с подсчетом
+    let userCountByRank = {};
+    usersToDelete.forEach(user => {
+        const rank = user.role || 'БЕЗ РАНГА';
+        userCountByRank[rank] = (userCountByRank[rank] || 0) + 1;
+    });
+    
+    let rankSummary = Object.entries(userCountByRank)
+        .map(([rank, count]) => `• ${rank}: ${count}`)
+        .join('\n');
+    
+    const confirmationMessage = `🚨 ВНИМАНИЕ! КРИТИЧЕСКАЯ ОПЕРАЦИЯ!\n\nВы собираетесь удалить ВСЕХ пользователей:\n\n${rankSummary}\n\nИтого: ${usersToDelete.length} пользователей\n\nЭта операция:\n❌ Удалит всех пользователей из базы данных\n❌ Удалит все связанные данные\n❌ Закроет все вкладки\n❌ НЕЛЬЗЯ ОТМЕНИТЬ!\n\nДля подтверждения введите: УДАЛИТЬ ВСЕХ`;
+    
+    // Создаем модальное окно подтверждения
+    const modal = document.createElement('div');
+    modal.id = 'delete-all-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(10, 8, 5, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(10px);
+    `;
+    
+    modal.innerHTML = `
+        <div style="
+            background: linear-gradient(145deg, rgba(28, 26, 23, 0.98), rgba(20, 18, 15, 0.98));
+            border: 3px solid #b43c3c;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(180, 60, 60, 0.3);
+        ">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="
+                    width: 80px;
+                    height: 80px;
+                    background: rgba(180, 60, 60, 0.2);
+                    border: 3px solid #b43c3c;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 20px;
+                ">
+                    <i class="fas fa-skull-crossbones" style="font-size: 2.5rem; color: #b43c3c;"></i>
+                </div>
+                <h3 style="color: #b43c3c; font-family: 'Orbitron', sans-serif; margin: 0 0 10px;">
+                    УДАЛЕНИЕ ВСЕХ ПОЛЬЗОВАТЕЛЕЙ
+                </h3>
+                <p style="color: #8f9779; font-size: 0.9rem; margin: 0;">
+                    Критическая операция администратора
+                </p>
+            </div>
+            
+            <div style="
+                background: rgba(180, 60, 60, 0.1);
+                border: 1px solid #b43c3c;
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 25px;
+            ">
+                <div style="color: #c0b070; font-weight: 600; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    БУДУТ УДАЛЕНЫ:
+                </div>
+                
+                <div style="color: #8f9779; font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px;">
+                    ${rankSummary.split('\n').map(line => `<div style="margin-bottom: 5px;">${line}</div>`).join('')}
+                </div>
+                
+                <div style="
+                    background: rgba(20, 18, 15, 0.8);
+                    border: 1px solid #4a4a3a;
+                    border-radius: 4px;
+                    padding: 15px;
+                    text-align: center;
+                    color: #c0b070;
+                    font-weight: 600;
+                    font-size: 1.1rem;
+                    margin-bottom: 15px;
+                ">
+                    <i class="fas fa-users"></i> Итого: ${usersToDelete.length} пользователей
+                </div>
+                
+                <div style="color: #b43c3c; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 10px;">
+                    <i class="fas fa-shield-alt"></i>
+                    <div>
+                        <strong>Будут защищены:</strong>
+                        <div style="margin-top: 5px;">
+                            • Текущий пользователь (${CURRENT_USER})<br>
+                            • Защищенные пользователи (${PROTECTED_USERS.join(', ')})
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 25px;">
+                <div style="color: #c0b070; margin-bottom: 10px; font-weight: 600;">
+                    <i class="fas fa-keyboard"></i> ПОДТВЕРЖДЕНИЕ
+                </div>
+                <div style="color: #8f9779; font-size: 0.9rem; margin-bottom: 15px;">
+                    Для подтверждения введите фразу <strong style="color: #b43c3c;">УДАЛИТЬ ВСЕХ</strong> ниже:
+                </div>
+                <input type="text" id="delete-all-confirmation" class="form-input" 
+                       placeholder="Введите 'УДАЛИТЬ ВСЕХ'" 
+                       style="width: 100%; text-align: center; font-size: 1rem; padding: 12px;">
+            </div>
+            
+            <div style="display: flex; gap: 15px; justify-content: space-between;">
+                <button onclick="closeDeleteAllModal()" 
+                        style="
+                            background: rgba(40, 42, 36, 0.8);
+                            border: 1px solid #4a4a3a;
+                            color: #8f9779;
+                            padding: 12px 24px;
+                            border-radius: 4px;
+                            cursor: pointer;
+                            font-weight: 500;
+                            flex: 1;
+                            transition: all 0.2s;
+                        "
+                        onmouseover="this.style.background='rgba(60, 62, 56, 0.8)'; this.style.borderColor='#5a5a4a'"
+                        onmouseout="this.style.background='rgba(40, 42, 36, 0.8)'; this.style.borderColor='#4a4a3a'">
+                    <i class="fas fa-times"></i> ОТМЕНА
+                </button>
+                
+                <button onclick="deleteAllUsers()" 
+                        id="delete-all-button"
+                        disabled
+                        style="
+                            background: rgba(180, 60, 60, 0.2);
+                            border: 1px solid #b43c3c;
+                            color: #6a6a5a;
+                            padding: 12px 24px;
+                            border-radius: 4px;
+                            cursor: not-allowed;
+                            font-weight: 500;
+                            flex: 1;
+                            transition: all 0.2s;
+                        ">
+                    <i class="fas fa-skull-crossbones"></i> УДАЛИТЬ ВСЕХ
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Активация кнопки при правильном вводе
+    const input = document.getElementById('delete-all-confirmation');
+    const button = document.getElementById('delete-all-button');
+    
+    input.addEventListener('input', function() {
+        const isConfirmed = this.value.trim() === 'УДАЛИТЬ ВСЕХ';
+        
+        if (isConfirmed) {
+            button.disabled = false;
+            button.style.background = 'rgba(180, 60, 60, 0.4)';
+            button.style.color = '#b43c3c';
+            button.style.cursor = 'pointer';
+            button.style.borderColor = '#ff4d4d';
+            button.onmouseover = function() {
+                this.style.background = 'rgba(180, 60, 60, 0.6)';
+                this.style.borderColor = '#ff6b6b';
+            };
+            button.onmouseout = function() {
+                this.style.background = 'rgba(180, 60, 60, 0.4)';
+                this.style.borderColor = '#ff4d4d';
+            };
         } else {
-            loadReports(renderMLKScreen);
+            button.disabled = true;
+            button.style.background = 'rgba(180, 60, 60, 0.2)';
+            button.style.color = '#6a6a5a';
+            button.style.cursor = 'not-allowed';
+            button.style.borderColor = '#b43c3c';
+            button.onmouseover = null;
+            button.onmouseout = null;
+        }
+    });
+    
+    // Фокус на поле ввода
+    setTimeout(() => {
+        if (input) input.focus();
+    }, 100);
+}
+
+window.deleteAllUsers = async function() {
+    try {
+        // Проверяем права
+        if (CURRENT_RANK.level < RANKS.ADMIN.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+            showNotification("Только администратор может удалять всех пользователей", "error");
+            closeDeleteAllModal();
+            return;
         }
         
-        // Настраиваем высоту интерфейса
-        setTimeout(adjustInterfaceHeights, 100);
+        // Получаем список пользователей для удаления
+        const usersToDelete = users.filter(user => {
+            const isProtected = PROTECTED_USERS.some(protectedUser => 
+                protectedUser.toLowerCase() === user.username.toLowerCase()
+            );
+            const isCurrentUser = user.username === CURRENT_USER;
+            return !isProtected && !isCurrentUser;
+        });
+        
+        if (usersToDelete.length === 0) {
+            showNotification("Нет пользователей для удаления", "info");
+            closeDeleteAllModal();
+            return;
+        }
+        
+        showNotification(`Начинаю удаление ${usersToDelete.length} пользователей...`, "warning");
+        
+        // Удаляем каждого пользователя
+        let deletedCount = 0;
+        let errorCount = 0;
+        
+        for (const user of usersToDelete) {
+            try {
+                // Удаляем пользователя из базы
+                await db.ref('mlk_users/' + user.id).remove();
+                
+                // Удаляем связанные данные
+                await deleteUserRelatedData(user.username, user.staticId);
+                
+                // Закрываем вкладки
+                closeUserTabs(user.staticId);
+                
+                deletedCount++;
+                
+                // Обновляем прогресс
+                const progress = Math.round((deletedCount / usersToDelete.length) * 100);
+                const progressElement = document.createElement('div');
+                progressElement.id = 'delete-progress';
+                progressElement.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(30, 32, 28, 0.95);
+                    border: 1px solid #4a4a3a;
+                    border-radius: 8px;
+                    padding: 15px 25px;
+                    z-index: 10001;
+                    min-width: 300px;
+                    text-align: center;
+                    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+                `;
+                progressElement.innerHTML = `
+                    <div style="color: #c0b070; font-weight: 600; margin-bottom: 10px;">
+                        <i class="fas fa-trash"></i> Удаление пользователей...
+                    </div>
+                    <div style="color: #8f9779; margin-bottom: 10px;">
+                        ${deletedCount} / ${usersToDelete.length} (${progress}%)
+                    </div>
+                    <div style="background: #4a4a3a; height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${progress}%; height: 100%; background: #b43c3c; transition: width 0.3s;"></div>
+                    </div>
+                `;
+                
+                // Обновляем или создаем элемент прогресса
+                const existingProgress = document.getElementById('delete-progress');
+                if (existingProgress) {
+                    existingProgress.innerHTML = progressElement.innerHTML;
+                } else {
+                    document.body.appendChild(progressElement);
+                }
+                
+            } catch (error) {
+                console.error(`Ошибка удаления пользователя ${user.username}:`, error);
+                errorCount++;
+            }
+        }
+        
+        // Удаляем элемент прогресса
+        const progressElement = document.getElementById('delete-progress');
+        if (progressElement) {
+            setTimeout(() => progressElement.remove(), 1000);
+        }
+        
+        // Закрываем модальное окно
+        closeDeleteAllModal();
+        
+        // Обновляем данные
+        await new Promise(resolve => loadData(resolve));
+        
+        // Обновляем отображение
+        renderUsersWithPagination(1);
+        
+        // Показываем результат
+        if (errorCount === 0) {
+            showNotification(`✅ Успешно удалено ${deletedCount} пользователей`, "success");
+            
+            // Логируем операцию
+            await db.ref('mlk_audit_log').push({
+                action: 'MASS_USER_DELETION',
+                deletedCount: deletedCount,
+                performedBy: CURRENT_USER,
+                timestamp: new Date().toLocaleString(),
+                details: `Массовое удаление ${deletedCount} пользователей`
+            });
+        } else {
+            showNotification(`⚠️ Удалено ${deletedCount} пользователей, ошибок: ${errorCount}`, "warning");
+        }
+        
+        // Автоматически закрываем все дополнительные вкладки
+        const additionalTabs = accountTabs.filter(tab => !tab.isMain);
+        if (additionalTabs.length > 0) {
+            setTimeout(() => {
+                showNotification(`Закрыто ${additionalTabs.length} вкладок удаленных пользователей`, "info");
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('Ошибка массового удаления пользователей:', error);
+        showNotification(`❌ Ошибка удаления: ${error.message}`, "error");
+        closeDeleteAllModal();
+    }
+};
+
+function closeDeleteAllModal() {
+    const modal = document.getElementById('delete-all-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function deleteUserRelatedData(username, staticId) {
+    try {
+        console.log('Удаление связанных данных для:', username, staticId);
+        
+        // Удаляем из whitelist
+        const whitelistSnapshot = await db.ref('mlk_whitelist').once('value');
+        const whitelistData = whitelistSnapshot.val() || {};
+        const whitelistPromises = [];
+        
+        for (const key in whitelistData) {
+            if (whitelistData[key].username === username || whitelistData[key].staticId === staticId) {
+                whitelistPromises.push(db.ref('mlk_whitelist/' + key).remove());
+            }
+        }
+        
+        // Удаляем IP записи
+        const ipSnapshot = await db.ref('mlk_ip_tracking').once('value');
+        const ipData = ipSnapshot.val() || {};
+        const ipPromises = [];
+        
+        for (const key in ipData) {
+            if (ipData[key].username === username || ipData[key].staticId === staticId) {
+                ipPromises.push(db.ref('mlk_ip_tracking/' + key).remove());
+            }
+        }
+        
+        // Обновляем отчеты (помечаем как удаленные)
+        const reportsSnapshot = await db.ref('mlk_reports').once('value');
+        const reportsData = reportsSnapshot.val() || {};
+        const reportPromises = [];
+        
+        for (const key in reportsData) {
+            if (reportsData[key].author === username || reportsData[key].authorStaticId === staticId) {
+                reportPromises.push(
+                    db.ref('mlk_reports/' + key).update({
+                        authorDeleted: true,
+                        originalAuthor: username,
+                        deletedBy: CURRENT_USER,
+                        deletionDate: new Date().toLocaleString()
+                    })
+                );
+            }
+        }
+        
+        // Ждем выполнения всех обещаний
+        await Promise.all([...whitelistPromises, ...ipPromises, ...reportPromises]);
+        
+        console.log('Связанные данные пользователя удалены');
+        return true;
+        
+    } catch (error) {
+        console.error('Ошибка удаления связанных данных:', error);
+        throw error;
+    }
+}
+
+function closeUserTabs(staticId) {
+    // Находим пользователя по staticId
+    const user = users.find(u => u.staticId === staticId);
+    if (!user) return;
+    
+    console.log('Закрытие вкладок для пользователя:', user.username);
+    
+    // Находим и закрываем все вкладки этого пользователя
+    const tabsToClose = accountTabs.filter(tab => 
+        tab.login && tab.login.toLowerCase() === user.username.toLowerCase()
+    );
+    
+    tabsToClose.forEach(tab => {
+        console.log('Закрытие вкладки:', tab.name);
+        // Удаляем из массива вкладок
+        const index = accountTabs.findIndex(t => t.id === tab.id);
+        if (index !== -1) {
+            accountTabs.splice(index, 1);
+        }
+    });
+    
+    // Обновляем активную вкладку, если текущая была удалена
+    if (tabsToClose.some(tab => tab.id === accountTabs[activeAccountTab]?.id)) {
+        if (accountTabs.length > 0) {
+            activeAccountTab = 0;
+            switchAccount(0);
+        } else {
+            activeAccountTab = 0;
+            // Показываем экран без вкладок
+            const content = document.getElementById("content-body");
+            if (content) {
+                content.innerHTML = `
+                    <div class="empty-screen" style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        color: #8f9779;
+                        text-align: center;
+                        padding: 40px;
+                    ">
+                        <i class="fas fa-users" style="font-size: 4rem; margin-bottom: 20px; color: #4a4a3a;"></i>
+                        <h3 style="color: #c0b070; margin-bottom: 10px;">НЕТ АКТИВНЫХ АККАУНТОВ</h3>
+                        <p style="max-width: 400px; margin-bottom: 20px;">
+                            Вкладка была закрыта, так как пользователь был удален.
+                        </p>
+                        <button onclick="addMainAccountTab(); renderSystem();" class="btn-primary" style="margin-top: 20px;">
+                            <i class="fas fa-user"></i> ВЕРНУТЬСЯ К ОСНОВНОМУ АККАУНТУ
+                        </button>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
+    
+    console.log('Закрыто вкладок:', tabsToClose.length);
+    return tabsToClose.length;
+}
+
+/* ===== НОВЫЕ ФУНКЦИИ ДЛЯ СИСТЕМЫ ВКЛАДОК ===== */
+
+/* ===== УЛУЧШЕННОЕ СОХРАНЕНИЕ И ЗАГРУЗКА ВКЛАДОК ===== */
+
+function saveAccountTabsToStorage() {
+    try {
+        // Сохраняем ВСЕ вкладки, включая основной аккаунт
+        const tabsToSave = accountTabs.map(tab => ({
+            id: tab.id,
+            name: tab.name,
+            login: tab.login,
+            rankLevel: tab.rankLevel,
+            rankName: tab.rankName,
+            access: tab.access,
+            createdAt: tab.createdAt,
+            isMinimized: tab.isMinimized,
+            isMain: tab.isMain,
+            savedUserData: tab.savedUserData,
+            data: tab.data
+        }));
+        
+        localStorage.setItem('accountTabs', JSON.stringify(tabsToSave));
+        localStorage.setItem('activeAccountTab', activeAccountTab.toString());
+        console.log('Вкладки сохранены в localStorage:', tabsToSave.length, 'вкладок');
+    } catch (error) {
+        console.error('Ошибка сохранения вкладок:', error);
+    }
+}
+
+function loadAccountTabsFromStorage() {
+    try {
+        const savedTabs = localStorage.getItem('accountTabs');
+        if (savedTabs) {
+            const parsedTabs = JSON.parse(savedTabs);
+            console.log('Загружаем вкладки из localStorage:', parsedTabs.length, 'вкладок');
+            
+            // Восстанавливаем ВСЕ вкладки
+            accountTabs = parsedTabs;
+            
+            // Восстанавливаем активную вкладку
+            const savedActiveTab = localStorage.getItem('activeAccountTab');
+            activeAccountTab = savedActiveTab ? parseInt(savedActiveTab) : 0;
+            
+            // Корректируем индекс, если он выходит за пределы
+            if (activeAccountTab >= accountTabs.length) {
+                activeAccountTab = accountTabs.length > 0 ? accountTabs.length - 1 : 0;
+            }
+            
+            console.log('Вкладки загружены:', {
+                totalTabs: accountTabs.length,
+                activeTab: activeAccountTab,
+                tabs: accountTabs.map(t => ({ name: t.name, isMain: t.isMain }))
+            });
+            
+            return true;
+        }
+    } catch (error) {
+        console.error('Ошибка загрузки вкладок:', error);
+    }
+    return false;
+}
+
+function clearAccountTabsStorage() {
+    localStorage.removeItem('accountTabs');
+    localStorage.removeItem('activeAccountTab');
+    console.log('Хранилище вкладок очищено');
+}
+
+function updateMainAccountDisplay() {
+    const usernameEl = document.getElementById('current-username');
+    const rankEl = document.getElementById('current-rank');
+    
+    if (usernameEl && CURRENT_USER) {
+        usernameEl.textContent = CURRENT_USER.toUpperCase();
+    }
+    
+    if (rankEl && CURRENT_RANK) {
+        rankEl.textContent = CURRENT_RANK.name || '';
+    }
+}
+
+function getRankDisplayName(level) {
+    if (!level) return 'БЕЗ РАНГА';
+    if (CREATOR_RANK && CREATOR_RANK.level === level) return CREATOR_RANK.name;
+    
+    for (const key in RANKS) {
+        if (RANKS[key].level === level) return RANKS[key].name;
+    }
+    return 'МЛАДШИЙ КУРАТОР';
+}
+
+function updateAccountDisplay(tab) {
+    const usernameEl = document.getElementById('current-username');
+    const rankEl = document.getElementById('current-rank');
+    
+    if (usernameEl) {
+        if (tab.isMain) {
+            usernameEl.textContent = CURRENT_USER.toUpperCase();
+        } else {
+            usernameEl.textContent = `${tab.login} [${tab.rankName || 'ДОП. АККАУНТ'}]`;
+        }
+    }
+    
+    if (rankEl) {
+        if (tab.isMain) {
+            rankEl.textContent = CURRENT_RANK?.name || '';
+        } else {
+            rankEl.textContent = tab.rankName || 'ДОП. АККАУНТ';
+        }
+    }
+}
+
+function updateMainAccountDisplay() {
+    const usernameEl = document.getElementById('current-username');
+    const rankEl = document.getElementById('current-rank');
+    
+    if (usernameEl && CURRENT_USER) {
+        usernameEl.textContent = CURRENT_USER.toUpperCase();
+    }
+    
+    if (rankEl && CURRENT_RANK) {
+        rankEl.textContent = CURRENT_RANK.name || '';
+    }
+}
+
+function updateSidebarForTab(tab) {
+    // Сначала скрываем все элементы навигации
+    document.querySelectorAll('.nav-button').forEach(btn => {
+        // Не скрываем всегда видимые кнопки (профиль)
+        if (!btn.classList.contains('always-visible')) {
+            btn.style.display = 'none';
+        }
+    });
+    
+    // Показываем все элементы навигации для основного аккаунта
+    if (tab.isMain) {
+        document.querySelectorAll('.nav-button').forEach(btn => {
+            btn.style.display = 'flex';
+        });
+        return;
+    }
+    
+    // Показываем только те элементы, к которым есть доступ у этой вкладки
+    if (tab.access && Array.isArray(tab.access)) {
+        tab.access.forEach(access => {
+            const navElement = document.querySelector(`.nav-button[data-access="${access}"]`);
+            if (navElement) {
+                navElement.style.display = 'flex';
+            }
+        });
+    }
+    
+    // Всегда показываем профиль (если есть кнопка профиля)
+    const profileBtn = document.querySelector('.nav-button[data-access="profile"]');
+    if (profileBtn) profileBtn.style.display = 'flex';
+    
+    // Для создателя показываем пароль создателя
+    if (tab.rankLevel === CREATOR_RANK.level) {
+        const creatorPassBtn = document.querySelector('.nav-button[data-access="creator_password"]');
+        if (creatorPassBtn) creatorPassBtn.style.display = 'flex';
+    }
+}
+function addMainAccountTab() {
+    if (!CURRENT_USER) return;
+    
+    // Получаем доступы основного аккаунта
+    const mainAccess = CURRENT_RANK?.access || RANKS.JUNIOR_CURATOR.access;
+    
+    // Если уже есть таб основного аккаунта - обновляем его
+    const existingMainIndex = accountTabs.findIndex(t => t.isMain);
+    if (existingMainIndex !== -1) {
+        accountTabs[existingMainIndex] = {
+            id: 'main-' + Date.now(),
+            name: CURRENT_USER,
+            login: CURRENT_USER,
+            rankLevel: CURRENT_RANK?.level || null,
+            rankName: CURRENT_RANK?.name || null,
+            access: mainAccess,
+            createdAt: new Date().toLocaleString(),
+            isMinimized: false,
+            isMain: true,
+            data: {}
+        };
     } else {
-        console.error('Login screen or terminal not found');
+        // Создаем новый основной таб
+        const mainTab = {
+            id: 'main-' + Date.now(),
+            name: CURRENT_USER,
+            login: CURRENT_USER,
+            rankLevel: CURRENT_RANK?.level || null,
+            rankName: CURRENT_RANK?.name || null,
+            access: mainAccess,
+            createdAt: new Date().toLocaleString(),
+            isMinimized: false,
+            isMain: true,
+            data: {}
+        };
+        accountTabs.unshift(mainTab);
+    }
+    
+    activeAccountTab = 0;
+    renderAccountTabs();
+    switchAccount(0);
+}
+
+function createAccountTab(accountName, accountLogin, rankLevel, access = null) {
+    // Определяем доступ на основе ранга
+    let tabAccess = access;
+    
+    if (!tabAccess) {
+        if (rankLevel === CREATOR_RANK.level) {
+            tabAccess = CREATOR_RANK.access;
+        } else if (rankLevel === RANKS.ADMIN.level) {
+            tabAccess = RANKS.ADMIN.access;
+        } else if (rankLevel === RANKS.SENIOR_CURATOR.level) {
+            tabAccess = RANKS.SENIOR_CURATOR.access;
+        } else if (rankLevel === RANKS.CURATOR.level) {
+            tabAccess = RANKS.CURATOR.access;
+        } else {
+            tabAccess = RANKS.JUNIOR_CURATOR.access;
+        }
+    }
+    
+    const tabObj = {
+        id: 'tab-' + Date.now(),
+        name: accountName,
+        login: accountLogin,
+        rankLevel: rankLevel || null,
+        rankName: getRankDisplayName(rankLevel),
+        access: tabAccess,
+        createdAt: new Date().toLocaleString(),
+        isMinimized: false,
+        isMain: false,
+        data: {},
+        savedUserData: {
+            username: accountLogin,
+            rankName: getRankDisplayName(rankLevel),
+            rankLevel: rankLevel,
+            staticId: accountLogin + "-tab-" + Date.now()
+        }
+    };
+    
+    accountTabs.push(tabObj);
+    activeAccountTab = accountTabs.length - 1;
+    
+    // НЕМЕДЛЕННО СОХРАНЯЕМ В LOCALSTORAGE
+    saveAccountTabsToStorage();
+    
+    renderAccountTabs();
+    switchAccount(activeAccountTab);
+    
+    showNotification(`✅ Аккаунт "${accountName}" создан`, "success");
+}
+
+function closeAccountTab(tabId) {
+    const index = accountTabs.findIndex(t => t.id === tabId);
+    if (index === -1) return;
+    
+    const tab = accountTabs[index];
+    accountTabs.splice(index, 1);
+    
+    // Если был активный таб, переключаемся на другой
+    if (index === activeAccountTab) {
+        if (accountTabs.length > 0) {
+            activeAccountTab = Math.min(index, accountTabs.length - 1);
+            switchAccount(activeAccountTab);
+        } else {
+            activeAccountTab = 0;
+            // Если закрыли все вкладки - показываем пустой экран
+            const content = document.getElementById("content-body");
+            if (content) {
+                content.innerHTML = `
+                    <div class="empty-screen" style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        color: #8f9779;
+                        text-align: center;
+                        padding: 40px;
+                    ">
+                        <i class="fas fa-users" style="font-size: 4rem; margin-bottom: 20px; color: #4a4a3a;"></i>
+                        <h3 style="color: #c0b070; margin-bottom: 10px;">НЕТ АКТИВНЫХ АККАУНТОВ</h3>
+                        <p style="max-width: 400px; margin-bottom: 20px;">
+                            Чтобы начать работу, создайте новый аккаунт или переключитесь на основной аккаунт.
+                        </p>
+                        <button onclick="addMainAccountTab(); renderSystem();" class="btn-primary" style="margin-top: 20px;">
+                            <i class="fas fa-user"></i> ВЕРНУТЬСЯ К ОСНОВНОМУ АККАУНТУ
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Обновляем отображение в шапке
+            updateMainAccountDisplay();
+        }
+    }
+    
+    renderAccountTabs();
+    saveAccountTabsToStorage(); // Сохраняем в localStorage
+    showNotification(`Аккаунт "${tab.name}" закрыт`, 'info');
+}
+
+/* ===== ОЧИСТКА УСТАРЕВШИХ ВКЛАДОК ===== */
+
+function cleanupOldTabs() {
+    try {
+        const savedTabs = localStorage.getItem('accountTabs');
+        if (!savedTabs) return;
+        
+        const parsedTabs = JSON.parse(savedTabs);
+        const now = new Date().getTime();
+        const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000); // 1 неделя
+        
+        const filteredTabs = parsedTabs.filter(tab => {
+            // Основные вкладки не удаляем
+            if (tab.isMain) return true;
+            
+            // Проверяем дату создания
+            if (tab.createdAt) {
+                try {
+                    const tabDate = new Date(tab.createdAt).getTime();
+                    return tabDate > oneWeekAgo;
+                } catch (e) {
+                    return true; // Если ошибка парсинга даты, оставляем
+                }
+            }
+            
+            return true; // Если нет даты, оставляем
+        });
+        
+        if (filteredTabs.length < parsedTabs.length) {
+            localStorage.setItem('accountTabs', JSON.stringify(filteredTabs));
+            console.log('Очищены устаревшие вкладки:', {
+                было: parsedTabs.length,
+                стало: filteredTabs.length,
+                удалено: parsedTabs.length - filteredTabs.length
+            });
+        }
+        
+    } catch (error) {
+        console.error('Ошибка очистки устаревших вкладок:', error);
+    }
+}
+
+// Вызывайте эту функцию при необходимости, например:
+// cleanupOldTabs();
+
+function switchAccount(tabIndex) {
+    if (tabIndex < 0 || tabIndex >= accountTabs.length) return;
+    
+    activeAccountTab = tabIndex;
+    const tab = accountTabs[tabIndex];
+    
+    // Для основного аккаунта используем глобальные переменные
+    if (tab.isMain) {
+        console.log(`Переключились на ОСНОВНОЙ аккаунт: ${CURRENT_USER}`);
+    } else {
+        console.log(`Переключились на ДОПОЛНИТЕЛЬНЫЙ аккаунт: ${tab.login}`);
+    }
+    
+    // Обновляем отображение в шапке
+    updateAccountDisplay(tab);
+    
+    // Если это основной аккаунт, показываем все кнопки
+    if (tab.isMain) {
+        setupSidebar();
+    } else {
+        updateSidebarForTab(tab);
+    }
+    
+    // Показываем начальный экран в зависимости от доступа
+    if (tab.isMain) {
+        if (CURRENT_RANK && CURRENT_RANK.level >= RANKS.ADMIN.level) {
+            renderSystem();
+        } else {
+            renderMLKScreen();
+        }
+    } else {
+        if (tab.access && tab.access.includes('system')) {
+            renderSystem();
+        } else if (tab.access && tab.access.includes('mlk_reports')) {
+            renderMLKScreen();
+        }
+    }
+    
+    renderAccountTabs();
+    saveAccountTabsToStorage(); // Сохраняем в localStorage
+}
+
+function minimizeAccountTab(tabId) {
+    const tab = accountTabs.find(t => t.id === tabId);
+    if (tab) {
+        tab.isMinimized = !tab.isMinimized;
+        renderAccountTabs();
+        saveAccountTabsToStorage(); // Сохраняем в localStorage
+    }
+}
+
+function addMainAccountTab() {
+    if (!CURRENT_USER) return;
+    
+    // Проверяем, есть ли уже вкладка основного аккаунта в сохраненных данных
+    const savedTabs = localStorage.getItem('accountTabs');
+    let existingMainTab = null;
+    
+    if (savedTabs) {
+        try {
+            const parsedTabs = JSON.parse(savedTabs);
+            existingMainTab = parsedTabs.find(tab => tab.isMain);
+        } catch (error) {
+            console.error('Ошибка парсинга сохраненных вкладок:', error);
+        }
+    }
+    
+    // Получаем доступы основного аккаунта
+    const mainAccess = CURRENT_RANK?.access || RANKS.JUNIOR_CURATOR.access;
+    
+    // Создаем/обновляем данные основного таба
+    const mainTabData = {
+        id: existingMainTab?.id || 'main-' + Date.now(),
+        name: CURRENT_USER,
+        login: CURRENT_USER,
+        rankLevel: CURRENT_RANK?.level || null,
+        rankName: CURRENT_RANK?.name || null,
+        access: mainAccess,
+        createdAt: existingMainTab?.createdAt || new Date().toLocaleString(),
+        isMinimized: existingMainTab?.isMinimized || false,
+        isMain: true,
+        data: existingMainTab?.data || {}
+    };
+    
+    // Проверяем, есть ли уже основная вкладка в текущих вкладках
+    const existingMainIndex = accountTabs.findIndex(t => t.isMain);
+    
+    if (existingMainIndex !== -1) {
+        // Обновляем существующую основную вкладку
+        accountTabs[existingMainIndex] = mainTabData;
+        console.log('Обновлена основная вкладка:', mainTabData.name);
+    } else {
+        // Ищем основную вкладку в загруженных данных
+        const loadedMainIndex = accountTabs.findIndex(t => t.isMain);
+        if (loadedMainIndex !== -1) {
+            // Обновляем загруженную основную вкладку
+            accountTabs[loadedMainIndex] = mainTabData;
+            console.log('Обновлена загруженная основная вкладка:', mainTabData.name);
+        } else {
+            // Создаем новую основную вкладку и добавляем в начало
+            accountTabs.unshift(mainTabData);
+            console.log('Создана новая основная вкладка:', mainTabData.name);
+        }
+    }
+    
+    // Устанавливаем активной первую вкладку
+    activeAccountTab = 0;
+    
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
+    
+    console.log('Основная вкладка добавлена/обновлена:', {
+        totalTabs: accountTabs.length,
+        mainTab: mainTabData
+    });
+}
+
+function closeAccountTab(tabId) {
+    const index = accountTabs.findIndex(t => t.id === tabId);
+    if (index === -1) return;
+    
+    const tab = accountTabs[index];
+    accountTabs.splice(index, 1);
+    
+    // Если был активный таб, переключаемся на другой
+    if (index === activeAccountTab) {
+        if (accountTabs.length > 0) {
+            activeAccountTab = Math.min(index, accountTabs.length - 1);
+            switchAccount(activeAccountTab);
+        } else {
+            activeAccountTab = 0;
+            // Если закрыли все вкладки - показываем пустой экран
+            const content = document.getElementById("content-body");
+            if (content) {
+                content.innerHTML = `
+                    <div class="empty-screen" style="
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        color: #8f9779;
+                        text-align: center;
+                        padding: 40px;
+                    ">
+                        <i class="fas fa-users" style="font-size: 4rem; margin-bottom: 20px; color: #4a4a3a;"></i>
+                        <h3 style="color: #c0b070; margin-bottom: 10px;">НЕТ АКТИВНЫХ АККАУНТОВ</h3>
+                        <p style="max-width: 400px; margin-bottom: 20px;">
+                            Чтобы начать работу, создайте новый аккаунт или переключитесь на основной аккаунт.
+                        </p>
+                        <button onclick="addMainAccountTab(); renderSystem();" class="btn-primary" style="margin-top: 20px;">
+                            <i class="fas fa-user"></i> ВЕРНУТЬСЯ К ОСНОВНОМУ АККАУНТУ
+                        </button>
+                    </div>
+                `;
+            }
+            
+            // Обновляем отображение в шапке
+            updateMainAccountDisplay();
+        }
+    }
+    
+    renderAccountTabs();
+    showNotification(`Аккаунт "${tab.name}" закрыт`, 'info');
+}
+
+function renderAccountTabs() {
+    const tabsList = document.getElementById('tabs-list');
+    const tabsBar = document.getElementById('account-tabs-bar');
+    
+    if (!tabsList) return;
+    
+    tabsList.innerHTML = '';
+    
+    accountTabs.forEach((tab, index) => {
+        const tabEl = document.createElement('div');
+        tabEl.className = 'account-tab' + (index === activeAccountTab ? ' active' : '');
+        tabEl.innerHTML = `
+            <span class="tab-icon">
+                <i class="fas ${tab.isMinimized ? 'fa-window-minimize' : (tab.isMain ? 'fa-home' : 'fa-user')}"></i>
+            </span>
+            <span class="tab-name">${tab.name}</span>
+            ${tab.rankName ? `<span class="tab-rank" style="font-size: 0.7rem; color: #8cb43c;">${tab.rankName}</span>` : ''}
+            <button class="tab-minimize" onclick="event.stopPropagation(); minimizeAccountTab('${tab.id}')" title="Свернуть/развернуть">
+                ${tab.isMinimized ? '▢' : '▁'}
+            </button>
+            ${!tab.isMain ? `<button class="tab-close" onclick="event.stopPropagation(); closeAccountTab('${tab.id}')" title="Закрыть">×</button>` : ''}
+        `;
+        tabEl.addEventListener('click', () => switchAccount(index));
+        tabsList.appendChild(tabEl);
+    });
+    
+    // Показываем панель вкладок если есть хотя бы один таб
+    if (tabsBar) {
+        tabsBar.style.display = accountTabs.length > 0 ? 'flex' : 'none';
     }
 }
 
 // Инициализация обработчиков событий при загрузке
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM LOADED ===');
+    
+    // Функция обновления времени
     function updateTime() {
-        const now = new Date(), timeElement = document.getElementById('current-time'), dateElement = document.getElementById('current-date');
-        if (timeElement) timeElement.textContent = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        if (dateElement) dateElement.textContent = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const timeElement = document.getElementById('current-time');
+        const dateElement = document.getElementById('current-date');
+        
+        if (timeElement) {
+            timeElement.textContent = new Date().toLocaleTimeString('ru-RU');
+        }
+        if (dateElement) {
+            dateElement.textContent = new Date().toLocaleDateString('ru-RU');
+        }
     }
+    
     setInterval(updateTime, 1000);
     updateTime();
     
-    console.log('DOMContentLoaded: Attempting to restore session...');
+    // ВАЖНО: Инициализируем отображение по умолчанию
+    const loginScreen = document.getElementById("login-screen");
+    const terminal = document.getElementById("terminal");
     
+    // Сначала показываем экран входа
+    if (loginScreen) {
+        loginScreen.style.display = 'flex';
+        loginScreen.style.visibility = 'visible';
+    }
+    
+    if (terminal) {
+        terminal.style.display = 'none';
+        terminal.style.visibility = 'hidden';
+    }
+    
+    // ОДИН раз пытаемся восстановить сессию
     if (restoreSession()) {
-        console.log('Session restored successfully, loading data...');
+        console.log('Session restored for:', CURRENT_USER);
+        
+        // Сразу переключаем экраны
+        if (loginScreen) {
+            loginScreen.style.display = 'none';
+            loginScreen.style.visibility = 'hidden';
+        }
+        
+        if (terminal) {
+            terminal.style.display = 'flex';
+            terminal.style.visibility = 'visible';
+        }
+        
+        // Загружаем данные ОДИН раз
         loadData(() => {
-            const loginScreen = document.getElementById("login-screen"), terminal = document.getElementById("terminal");
-            if (loginScreen && terminal) { 
-                loginScreen.style.display = "none"; 
-                terminal.style.display = "flex"; 
-            }
+            console.log('Data loaded after session restore');
+            
+            // Загружаем вкладки
+            loadAccountTabsFromStorage();
+            addMainAccountTab();
+            
+            // Настраиваем интерфейс
             setupSidebar();
             updateSystemPrompt(`СЕССИЯ ВОССТАНОВЛЕНА. ДОБРО ПОЖАЛОВАТЬ, ${CURRENT_USER}`);
-            if (CURRENT_RANK.level >= RANKS.ADMIN.level) {
-                loadReports(renderSystem);
-            } else if (CURRENT_RANK.level >= RANKS.CURATOR.level) {
-                loadReports(renderMLKScreen);
+            
+            // Рендерим начальный экран
+            if (CURRENT_RANK && CURRENT_RANK.level >= RANKS.ADMIN.level) {
+                renderSystem();
             } else {
-                loadReports(renderMLKScreen);
+                renderMLKScreen();
             }
+            
+            // Обновляем интерфейс
+            setTimeout(() => {
+                adjustInterfaceHeights();
+                setupAutoScroll();
+            }, 100);
         });
+        
     } else {
-        console.log('No valid session found, showing login screen');
+        console.log('No valid session, showing login form');
+        
+        // Настраиваем обработчики входа
         const loginBtn = document.getElementById('login-btn');
         if (loginBtn) {
-            loginBtn.onclick = function() { 
-                loginBtn.style.transform = 'scale(0.98)'; 
-                setTimeout(() => { 
-                    loginBtn.style.transform = ''; 
-                    window.login(); 
-                }, 150); 
-            };
+            loginBtn.onclick = window.login;
         }
-        document.addEventListener('keypress', function(e) { 
-            if (e.key === 'Enter') { 
-                const activeElement = document.activeElement; 
-                if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) 
-                    window.login(); 
-            } 
+        
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const activeElement = document.activeElement;
+                if (activeElement && (activeElement.id === 'password' || activeElement.id === 'username')) {
+                    window.login();
+                }
+            }
         });
-        loadData();
+        
+        // Загружаем данные для формы входа
+        loadData(() => {
+            console.log('Login form initialized');
+        });
     }
 });
 // Исправленная версия обработчика blur
@@ -2503,18 +4303,18 @@ function setupSidebar() {
     // === КАТЕГОРИЯ: ПОЛЬЗОВАТЕЛЬСКИЙ УГОЛОК ===
     addCategoryHeader(navMenu, 'ПОЛЬЗОВАТЕЛЬСКИЙ УГОЛОК', 'fa-user-circle');
     
-    // Мой профиль (для всех пользователей)
+    // Мой профиль (для всех пользователей) - ВСЕГДА ВИДИМ
     addNavButton(navMenu, 'fas fa-user-circle', 'МОЙ ПРОФИЛЬ', () => {
         renderProfile();
         updateTitleAndPrompt('МОЙ ПРОФИЛЬ', 'НАСТРОЙКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ');
-    });
+    }, 'profile', true); // data-access="profile", always-visible=true
     
     // Пароль создателя (только для создателя)
     if (CURRENT_USER.toLowerCase() === "tihiy") {
         addNavButton(navMenu, 'fas fa-crown', 'ПАРОЛЬ СОЗДАТЕЛЯ', () => {
             renderPasswords();
             updateTitleAndPrompt('ПАРОЛЬ СОЗДАТЕЛЯ', 'УПРАВЛЕНИЕ ПАРОЛЕМ СОЗДАТЕЛЯ');
-        });
+        }, 'creator_password', false);
     }
     
     // === КАТЕГОРИЯ: НАСТРОЙКИ СИСТЕМЫ ===
@@ -2525,7 +4325,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-users', 'СПИСОК ДОСТУПА', () => {
             renderWhitelistWithPagination(1);
             updateTitleAndPrompt('СПИСОК ДОСТУПА', 'УПРАВЛЕНИЕ СПИСКОМ ДОСТУПА');
-        });
+        }, 'whitelist', false);
     }
     
     // Система (только для администраторов и создателя)
@@ -2533,7 +4333,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-cogs', 'СИСТЕМА', () => {
             renderSystem();
             updateTitleAndPrompt('СИСТЕМА', 'ОБЩАЯ СТАТИСТИКА И ИНФОРМАЦИЯ');
-        });
+        }, 'system', false);
     }
     
     // Баны (только для администраторов и создателя)
@@ -2541,7 +4341,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-ban', 'БАНЫ', () => {
             renderBansWithPagination(1);
             updateTitleAndPrompt('БАНЫ', 'УПРАВЛЕНИЕ СИСТЕМОЙ БЛОКИРОВКИ');
-        });
+        }, 'bans', false);
     }
     
     // IP Мониторинг (только для администраторов и создателя)
@@ -2549,7 +4349,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-network-wired', 'IP МОНИТОРИНГ', () => {
             renderIPStats();
             updateTitleAndPrompt('IP МОНИТОРИНГ', 'МОНИТОРИНГ IP АДРЕСОВ И БЕЗОПАСНОСТЬ');
-        });
+        }, 'ip_monitoring', false);
     }
     
     // Пользователи (только для старших кураторов и выше)
@@ -2557,7 +4357,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-user-friends', 'ПОЛЬЗОВАТЕЛИ', () => {
             renderUsersWithPagination(1);
             updateTitleAndPrompt('ПОЛЬЗОВАТЕЛИ', 'УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ И РАНГАМИ');
-        });
+        }, 'users', false);
     }
     
     // Discord вебхуки (только для администраторов и создателя)
@@ -2565,7 +4365,7 @@ function setupSidebar() {
         addNavButton(navMenu, 'fas fa-broadcast-tower', 'DISCORD ВЕБХУКИ', () => {
             renderWebhookManager();
             updateTitleAndPrompt('DISCORD ВЕБХУКИ', 'НАСТРОЙКА ИНТЕГРАЦИИ С DISCORD');
-        });
+        }, 'webhooks', false);
     }
     
     // === КАТЕГОРИЯ: РАБОТА ===
@@ -2575,34 +4375,36 @@ function setupSidebar() {
     addNavButton(navMenu, 'fas fa-file-alt', 'ОТЧЕТЫ МЛК', () => {
         renderMLKScreen();
         updateTitleAndPrompt('ОТЧЕТЫ МЛК', 'СИСТЕМА ФИКСАЦИИ НАРУШЕНИЙ');
-    });
+    }, 'mlk_reports', false);
     
     // Все отчеты (только для старших кураторов и выше)
     if (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level) {
         addNavButton(navMenu, 'fas fa-list', 'ВСЕ ОТЧЕТЫ', () => {
             renderReportsWithPagination(1);
             updateTitleAndPrompt('ВСЕ ОТЧЕТЫ', 'ПОЛНЫЙ АРХИВ ОТЧЕТОВ');
-        });
+        }, 'all_reports', false);
     }
+    
+    // В конце функции setupSidebar(), перед logoutBtn, добавьте:
+if (accountTabs.length > 1) {
+    addNavButton(navMenu, 'fas fa-layer-group', 'УПРАВЛЕНИЕ ВКЛАДКАМИ', () => {
+        manageAccountTabs();
+    }, null, false);
+}
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.onclick = logout;
+    
+    // Обновляем навигацию для активной вкладки
+    if (accountTabs.length > 0 && activeAccountTab < accountTabs.length) {
+        updateSidebarForTab(accountTabs[activeAccountTab]);
+    }
     
     setTimeout(() => { 
         if (sidebar) { 
             sidebar.classList.add('scrollable-container'); 
             adjustInterfaceHeights(); 
         } 
-    }, 100);
-}
-
-function updateTitleAndPrompt(title, prompt) {
-    const titleElement = document.getElementById('content-title');
-    if (titleElement) titleElement.textContent = title;
-    updateSystemPrompt(prompt);
-    setTimeout(() => { 
-        adjustInterfaceHeights(); 
-        setupAutoScroll(); 
     }, 100);
 }
 
@@ -2620,34 +4422,102 @@ function addCategoryHeader(container, title, icon = 'fa-folder') {
 }
 
 /* ===== ФУНКЦИЯ ДЛЯ ДОБАВЛЕНИЯ КНОПОК НАВИГАЦИИ ===== */
-function addNavButton(container, icon, text, onClick) {
+
+/* ===== ФУНКЦИЯ ОБНОВЛЕНИЯ ЗАГОЛОВКА И ПОДСКАЗКИ ===== */
+function updateTitleAndPrompt(title, prompt) {
+    const titleElement = document.getElementById('content-title');
+    const promptElement = document.getElementById('system-prompt');
+    
+    if (titleElement) {
+        titleElement.textContent = title;
+    }
+    
+    if (promptElement) {
+        promptElement.textContent = prompt;
+    }
+    
+    // Также обновляем title страницы
+    document.title = `${title} | Система отчетов Зоны`;
+}
+function addNavButton(container, icon, text, onClick, dataAccess = null, alwaysVisible = false) {
     const button = document.createElement('button');
     button.className = 'nav-button';
+    if (alwaysVisible) {
+        button.classList.add('always-visible');
+    }
+    if (dataAccess) {
+        button.setAttribute('data-access', dataAccess);
+    }
     button.innerHTML = `<i class="${icon}"></i><span>${text}</span>`;
     button.onclick = function() {
         document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
+        
+        // Вызываем функцию навигации
         onClick();
-        const titleElement = document.getElementById('content-title');
-        if (titleElement) titleElement.textContent = text;
-        updateSystemPrompt(`ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
-        setTimeout(() => { adjustInterfaceHeights(); setupAutoScroll(); }, 100);
+        
+        // Обновляем заголовок и подсказку
+        updateTitleAndPrompt(text, `ЗАГРУЖЕН РАЗДЕЛ: ${text}`);
+        
+        // Настраиваем интерфейс
+        setTimeout(() => { 
+            adjustInterfaceHeights(); 
+            setupAutoScroll(); 
+        }, 100);
     };
     container.appendChild(button);
 }
-
 window.logout = function logout() {
-    CURRENT_ROLE = null, CURRENT_USER = null, CURRENT_RANK = null, CURRENT_STATIC_ID = null;
+    console.log('Logout called, saving tabs before logout...');
+    
+    // Сохраняем ВСЕ текущие вкладки
+    saveAccountTabsToStorage();
+    
+    console.log('Tabs saved to localStorage:', {
+        totalTabs: accountTabs.length,
+        tabs: accountTabs.map(t => ({ name: t.name, isMain: t.isMain }))
+    });
+    
+    // Очищаем текущие вкладки в памяти
+    accountTabs = [];
+    activeAccountTab = 0;
+    
+    // Очищаем данные сессии
+    CURRENT_ROLE = null;
+    CURRENT_USER = null;
+    CURRENT_RANK = null;
+    CURRENT_STATIC_ID = null;
     localStorage.removeItem('mlk_session');
-    const terminal = document.getElementById('terminal'), loginScreen = document.getElementById('login-screen');
-    if (terminal && loginScreen) { terminal.style.display = 'none'; loginScreen.style.display = 'flex'; }
-    document.getElementById('password').value = '';
+    
+    const terminal = document.getElementById('terminal');
+    const loginScreen = document.getElementById('login-screen');
+    const tabsBar = document.getElementById('account-tabs-bar');
+    
+    // Прячем терминал, показываем экран входа
+    if (terminal && loginScreen) { 
+        terminal.style.display = 'none'; 
+        loginScreen.style.display = 'flex'; 
+    }
+    
+    // Скрываем панель вкладок
+    if (tabsBar) {
+        tabsBar.style.display = 'none';
+    }
+    
+    // Очищаем поля формы
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) passwordInput.value = '';
+    
     const usernameInput = document.getElementById('username');
     if (usernameInput) usernameInput.value = '';
+    
     const errorElement = document.getElementById('login-error');
     if (errorElement) errorElement.textContent = '';
+    
+    // Сбрасываем активные кнопки навигации
     document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
-    showNotification("Сессия завершена", "info");
+    
+    showNotification("Сессия завершена. Вкладки сохранены.", "info");
 }
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
@@ -2660,11 +4530,13 @@ function showNotification(message, type = "info") {
     setTimeout(() => { notification.classList.remove('show'); setTimeout(() => { if (notification.parentNode) notification.parentNode.removeChild(notification); }, 300); }, 5000);
 }
 
+/* ===== ФУНКЦИЯ ОБНОВЛЕНИЯ СИСТЕМНОЙ ПОДСКАЗКИ ===== */
 function updateSystemPrompt(message) {
     const promptElement = document.getElementById('system-prompt');
-    if (promptElement) promptElement.textContent = message;
+    if (promptElement) {
+        promptElement.textContent = message;
+    }
 }
-
 /* ===== ЗАГРУЗКА ОТЧЕТОВ ===== */
 function loadReports(callback) {
     db.ref('mlk_reports').once('value').then(snapshot => {
@@ -3729,68 +5601,275 @@ window.removeFromWhitelist = function(id) {
 window.renderUsersWithPagination = function(page = 1) {
     const content = document.getElementById("content-body");
     if (!content) return;
+    
+    // Проверяем права доступа
+    if (CURRENT_RANK.level < RANKS.SENIOR_CURATOR.level && CURRENT_RANK.level !== CREATOR_RANK.level) {
+        content.innerHTML = `
+            <div class="error-display" style="text-align: center; padding: 40px;">
+                <i class="fas fa-lock" style="font-size: 3rem; color: #b43c3c; margin-bottom: 20px;"></i>
+                <h3 style="color: #b43c3c;">ДОСТУП ЗАПРЕЩЕН</h3>
+                <p style="color: #8f9779;">Только старший куратор или выше может просматривать список пользователей</p>
+            </div>
+        `;
+        return;
+    }
+    
     currentPage = page;
-    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage, startIndex = (page - 1) * itemsPerPage, endIndex = startIndex + itemsPerPage;
+    const itemsPerPage = PAGINATION_CONFIG.itemsPerPage;
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
     const paginatedUsers = users.slice(startIndex, endIndex);
     totalPages = Math.ceil(users.length / itemsPerPage);
-    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length, seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length, curators = users.filter(u => u.role === RANKS.CURATOR.name).length, juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
+    
+    const adminUsers = users.filter(u => u.role === RANKS.ADMIN.name).length;
+    const seniorCurators = users.filter(u => u.role === RANKS.SENIOR_CURATOR.name).length;
+    const curators = users.filter(u => u.role === RANKS.CURATOR.name).length;
+    const juniorCurators = users.filter(u => u.role === RANKS.JUNIOR_CURATOR.name).length;
+    
+    // Рассчитываем пользователей, которых можно удалить
+    const deletableUsers = users.filter(user => {
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
+        );
+        const isCurrentUser = user.username === CURRENT_USER;
+        return !isProtected && !isCurrentUser;
+    }).length;
     
     content.innerHTML = `
         <div class="form-container with-scroll">
-            <h2 style="color: #c0b070; margin-bottom: 15px; font-family: 'Orbitron', sans-serif;"><i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ ПОЛЬЗОВАТЕЛИ</h2>
-            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-users"></i></div><div class="card-value">${users.length}</div><div class="card-label">ВСЕГО</div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-user-shield"></i></div><div class="card-value">${adminUsers}</div><div class="card-label">АДМИНЫ</div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-star"></i></div><div class="card-value">${seniorCurators}</div><div class="card-label">СТ.КУРАТОРЫ</div></div>
-                <div class="zone-card"><div class="card-icon"><i class="fas fa-user"></i></div><div class="card-value">${curators}</div><div class="card-label">КУРАТОРЫ</div></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 style="color: #c0b070; margin-bottom: 5px; font-family: 'Orbitron', sans-serif;">
+                        <i class="fas fa-user-friends"></i> РЕГИСТРИРОВАННЫЕ ПОЛЬЗОВАТЕЛИ
+                    </h2>
+                    <p style="color: #8f9779; margin: 0; font-size: 0.9rem;">
+                        Всего пользователей: ${users.length} | Можно удалить: ${deletableUsers}
+                    </p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div class="items-per-page-selector">
+                        <span>На странице:</span>
+                        <select onchange="changeItemsPerPage('renderUsersWithPagination', this.value)">
+                            <option value="5" ${PAGINATION_CONFIG.itemsPerPage === 5 ? 'selected' : ''}>5</option>
+                            <option value="10" ${PAGINATION_CONFIG.itemsPerPage === 10 ? 'selected' : ''}>10</option>
+                            <option value="15" ${PAGINATION_CONFIG.itemsPerPage === 15 ? 'selected' : ''}>15</option>
+                            <option value="20" ${PAGINATION_CONFIG.itemsPerPage === 20 ? 'selected' : ''}>20</option>
+                            <option value="30" ${PAGINATION_CONFIG.itemsPerPage === 30 ? 'selected' : ''}>30</option>
+                        </select>
+                    </div>
+                    
+                    ${CURRENT_RANK.level >= RANKS.ADMIN.level ? `
+                    <button onclick="deleteAllUsersConfirm()" class="btn-primary" 
+                            style="background: rgba(180, 60, 60, 0.2); border-color: #b43c3c; color: #b43c3c; padding: 8px 16px;"
+                            title="Удалить всех пользователей (кроме себя и защищенных)">
+                        <i class="fas fa-skull-crossbones"></i> УДАЛИТЬ ВСЕХ
+                    </button>
+                    ` : ''}
+                </div>
             </div>
+            
+            <div class="dashboard-grid" style="margin-bottom: 20px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-users"></i></div>
+                    <div class="card-value">${users.length}</div>
+                    <div class="card-label">ВСЕГО</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user-shield"></i></div>
+                    <div class="card-value">${adminUsers}</div>
+                    <div class="card-label">АДМИНЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-star"></i></div>
+                    <div class="card-value">${seniorCurators}</div>
+                    <div class="card-label">СТ.КУРАТОРЫ</div>
+                </div>
+                <div class="zone-card">
+                    <div class="card-icon"><i class="fas fa-user"></i></div>
+                    <div class="card-value">${curators}</div>
+                    <div class="card-label">КУРАТОРЫ</div>
+                </div>
+            </div>
+            
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                 <h4 style="color: #c0b070; margin: 0;">СПИСОК ПОЛЬЗОВАТЕЛЕЙ (${users.length})</h4>
-                <div class="items-per-page-selector"><span>На странице:</span><select onchange="changeItemsPerPage('renderUsersWithPagination', this.value)"><option value="5">5</option><option value="10">10</option><option value="15" selected>15</option><option value="20">20</option><option value="30">30</option></select></div>
+                ${deletableUsers > 0 ? `
+                <div style="color: #8f9779; font-size: 0.9rem;">
+                    <i class="fas fa-exclamation-triangle" style="color: #c0b070;"></i>
+                    Можно удалить: ${deletableUsers} пользователей
+                </div>
+                ` : ''}
             </div>
+            
             <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
                 <div class="table-container scrollable-container" style="flex: 1;">
-                    ${users.length === 0 ? `<div style="text-align: center; padding: 40px; color: #8f9779;"><i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px;"></i><p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p></div>` : 
-                    `<table class="data-table" style="min-width: 100%;"><thead><tr><th>ПСЕВДОНИМ</th><th>STATIC ID</th><th>РАНГ</th><th>РЕГИСТРАЦИЯ</th><th>ПОСЛЕДНИЙ ВХОД</th><th>СТАТУС</th><th>ДЕЙСТВИЯ</th></tr></thead><tbody id="users-table-body"></tbody></table>`}
-                </div><div id="users-pagination-container"></div></div></div>`;
+                    ${users.length === 0 ? 
+                        `<div style="text-align: center; padding: 40px; color: #8f9779;">
+                            <i class="fas fa-user-friends" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                            <p>ПОЛЬЗОВАТЕЛИ ПОЯВЯТСЯ ПОСЛЕ РЕГИСТРАЦИИ</p>
+                        </div>` : 
+                        `<table class="data-table" style="min-width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>ПСЕВДОНИМ</th>
+                                    <th>STATIC ID</th>
+                                    <th>РАНГ</th>
+                                    <th>РЕГИСТРАЦИЯ</th>
+                                    <th>ПОСЛЕДНИЙ ВХОД</th>
+                                    <th>СТАТУС</th>
+                                    <th style="min-width: 200px;">ДЕЙСТВИЯ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body"></tbody>
+                        </table>`
+                    }
+                </div>
+                <div id="users-pagination-container"></div>
+            </div>
+        </div>
+    `;
     
     if (users.length > 0) {
         renderUsersTablePaginated(paginatedUsers);
         if (totalPages > 1) renderPagination('users-pagination-container', currentPage, totalPages, 'renderUsersWithPagination');
     }
+    
     setTimeout(adjustInterfaceHeights, 100);
 }
 
 function renderUsersTablePaginated(paginatedUsers) {
     const tableBody = document.getElementById("users-table-body");
     if (!tableBody) return;
+    
     tableBody.innerHTML = paginatedUsers.map(user => {
-        const isProtected = PROTECTED_USERS.some(protectedUser => protectedUser.toLowerCase() === user.username.toLowerCase());
+        const isProtected = PROTECTED_USERS.some(protectedUser => 
+            protectedUser.toLowerCase() === user.username.toLowerCase()
+        );
         const isCurrentUser = user.username === CURRENT_USER;
         const isBanned = bans.some(ban => ban.staticId === user.staticId && !ban.unbanned);
-        let rankBadge = '', rankClass = '';
-        if (user.role === RANKS.ADMIN.name) { rankBadge = 'АДМИНИСТРАТОР'; rankClass = 'status-confirmed'; }
-        else if (user.role === RANKS.SENIOR_CURATOR.name) { rankBadge = 'СТАРШИЙ КУРАТОР'; rankClass = 'status-pending'; }
-        else if (user.role === RANKS.CURATOR.name) { rankBadge = 'КУРАТОР'; rankClass = ''; }
-        else { rankBadge = 'МЛАДШИЙ КУРАТОР'; rankClass = ''; }
-        return `<tr>
-            <td style="font-weight: 500; color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
-                <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}"></i>${user.username}${isCurrentUser ? ' <span style="color: #8cb43c; font-size: 0.8rem;">(ВЫ)</span>' : ''}${isBanned ? ' <span style="color: #b43c3c; font-size: 0.8rem;">(ЗАБАНЕН)</span>' : ''}
+        
+        let rankBadge = '';
+        let rankClass = '';
+        
+        if (user.role === RANKS.ADMIN.name) { 
+            rankBadge = 'АДМИНИСТРАТОР'; 
+            rankClass = 'status-confirmed'; 
+        } else if (user.role === RANKS.SENIOR_CURATOR.name) { 
+            rankBadge = 'СТАРШИЙ КУРАТОР'; 
+            rankClass = 'status-pending'; 
+        } else if (user.role === RANKS.CURATOR.name) { 
+            rankBadge = 'КУРАТОР'; 
+            rankClass = ''; 
+        } else { 
+            rankBadge = 'МЛАДШИЙ КУРАТОР'; 
+            rankClass = ''; 
+        }
+        
+        // Проверяем права для удаления
+        const canDelete = (
+            !isProtected && 
+            !isCurrentUser && 
+            (CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level || CURRENT_RANK.level === CREATOR_RANK.level)
+        );
+        
+        return `
+        <tr>
+            <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="fas ${isProtected ? 'fa-shield-alt' : 'fa-user'}" 
+                       style="color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'}">
+                    </i>
+                    <a href="javascript:void(0)" 
+                       onclick="openUserInNewTab('${user.username.replace(/'/g, "\\'")}', '${user.role.replace(/'/g, "\\'")}', '${user.staticId}', ${user.rank})"
+                       class="username-link"
+                       style="
+                           color: ${isProtected ? '#c0b070' : isCurrentUser ? '#8cb43c' : isBanned ? '#b43c3c' : '#8f9779'};
+                           text-decoration: none;
+                           font-weight: 500;
+                           cursor: pointer;
+                           transition: all 0.2s;
+                           padding: 3px 8px;
+                           border-radius: 3px;
+                       "
+                       onmouseover="this.style.background='rgba(192, 176, 112, 0.1)'; this.style.textDecoration='underline'"
+                       onmouseout="this.style.background='transparent'; this.style.textDecoration='none'"
+                       title="Открыть в новой вкладке">
+                        ${user.username}
+                        ${isCurrentUser ? '<span style="color: #8cb43c; font-size: 0.8rem; margin-left: 5px;">(ВЫ)</span>' : ''}
+                        ${isBanned ? '<span style="color: #b43c3c; font-size: 0.8rem; margin-left: 5px;">(ЗАБАНЕН)</span>' : ''}
+                    </a>
+                </div>
             </td>
-            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">${user.staticId || "N/A"}</td>
-            <td><span class="report-status ${rankClass}" style="${!rankClass ? 'background: rgba(100, 100, 100, 0.1); color: #8f9779; border-color: rgba(100, 100, 100, 0.3);' : ''}">${rankBadge}</span></td>
+            <td style="font-family: 'Courier New', monospace; font-size: 0.9rem; color: #8f9779;">
+                ${user.staticId || "N/A"}
+            </td>
+            <td>
+                <span class="report-status ${rankClass}" style="${!rankClass ? 'background: rgba(100, 100, 100, 0.1); color: #8f9779; border-color: rgba(100, 100, 100, 0.3);' : ''}">
+                    ${rankBadge}
+                </span>
+            </td>
             <td>${user.registrationDate || "НЕИЗВЕСТНО"}</td>
             <td>${user.lastLogin || "НИКОГДА"}</td>
-            <td>${isBanned ? '<span class="report-status status-deleted"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : '<span class="report-status status-confirmed"><i class="fas fa-check"></i> АКТИВЕН</span>'}</td>
-            <td><div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;"><i class="fas fa-user-shield"></i> АДМ</button>` : ''}
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;"><i class="fas fa-star"></i> СТ.КУР</button>` : ''}
-                ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? `<button onclick="setToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;"><i class="fas fa-user"></i> КУР</button>` : ''}
-            </div></td>
+            <td>
+                ${isBanned ? 
+                    '<span class="report-status status-deleted"><i class="fas fa-ban"></i> ЗАБАНЕН</span>' : 
+                    '<span class="report-status status-confirmed"><i class="fas fa-check"></i> АКТИВЕН</span>'
+                }
+            </td>
+            <td>
+                <div class="action-buttons" style="display: flex; gap: 5px; flex-wrap: wrap;">
+    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.ADMIN.level && user.role !== RANKS.ADMIN.name ? 
+        `<button onclick="promoteToAdminByStaticId('${user.staticId}')" class="action-btn" style="background: #c0b070; border-color: #c0b070; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
+            <i class="fas fa-user-shield"></i> АДМ
+        </button>` : ''
+    }
+    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.SENIOR_CURATOR.name ? 
+        `<button onclick="promoteToSeniorByStaticId('${user.staticId}')" class="action-btn" style="background: #8cb43c; border-color: #8cb43c; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
+            <i class="fas fa-star"></i> СТ.КУР
+        </button>` : ''
+    }
+    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.role !== RANKS.CURATOR.name ? 
+        `<button onclick="setToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;">
+            <i class="fas fa-user"></i> КУР
+        </button>` : ''
+    }
+    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.rank > RANKS.CURATOR.level ? 
+        `<button onclick="demoteToCuratorByStaticId('${user.staticId}')" class="action-btn" style="background: #5865F2; border-color: #5865F2; color: #1e201c; padding: 3px 8px; font-size: 0.8rem;"
+             title="Понизить до куратора">
+            <i class="fas fa-arrow-down"></i> КУР
+        </button>` : ''
+    }
+    ${!isProtected && !isCurrentUser && CURRENT_RANK.level >= RANKS.SENIOR_CURATOR.level && user.rank > RANKS.JUNIOR_CURATOR.level ? 
+    `<button onclick="demoteToJuniorByStaticId('${user.staticId}')" 
+        class="action-btn" 
+        style="
+            background: rgba(143, 151, 121, 0.2); 
+            border: 1px solid #8f9779; 
+            color: #8f9779; 
+            padding: 3px 8px; 
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        "
+        onmouseover="this.style.background='rgba(143, 151, 121, 0.4)'; this.style.borderColor='#c0b070'; this.style.color='#c0b070'"
+        onmouseout="this.style.background='rgba(143, 151, 121, 0.2)'; this.style.borderColor='#8f9779'; this.style.color='#8f9779'"
+        title="Понизить до младшего куратора (оставит только доступ к отчетам)">
+        <i class="fas fa-arrow-down"></i> МЛ.КУР
+    </button>` : ''
+}
+    }
+    ${canDelete ? 
+        `<button onclick="deleteUserByStaticId('${user.staticId}')" class="action-btn delete-btn" 
+           style="background: #b43c3c; border-color: #b43c3c; color: white; padding: 3px 8px; font-size: 0.8rem;"
+           title="Удалить пользователя полностью из системы">
+            <i class="fas fa-trash"></i> УДАЛИТЬ
+        </button>` : ''
+    }
+</div>
+            </td>
         </tr>`;
     }).join('');
 }
-
 /* ===== СТРАНИЦА СИСТЕМЫ С ПРОКРУТКОЙ ===== */
 window.renderSystem = function() {
     const content = document.getElementById("content-body");
@@ -4261,6 +6340,27 @@ window.renderProfile = function() {
     const content = document.getElementById("content-body");
     if (!content) return;
     
+    // Получаем данные активного аккаунта
+    let currentTab = accountTabs[activeAccountTab];
+    let displayUsername, displayRank, displayStaticId;
+    
+    if (currentTab && currentTab.isMain) {
+        // Основной аккаунт - используем глобальные переменные
+        displayUsername = CURRENT_USER;
+        displayRank = CURRENT_RANK?.name;
+        displayStaticId = CURRENT_STATIC_ID;
+    } else if (currentTab && currentTab.savedUserData) {
+        // Дополнительный аккаунт - используем данные из таба
+        displayUsername = currentTab.savedUserData.username;
+        displayRank = currentTab.savedUserData.rankName;
+        displayStaticId = currentTab.savedUserData.staticId;
+    } else {
+        // Если что-то пошло не так, показываем данные основного аккаунта
+        displayUsername = CURRENT_USER;
+        displayRank = CURRENT_RANK?.name;
+        displayStaticId = CURRENT_STATIC_ID;
+    }
+    
     loadUserSettings(); // Загружаем текущие настройки
     
     content.innerHTML = `
@@ -4281,9 +6381,9 @@ window.renderProfile = function() {
                             overflow: hidden;
                         ">
                             ${USER_SETTINGS.avatar ? 
-                                `<img src="${USER_SETTINGS.avatar}" alt="${CURRENT_USER}" 
+                                `<img src="${USER_SETTINGS.avatar}" alt="${displayUsername}" 
                                       style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
-                                      onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'96\\' height=\\'96\\' viewBox=\\'0 0 96 96\\'><rect width=\\'96\\' height=\\'96\\' fill=\\'%231e201c\\' rx=\\'48\\'/><text x=\\'48\\' y=\\'52\\' font-family=\\'Arial\\' font-size=\\'32\\' font-weight=\\'bold\\' text-anchor=\\'middle\\' fill=\\'%23c0b070\\'>${CURRENT_USER.substring(0, 2).toUpperCase()}</text></svg>'">` : 
+                                      onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'96\\' height=\\'96\\' viewBox=\\'0 0 96 96\\'><rect width=\\'96\\' height=\\'96\\' fill=\\'%231e201c\\' rx=\\'48\\'/><text x=\\'48\\' y=\\'52\\' font-family=\\'Arial\\' font-size=\\'32\\' font-weight=\\'bold\\' text-anchor=\\'middle\\' fill=\\'%23c0b070\\'>${displayUsername.substring(0, 2).toUpperCase()}</text></svg>'">` : 
                                 `<i class="fas fa-user-shield" style="font-size: 2.5rem; color: #c0b070;"></i>`
                             }
                         </div>
@@ -4306,23 +6406,24 @@ window.renderProfile = function() {
                     </div>
                     <div>
                         <h2 style="color: #c0b070; margin: 0 0 8px 0; font-family: 'Orbitron', sans-serif; font-size: 1.5rem;">
-                            ${CURRENT_USER}
+                            ${displayUsername}
+                            ${currentTab && !currentTab.isMain ? '<span style="color: #8cb43c; font-size: 0.8rem; margin-left: 10px;">[ДОП. АККАУНТ]</span>' : ''}
                         </h2>
                         <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                             <span style="color: #8cb43c; background: rgba(140, 180, 60, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500;">
                                 <i class="fas fa-crown" style="margin-right: 5px;"></i>
-                                ${CURRENT_RANK.name}
+                                ${displayRank || 'БЕЗ РАНГА'}
                             </span>
                             <span style="color: #8f9779; font-family: 'Courier New', monospace; font-size: 0.85rem;">
                                 <i class="fas fa-id-card" style="margin-right: 5px;"></i>
-                                ${CURRENT_STATIC_ID}
+                                ${displayStaticId || 'N/A'}
                             </span>
                         </div>
                     </div>
                 </div>
-                <button onclick="renderSystem()" class="btn-secondary" style="padding: 10px 20px; font-size: 0.9rem; min-width: 120px;">
-                    <i class="fas fa-arrow-left"></i> НАЗАД
-                </button>
+                <button onclick="goBackToPreviousScreen()" class="btn-secondary" style="padding: 10px 20px; font-size: 0.9rem; min-width: 120px;">
+    <i class="fas fa-arrow-left"></i> НАЗАД
+</button>
             </div>
             
             <!-- ОСНОВНОЕ СОДЕРЖИМОЕ С ВКЛАДКАМИ -->
@@ -4332,6 +6433,7 @@ window.renderProfile = function() {
                     <button class="profile-tab active" onclick="switchProfileTab('info')" style="padding: 12px 20px; min-width: 120px;">
                         <i class="fas fa-user"></i> ПРОФИЛЬ
                     </button>
+                    ${currentTab && currentTab.isMain ? `
                     <button class="profile-tab" onclick="switchProfileTab('security')" style="padding: 12px 20px; min-width: 120px;">
                         <i class="fas fa-shield-alt"></i> БЕЗОПАСНОСТЬ
                     </button>
@@ -4341,6 +6443,11 @@ window.renderProfile = function() {
                     <button class="profile-tab" onclick="switchProfileTab('notifications')" style="padding: 12px 20px; min-width: 120px;">
                         <i class="fas fa-bell"></i> УВЕДОМЛЕНИЯ
                     </button>
+                    ` : `
+                    <div style="padding: 12px 20px; min-width: 120px; color: #6a6a5a; font-size: 0.9rem; text-align: center;">
+                        <i class="fas fa-info-circle"></i> ЛИШЬ ПРОСМОТР
+                    </div>
+                    `}
                 </div>
                 
                 <!-- КОНТЕНТ ВКЛАДОК -->
@@ -4351,15 +6458,167 @@ window.renderProfile = function() {
         </div>
     `;
     
-    // Инициализируем первую вкладку
-    loadProfileTab('info');
+    // Для дополнительных аккаунтов показываем только просмотр
+    if (currentTab && !currentTab.isMain) {
+        loadProfileTabForAdditionalAccount(currentTab);
+    } else {
+        // Для основного аккаунта загружаем полный профиль
+        loadProfileTab('info');
+    }
+    function loadProfileTabForAdditionalAccount(tab) {
+    const tabContent = document.getElementById('profile-tab-content');
+    if (!tabContent) return;
     
-    // Добавляем обработчик для смены аватарки
-    const changeBtn = document.getElementById('avatar-change-btn');
-    if (changeBtn) {
-        changeBtn.addEventListener('click', function() {
-            showAvatarUploadModal();
-        });
+    const userData = tab.savedUserData || {
+        username: tab.login,
+        rankName: tab.rankName,
+        rankLevel: tab.rankLevel,
+        staticId: tab.login + "-tab-" + tab.id
+    };
+    
+    tabContent.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 25px; max-width: 800px; margin: 0 auto;">
+            <!-- ИНФОРМАЦИЯ О ДОПОЛНИТЕЛЬНОМ АККАУНТЕ -->
+            <div class="zone-card" style="border-color: #8cb43c;">
+                <div class="card-icon" style="color: #8cb43c;"><i class="fas fa-info-circle"></i></div>
+                <h4 style="color: #8cb43c; margin-bottom: 20px;">ПРОСМОТР АККАУНТА</h4>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- КАРТОЧКИ С ИНФОРМАЦИЕЙ -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                        <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 20px;">
+                            <div style="color: #8f9779; font-size: 0.9rem; margin-bottom: 8px;">
+                                <i class="fas fa-user"></i> ИМЯ ПОЛЬЗОВАТЕЛЯ
+                            </div>
+                            <div style="color: #c0b070; font-weight: 600; font-size: 1.2rem;">
+                                ${userData.username}
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 20px;">
+                            <div style="color: #8f9779; font-size: 0.9rem; margin-bottom: 8px;">
+                                <i class="fas fa-crown"></i> РАНГ
+                            </div>
+                            <div style="color: #8cb43c; font-weight: 600; font-size: 1.2rem;">
+                                ${userData.rankName || 'НЕИЗВЕСТНО'}
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 20px;">
+                            <div style="color: #8f9779; font-size: 0.9rem; margin-bottom: 8px;">
+                                <i class="fas fa-id-card"></i> ID
+                            </div>
+                            <div style="color: #8f9779; font-family: 'Courier New', monospace; font-size: 0.9rem;">
+                                ${userData.staticId}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ПРАВА ДОСТУПА -->
+                    <div style="background: rgba(40, 42, 36, 0.5); border-radius: 6px; padding: 20px;">
+                        <h5 style="color: #c0b070; margin-bottom: 15px; font-size: 1rem;">
+                            <i class="fas fa-key"></i> ПРАВА ДОСТУПА
+                        </h5>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            ${tab.access && tab.access.length > 0 ? 
+                                tab.access.map(access => `
+                                    <span style="
+                                        background: rgba(140, 180, 60, 0.1);
+                                        color: #8cb43c;
+                                        padding: 6px 12px;
+                                        border-radius: 4px;
+                                        font-size: 0.85rem;
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 6px;
+                                    ">
+                                        <i class="fas fa-check-circle"></i>
+                                        ${getAccessDisplayName(access)}
+                                    </span>
+                                `).join('') : 
+                                '<span style="color: #6a6a5a; font-style: italic;">Нет прав доступа</span>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- ПРИМЕЧАНИЕ -->
+                    <div style="background: rgba(192, 176, 112, 0.05); border: 1px solid #c0b070; border-radius: 6px; padding: 20px;">
+                        <div style="color: #c0b070; display: flex; align-items: flex-start; gap: 10px;">
+                            <i class="fas fa-exclamation-circle" style="margin-top: 3px;"></i>
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 5px;">ПРИМЕЧАНИЕ</div>
+                                <div style="color: #8f9779; font-size: 0.9rem;">
+                                    Это дополнительный аккаунт, созданный через систему вкладок. 
+                                    Для изменения настроек используйте основной аккаунт.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- КНОПКА ЗАКРЫТИЯ -->
+            <div style="text-align: center;">
+                <button onclick="closeAccountTab('${tab.id}')" class="btn-primary" style="border-color: #b43c3c; color: #b43c3c;">
+                    <i class="fas fa-times"></i> ЗАКРЫТЬ ЭТУ ВКЛАДКУ
+                </button>
+            </div>
+        </div>
+    `;
+}
+/* ===== ФУНКЦИЯ ВОЗВРАТА НА ПРЕДЫДУЩИЙ ЭКРАН ===== */
+window.goBackToPreviousScreen = function() {
+    // Определяем, на какой экран вернуться в зависимости от активного аккаунта
+    const currentTab = accountTabs[activeAccountTab];
+    
+    if (currentTab) {
+        if (currentTab.isMain) {
+            // Основной аккаунт - показываем систему или отчеты
+            if (CURRENT_RANK && CURRENT_RANK.level >= RANKS.ADMIN.level) {
+                renderSystem();
+            } else {
+                renderMLKScreen();
+            }
+        } else {
+            // Дополнительный аккаунт - показываем в зависимости от доступа
+            if (currentTab.access && currentTab.access.includes('system')) {
+                renderSystem();
+            } else if (currentTab.access && currentTab.access.includes('mlk_reports')) {
+                renderMLKScreen();
+            }
+        }
+    }
+};
+// Функция для отображения названий прав доступа
+function getAccessDisplayName(access) {
+    const accessNames = {
+        'mlk_reports': 'Отчеты МЛК',
+        'all_reports': 'Все отчеты',
+        'whitelist': 'Список доступа',
+        'users': 'Пользователи',
+        'system': 'Система',
+        'bans': 'Баны',
+        'ip_monitoring': 'IP мониторинг',
+        'webhooks': 'Discord вебхуки',
+        'profile': 'Мой профиль',
+        'creator_password': 'Пароль создателя'
+    };
+    return accessNames[access] || access;
+}
+    // Добавляем обработчик для смены аватарки (только для основного аккаунта)
+    if (currentTab && currentTab.isMain) {
+        const changeBtn = document.getElementById('avatar-change-btn');
+        if (changeBtn) {
+            changeBtn.addEventListener('click', function() {
+                showAvatarUploadModal();
+            });
+        }
+    } else {
+        // Скрываем кнопку изменения аватарки для дополнительных аккаунтов
+        const changeBtn = document.getElementById('avatar-change-btn');
+        if (changeBtn) {
+            changeBtn.style.display = 'none';
+        }
     }
     
     setTimeout(adjustInterfaceHeights, 100);
@@ -5574,5 +7833,344 @@ async function updatePassword() {
     } catch (error) {
         console.error('Password change error:', error);
         showNotification('Ошибка при смене пароля', 'error');
+    }
+}
+
+/* ===== СИСТЕМА МЕМОВ ===== */
+const MEMES = [
+    { text: 'ЕБАРЬ КЛУБНИЧКИ? ЗНАЕМ КТО.', icon: 'fa-grin-wink' },
+    { text: 'EOD', icon: 'fa-crown' },
+    { text: 'ЛАВР ПАПА', icon: 'fa-user-shield' },
+    { text: 'ТИХОГО НА СТК', icon: 'fa-user-secret' },
+    { text: 'БЕСКОНЕЧНЫЙ ОТПУСК', icon: 'fa-umbrella-beach' },
+    { text: 'ИНСПЕКТОР ЧМО', icon: 'fa-face-grin-squint-tears' }
+];
+
+function initMemeZone() {
+    const memeContainer = document.querySelector('.meme-container');
+    if (!memeContainer) return;
+    
+    function showRandomMeme() {
+        const randomMeme = MEMES[Math.floor(Math.random() * MEMES.length)];
+        const memeContent = document.getElementById('meme-content');
+        const memeIcon = document.querySelector('.meme-icon i');
+        
+        if (memeContent && memeIcon) {
+            memeContent.textContent = randomMeme.text;
+            memeIcon.className = `fas ${randomMeme.icon}`;
+            memeContainer.style.animation = 'none';
+            setTimeout(() => {
+                memeContainer.style.animation = 'memePulse 3s ease-in-out infinite';
+            }, 10);
+        }
+    }
+    
+    memeContainer.addEventListener('click', showRandomMeme);
+    showRandomMeme(); // Показываем первый мем при загрузке
+}
+
+// Инициализируем мем при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    initMemeZone();
+    initAccountTabs();
+});
+
+/* ===== СИСТЕМА ТАБОВ АККАУНТОВ ===== */
+let accountTabs = [];
+let activeAccountTab = 0;
+
+function initAccountTabs() {
+    const addAccountBtn = document.getElementById('add-account-btn');
+    if (addAccountBtn) {
+        addAccountBtn.addEventListener('click', showCreateAccountModal);
+    }
+    const manageBtn = document.getElementById('manage-accounts-btn');
+    if (manageBtn) manageBtn.addEventListener('click', toggleAccountsManager);
+    const accountsBackBtn = document.getElementById('accounts-back-btn');
+    if (accountsBackBtn) accountsBackBtn.addEventListener('click', returnToMainAccount);
+    
+    // НЕ загружаем старые табы - они создаются при входе
+    // accountTabs начинаются пустыми
+}
+
+function loadAccountTabsFromStorage() {
+    const savedTabs = localStorage.getItem('accountTabs');
+    if (savedTabs) {
+        accountTabs = JSON.parse(savedTabs);
+        // Restore active tab
+        if (activeAccountTab >= accountTabs.length) {
+            activeAccountTab = accountTabs.length - 1;
+        }
+    }
+}
+function toggleAccountsManager() {
+    const tabsBar = document.getElementById('account-tabs-bar');
+    if (!tabsBar) return;
+    if (tabsBar.style.display === 'none' || tabsBar.style.display === '') {
+        tabsBar.style.display = 'flex';
+        // If no tabs exist yet, show create modal to encourage creating one
+        if (accountTabs.length === 0) showCreateAccountModal();
+    } else {
+        tabsBar.style.display = 'none';
+    }
+}
+
+function returnToMainAccount() {
+    accountTabs = [];
+    activeAccountTab = 0;
+    renderAccountTabs();
+    const usernameEl = document.getElementById('current-username');
+    if (usernameEl && CURRENT_USER) usernameEl.textContent = CURRENT_USER;
+    const rankEl = document.getElementById('current-rank');
+    if (rankEl && CURRENT_RANK) rankEl.textContent = CURRENT_RANK.name || '';
+    showNotification('Возвращено к основному аккаунту', 'info');
+}
+
+function showCreateAccountModal() {
+    let modal = document.getElementById('create-account-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'create-account-modal';
+        modal.className = 'create-account-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">Создать новый аккаунт</div>
+                <div class="modal-form">
+                    <input type="text" id="new-account-login" class="modal-input" placeholder="Логин (ник)" maxlength="30">
+                    <input type="password" id="new-account-password" class="modal-input" placeholder="Пароль" maxlength="100">
+                    <select id="new-account-rank" class="modal-input">
+                        <option value="1">МЛАДШИЙ КУРАТОР</option>
+                        <option value="2">КУРАТОР</option>
+                        <option value="3">СТАРШИЙ КУРАТОР</option>
+                        <option value="4">АДМИНИСТРАТОР</option>
+                        <option value="999">СОЗДАТЕЛЬ</option>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn confirm" onclick="confirmCreateAccount()">Создать</button>
+                    <button class="modal-btn cancel" onclick="closeCreateAccountModal()">Отмена</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    modal.classList.add('show');
+    const focusEl = document.getElementById('new-account-login');
+    if (focusEl) focusEl.focus();
+}
+
+function closeCreateAccountModal() {
+    const modal = document.getElementById('create-account-modal');
+    if (modal) modal.classList.remove('show');
+}
+
+window.confirmCreateAccount = async function() {
+    const loginEl = document.getElementById('new-account-login');
+    const passEl = document.getElementById('new-account-password');
+    const rankEl = document.getElementById('new-account-rank');
+    
+    if (!loginEl || !passEl || !rankEl) { 
+        showNotification('Ошибка формы', 'error'); 
+        return; 
+    }
+
+    const login = loginEl.value.trim();
+    const password = passEl.value;
+    const rankLevel = parseInt(rankEl.value, 10) || RANKS.JUNIOR_CURATOR.level;
+
+    if (!login || !password) { 
+        showNotification('Заполните все поля', 'warning'); 
+        return; 
+    }
+
+    const valid = validateUsername(login);
+    if (!valid.valid) { 
+        showNotification(valid.message, 'warning'); 
+        return; 
+    }
+
+    // Проверяем, существует ли уже такой пользователь
+    const existingUser = users.find(u => u.username.toLowerCase() === login.toLowerCase());
+    if (existingUser) {
+        showNotification('Пользователь с таким именем уже существует', 'error');
+        return;
+    }
+
+    try {
+        const salt = generateSalt();
+        const hash = await hashPassword(password, salt);
+        const staticId = generateStaticId(login);
+        
+        // Определяем роль на основе ранга
+        let role = RANKS.JUNIOR_CURATOR.name;
+        let rankObj = RANKS.JUNIOR_CURATOR;
+        
+        if (rankLevel === CREATOR_RANK.level) {
+            role = CREATOR_RANK.name;
+            rankObj = CREATOR_RANK;
+        } else if (rankLevel === RANKS.ADMIN.level) {
+            role = RANKS.ADMIN.name;
+            rankObj = RANKS.ADMIN;
+        } else if (rankLevel === RANKS.SENIOR_CURATOR.level) {
+            role = RANKS.SENIOR_CURATOR.name;
+            rankObj = RANKS.SENIOR_CURATOR;
+        } else if (rankLevel === RANKS.CURATOR.level) {
+            role = RANKS.CURATOR.name;
+            rankObj = RANKS.CURATOR;
+        }
+        
+        const userData = {
+            username: login,
+            passwordHash: hash,
+            passwordSalt: salt,
+            staticId: staticId,
+            role: role,
+            rank: rankLevel,
+            registrationDate: new Date().toLocaleString(),
+            lastLogin: new Date().toLocaleString(),
+            createdBy: CURRENT_USER || 'system'
+        };
+
+        await db.ref('mlk_users').push(userData);
+        
+        // Обновляем локальные данные
+        await new Promise(resolve => loadData(resolve));
+        
+        // Создаем вкладку с ПРАВИЛЬНЫМИ правами доступа
+        createAccountTab(login, login, rankLevel, rankObj.access);
+        
+        closeCreateAccountModal();
+        loginEl.value = ''; 
+        passEl.value = '';
+        
+        showNotification(`Аккаунт "${login}" создан как ${role}`, 'success');
+        
+    } catch (err) { 
+        showNotification('Ошибка создания аккаунта: ' + (err && err.message ? err.message : err), 'error'); 
+    }
+}
+
+function createAccountTab(accountName, accountLogin, rankLevel) {
+    const tabObj = {
+        id: 'tab-' + Date.now(),
+        name: accountName,
+        login: accountLogin,
+        rankLevel: rankLevel || null,
+        rankName: rankLevel ? getRankName(rankLevel) : null,
+        createdAt: new Date().toLocaleString(),
+        isMinimized: false,
+        data: {}
+    };
+    
+    // Получаем доступ на основе ранга
+    const rankObj = getAccessByRank(rankLevel);
+    tabObj.access = rankObj.access || []; // получаем массив access
+    
+    // Для младших кураторов добавляем доступ к отчетам
+    if (rankLevel === RANKS.JUNIOR_CURATOR.level) {
+        if (!tabObj.access.includes("mlk_reports")) {
+            tabObj.access.push("mlk_reports");
+        }
+    }
+    
+    accountTabs.push(tabObj);
+    activeAccountTab = accountTabs.length - 1;
+    renderAccountTabs();
+    switchAccount(activeAccountTab);
+    showNotification(`Аккаунт "${accountName}" создан!`, "success");
+}
+
+window.openUserInNewTab = function(username, role, staticId, rankLevel) {
+    // Проверяем, не пытаемся ли открыть себя
+    if (username === CURRENT_USER) {
+        showNotification("Это ваш текущий аккаунт", "info");
+        return;
+    }
+    
+    // Проверяем, есть ли уже такая вкладка
+    const existingTabIndex = accountTabs.findIndex(tab => 
+        tab.login && tab.login.toLowerCase() === username.toLowerCase()
+    );
+    
+    if (existingTabIndex !== -1) {
+        // Сначала синхронизируем права вкладки с актуальными данными пользователя
+        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (user && user.rank !== accountTabs[existingTabIndex].rankLevel) {
+            let access = [];
+            if (user.rank === CREATOR_RANK.level) access = CREATOR_RANK.access;
+            else if (user.rank === RANKS.ADMIN.level) access = RANKS.ADMIN.access;
+            else if (user.rank === RANKS.SENIOR_CURATOR.level) access = RANKS.SENIOR_CURATOR.access;
+            else if (user.rank === RANKS.CURATOR.level) access = RANKS.CURATOR.access;
+            else access = RANKS.JUNIOR_CURATOR.access;
+            
+            updateTabAccessForUser(username, user.rank, access);
+        }
+        
+        // Переключаемся на существующую вкладку
+        switchAccount(existingTabIndex);
+        showNotification(`Переключено на вкладку ${username}`, "info");
+        return;
+    }
+    
+    // Определяем доступы на основе ранга
+    let access = [];
+    if (rankLevel === CREATOR_RANK.level) {
+        access = CREATOR_RANK.access;
+    } else if (rankLevel === RANKS.ADMIN.level) {
+        access = RANKS.ADMIN.access;
+    } else if (rankLevel === RANKS.SENIOR_CURATOR.level) {
+        access = RANKS.SENIOR_CURATOR.access;
+    } else if (rankLevel === RANKS.CURATOR.level) {
+        access = RANKS.CURATOR.access;
+    } else {
+        access = RANKS.JUNIOR_CURATOR.access;
+    }
+    
+    // Создаем новую вкладку
+    createAccountTab(username, username, rankLevel, access);
+    
+    // Загружаем данные пользователя в сохраненные данные вкладки
+    const currentTab = accountTabs[accountTabs.length - 1];
+    if (currentTab) {
+        currentTab.savedUserData = {
+            username: username,
+            role: role,
+            rankName: getRankDisplayName(rankLevel),
+            rankLevel: rankLevel,
+            staticId: staticId
+        };
+        
+        // Сохраняем вкладки
+        saveAccountTabsToStorage();
+        
+        showNotification(`✅ Аккаунт "${username}" открыт в новой вкладке`, "success");
+    }
+};
+
+function getAccessByRank(rankLevel) {
+    const rankKey = getRankName(rankLevel);
+    if (!rankKey) return { access: [] };
+    
+    if (rankKey === "CREATOR") {
+        return CREATOR_RANK; // возвращаем объект с доступом
+    }
+    
+    return RANKS[rankKey] || { access: [] }; // возвращаем объект ранга
+}
+
+function getRankName(level) {
+    if (!level) return null;
+    if (CREATOR_RANK && CREATOR_RANK.level === level) return "CREATOR"; // возвращаем ключ на английском
+    for (const key in RANKS) {
+        if (RANKS[key].level === level) return key; // возвращаем ключ (на английском)
+    }
+    return null;
+}
+
+function minimizeAccountTab(tabId) {
+    const tab = accountTabs.find(t => t.id === tabId);
+    if (tab) {
+        tab.isMinimized = !tab.isMinimized;
+        renderAccountTabs();
     }
 }

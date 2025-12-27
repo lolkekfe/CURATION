@@ -535,14 +535,15 @@ html, body {
 }
 
 .zone-sidebar {
-    position: sticky;
-    top: 0;
-    /* allow sidebar to size naturally and not force internal clipping */
+    /* Use relative positioning and stretch to parent height so sidebar background fills fully */
+    position: relative;
+    /* allow sidebar to stretch to the height of the interface */
     height: auto;
-    min-height: 0;
+    min-height: 100%;
     overflow: visible;
     display: flex;
     flex-direction: column;
+    align-self: stretch;
 }
 
 /* Make the navigation/content area inside sidebar scrollable without affecting document scroll */
@@ -584,7 +585,7 @@ html, body {
     display: flex;
     flex-direction: column;
     position: relative;
-    justify-content: space-between;
+    justify-content: flex-start;
     height: auto;
     box-sizing: border-box;
 }
@@ -741,6 +742,10 @@ html, body {
     box-shadow: 0 0 30px rgba(139, 69, 19, 0.3);
 }
 
+/* Стили кнопки управления аккаунтами в сайдбаре */
+#manage-accounts-btn .button-core i { margin-right: 10px; }
+#manage-accounts-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
 /* КОНТЕНТ */
 .zone-content {
     flex: 1;
@@ -764,17 +769,18 @@ html, body {
 }
 
 /* Ensure left sidebar always fills the viewport height and has no bottom gap */
-html, body {
-    height: 100%;
+.html-body-fix, body {
+    /* keep natural sizing for document; avoid forcing 100% height which can create gaps */
+    height: auto;
 }
 
 #terminal, .zone-interface {
-    min-height: 100vh;
+    min-height: 0;
 }
 
 .zone-sidebar {
-    height: 100vh;
-    min-height: 100vh;
+    height: auto;
+    min-height: 0;
     box-sizing: border-box;
     padding-bottom: 0 !important;
 }
@@ -2349,8 +2355,9 @@ html, body {
 
 @media (max-height: 600px) {
     .zone-interface {
-        height: 100vh;
-        min-height: 600px;
+        /* Don't force viewport-sized height here — allow natural document flow */
+        height: auto;
+        min-height: 0;
     }
     
     .content-header {
@@ -3028,20 +3035,23 @@ input:checked + .slider:before {
         font-size: 0.8rem;
     }
 }
-/* Final override: ensure sidebar stretches to bottom and cannot be overridden by earlier declarations */
-html, body, .zone-interface, .zone-sidebar {
+/* Ensure the document and main interface fill the viewport, but do not force exact heights
+   (use min-height so content can grow and document scroll works). */
+html, body {
     height: 100%;
     min-height: 100vh;
+    overflow-y: auto;
 }
 .zone-interface {
-    align-items: stretch !important;
+    min-height: 100vh;
+    align-items: stretch;
 }
 .zone-sidebar {
-    height: auto !important;
-    min-height: 100vh !important;
-    align-self: stretch !important;
-    padding-bottom: 0 !important;
-    margin-bottom: 0 !important;
+    height: auto;
+    min-height: 0; /* remove forced viewport height so sidebar can stretch to parent */
+    align-self: stretch;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 
 /* Info split: make the two info cards stretch to fill their grid cell */
@@ -3113,3 +3123,1049 @@ html, body, .zone-interface, .zone-sidebar {
 
 /* Ensure metrics content does not create internal scroll — let the page scroll instead */
 .metrics-card .info-content { overflow: visible; }
+
+/* ===== СИСТЕМА ВКЛАДОК АККАУНТОВ ===== */
+.account-tabs-bar {
+    background: var(--tertiary-dark);
+    border-bottom: 2px solid var(--accent-green);
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 50;
+}
+
+.tabs-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.tabs-list {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    flex: 1;
+    align-items: center;
+}
+
+.tabs-list::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tabs-list::-webkit-scrollbar-track {
+    background: rgba(20, 18, 15, 0.5);
+}
+
+.tabs-list::-webkit-scrollbar-thumb {
+    background: var(--accent-green);
+    border-radius: 2px;
+}
+
+.account-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(28, 26, 23, 0.8);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px 4px 0 0;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.account-tab:hover {
+    border-color: var(--accent-green);
+    color: var(--text-primary);
+    background: rgba(28, 26, 23, 0.9);
+}
+
+.account-tab.active {
+    background: var(--secondary-dark);
+    border-color: var(--accent-green);
+    border-bottom-color: var(--secondary-dark);
+    color: var(--accent-green);
+    font-weight: 600;
+}
+
+.tab-icon {
+    font-size: 0.9rem;
+}
+
+.tab-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tab-close {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 0 4px;
+    transition: all 0.2s;
+    opacity: 0.7;
+}
+
+.tab-close:hover {
+    opacity: 1;
+    color: var(--accent-red);
+}
+
+.tab-minimize {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0 6px;
+    opacity: 0.8;
+}
+
+.tab-minimize:hover { color: var(--accent-yellow); opacity: 1; }
+
+.accounts-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    background: rgba(40,42,36,0.6);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 6px;
+}
+
+.accounts-back-btn:hover { border-color: var(--accent-green); color: var(--accent-green); background: rgba(28,26,23,0.9); }
+
+.add-account-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(74, 122, 80, 0.2);
+    border: 1px solid var(--accent-green);
+    border-radius: 4px;
+    color: var(--accent-green);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.add-account-btn:hover {
+    background: rgba(74, 122, 80, 0.3);
+    box-shadow: 0 0 15px rgba(74, 122, 80, 0.2);
+}
+
+/* Модальное окно создания аккаунта */
+.create-account-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.create-account-modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--secondary-dark);
+    border: 2px solid var(--accent-green);
+    border-radius: 6px;
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    color: var(--accent-green);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(28, 26, 23, 0.8);
+    border: 1px solid var(--border-dark);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.modal-input:focus {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 10px rgba(74, 122, 80, 0.2);
+}
+
+.modal-input::placeholder {
+    color: var(--text-dim);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.modal-btn.confirm {
+    background: var(--accent-green);
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.modal-btn.confirm:hover {
+    background: var(--accent-green-glow);
+    box-shadow: 0 0 15px rgba(74, 122, 80, 0.3);
+}
+
+.modal-btn.cancel {
+    background: rgba(28, 26, 23, 0.8);
+    border: 1px solid var(--border-dark);
+    color: var(--text-secondary);
+}
+
+.modal-btn.cancel:hover {
+    border-color: var(--accent-red);
+    color: var(--accent-red);
+}
+
+/* ===== МЕМЗОНА ===== */
+.sidebar-meme {
+    flex: 0 0 auto;
+    padding: 15px;
+    margin-top: auto;
+}
+
+.meme-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(74, 122, 80, 0.15), rgba(42, 122, 74, 0.1));
+    border: 2px dashed var(--accent-green);
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    animation: memePulse 3s ease-in-out infinite;
+}
+
+.meme-container:hover {
+    border-color: var(--accent-green-glow);
+    background: linear-gradient(135deg, rgba(74, 122, 80, 0.25), rgba(42, 122, 74, 0.2));
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(74, 122, 80, 0.3);
+}
+
+.meme-icon {
+    font-size: 2.5rem;
+    color: var(--accent-green);
+    animation: memeRotate 4s linear infinite;
+}
+
+.meme-icon i {
+    display: block;
+}
+
+.meme-content {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    color: var(--accent-green-glow);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes memePulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+}
+
+@keyframes memeRotate {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Мемы при разных разрешениях */
+@media (max-width: 768px) {
+    .sidebar-meme {
+        padding: 10px;
+    }
+    
+    .meme-container {
+        padding: 10px;
+        gap: 8px;
+    }
+    
+    .meme-icon {
+        font-size: 2rem;
+    }
+    
+    .meme-content {
+        font-size: 0.75rem;
+    }
+}
+
+.tab-rank {
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: rgba(192,176,112,0.08);
+    border: 1px solid rgba(192,176,112,0.12);
+    color: var(--accent-yellow);
+    font-size: 0.72rem;
+    border-radius: 3px;
+    align-self: center;
+}
+
+/* Исправление базового масштаба и размеров */
+:root {
+    font-size: 16px; /* Устанавливаем базовый размер шрифта */
+}
+
+body {
+    zoom: 1; /* Убираем возможное масштабирование */
+    transform: scale(1); /* Сбрасываем трансформации */
+}
+
+/* Увеличиваем базовые размеры для удобства чтения */
+.zone-title {
+    font-size: 3.5rem; /* Было 3rem */
+}
+
+.zone-sidebar {
+    width: 320px; /* Было 300px */
+}
+
+.login-terminal {
+    max-width: 900px; /* Было 800px */
+}
+
+.content-header {
+    padding: 25px 35px; /* Увеличиваем отступы */
+}
+
+.content-body {
+    padding: 35px; /* Было 30px */
+}
+
+/* Увеличиваем размеры текста в основных элементах */
+.nav-button {
+    font-size: 0.95rem; /* Было 0.85rem */
+    padding: 16px 25px; /* Было 15px 20px */
+}
+
+.form-input, .form-textarea {
+    font-size: 1.1rem; /* Было 1rem */
+    padding: 14px 18px; /* Было 12px 15px */
+}
+
+.stat-value {
+    font-size: 1.6rem; /* Было 1.4rem */
+}
+
+.meta-value {
+    font-size: 1rem; /* Было 0.9rem */
+}
+
+/* Увеличиваем размеры кнопок */
+.btn-primary, .btn-secondary {
+    padding: 14px 30px; /* Было 12px 25px */
+    font-size: 1rem; /* Было 0.95rem */
+}
+
+.action-btn {
+    padding: 8px 16px; /* Было 6px 12px */
+    font-size: 0.9rem; /* Было 0.8rem */
+}
+
+/* Увеличиваем размеры иконок */
+.nav-button i,
+.header-icon i,
+.stat-icon i {
+    font-size: 1.1rem; /* Было 0.9rem */
+}
+
+.card-icon {
+    font-size: 2.5rem; /* Было 2rem */
+}
+
+/* Увеличиваем отступы между элементами */
+.dashboard-grid {
+    gap: 30px; /* Было 25px */
+}
+
+.form-group {
+    margin-bottom: 30px; /* Было 25px */
+}
+
+/* Улучшаем читаемость в таблицах */
+.data-table th {
+    font-size: 0.95rem; /* Было 0.85rem */
+    padding: 15px 20px; /* Было 12px 15px */
+}
+
+.data-table td {
+    font-size: 1rem; /* Было 0.9rem */
+    padding: 12px 20px; /* Было 10px 15px */
+}
+
+/* Адаптивные улучшения для мобильных устройств */
+@media (max-width: 768px) {
+    :root {
+        font-size: 14px;
+    }
+    
+    .zone-title {
+        font-size: 2.5rem; /* Для мобильных */
+    }
+    
+    .zone-sidebar {
+        width: 280px;
+    }
+    
+    .content-header {
+        padding: 15px 20px;
+    }
+    
+    .content-body {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        font-size: 13px;
+    }
+    
+    .zone-title {
+        font-size: 2rem;
+    }
+    
+    .login-terminal {
+        max-width: 95%;
+    }
+}
+
+/* Дополнительные улучшения для интерфейса */
+.login-container {
+    padding: 30px; /* Увеличиваем отступы на экране входа */
+}
+
+.terminal-screen {
+    min-height: 450px; /* Увеличиваем минимальную высоту */
+}
+
+.screen-content {
+    padding: 40px; /* Было 35px */
+}
+
+/* Улучшаем видимость полей ввода */
+.input-wrapper input {
+    font-size: 1.1rem;
+    padding: 15px 20px;
+}
+
+/* Увеличиваем размеры элементов в футере */
+.footer-info {
+    font-size: 0.9rem; /* Было 0.8rem */
+    padding: 25px; /* Было 20px */
+}
+
+/* Делаем контейнеры более просторными */
+.zone-card {
+    padding: 25px; /* Было 20px */
+}
+
+/* Улучшаем отображение заголовков модулей */
+.panel-header {
+    font-size: 1rem; /* Было 0.9rem */
+    padding-bottom: 20px; /* Было 15px */
+}
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+/* УВЕЛИЧЕНИЕ В 1.5 РАЗА ОТ КОМПАКТНОГО ВАРИАНТА */
+
+/* 1. ОСНОВНОЙ МАСШТАБ */
+:root {
+    font-size: 14px; /* Было 12px */
+}
+
+/* 2. ЗАГОЛОВКИ */
+.zone-title {
+    font-size: 1.5rem !important; /* Было 1.2rem */
+    letter-spacing: 2.5px;
+    margin: 5px 0;
+}
+
+/* 3. ЭКРАН ВХОДА */
+.login-container {
+    padding: 12px 15px !important; /* Было 8px 10px */
+}
+
+.system-status {
+    padding: 5px 15px !important; /* Было 3px 10px */
+    margin-bottom: 8px;
+}
+
+.status-text {
+    font-size: 0.85rem !important; /* Было 0.7rem */
+}
+
+.status-indicator {
+    width: 8px !important; /* Было 6px */
+    height: 8px !important;
+}
+
+.frequency-bar {
+    width: 3px !important; /* Было 2px */
+    height: 10px !important; /* Было 8px */
+}
+
+.security-level {
+    padding: 6px 15px !important; /* Было 4px 10px */
+    margin-top: 8px;
+}
+
+.security-bar {
+    height: 4px !important; /* Было 3px */
+}
+
+/* 4. ТЕРМИНАЛ ВХОДА */
+.login-terminal {
+    max-width: 650px !important; /* Было 500px */
+    margin: 8px auto;
+}
+
+.terminal-screen {
+    min-height: 280px !important; /* Было 200px */
+}
+
+.screen-header {
+    padding: 8px 15px !important; /* Было 5px 10px */
+}
+
+.screen-header span {
+    font-size: 0.85rem !important; /* Было 0.7rem */
+    letter-spacing: 1.5px;
+}
+
+.screen-content {
+    padding: 15px !important; /* Было 10px */
+}
+
+.access-line {
+    gap: 8px !important; /* Было 5px */
+    margin-bottom: 12px !important; /* Было 8px */
+    grid-template-columns: 50px auto 1fr !important; /* Было 40px */
+}
+
+.line-number {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.prompt {
+    font-size: 0.85rem !important; /* Было 0.7rem */
+}
+
+.input-wrapper input {
+    padding: 8px 12px !important; /* Было 6px 8px */
+    font-size: 0.95rem !important; /* Было 0.8rem */
+}
+
+.system-log {
+    margin-top: 20px !important; /* Было 15px */
+    padding: 12px !important; /* Было 8px */
+}
+
+.log-entry {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    margin-bottom: 6px;
+}
+
+/* 5. БОКОВАЯ ПАНЕЛЬ */
+.zone-sidebar {
+    width: 220px !important; /* Было 180px */
+}
+
+.sidebar-header {
+    padding: 12px !important; /* Было 8px */
+}
+
+.header-panel {
+    padding: 9px !important; /* Было 6px */
+}
+
+.terminal-display {
+    padding: 9px !important; /* Было 6px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.display-line {
+    margin-bottom: 5px !important; /* Было 3px */
+    gap: 6px;
+}
+
+/* 6. НАВИГАЦИЯ */
+.navigation-panel {
+    padding: 15px !important; /* Было 10px */
+}
+
+.panel-header {
+    margin-bottom: 12px !important; /* Было 8px */
+    padding-bottom: 8px !important; /* Было 5px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 9px;
+}
+
+.header-icon {
+    width: 25px !important; /* Было 20px */
+    height: 25px !important;
+}
+
+.header-icon i {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.nav-button {
+    padding: 8px 12px !important; /* Было 5px 8px */
+    margin-bottom: 3px;
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 9px;
+}
+
+.nav-button i {
+    width: 18px !important; /* Было 14px */
+    font-size: 0.75rem !important;
+}
+
+/* 7. ХЕДЕР КОНТЕНТА */
+.content-header {
+    padding: 9px 18px !important; /* Было 6px 12px */
+}
+
+.title-container h2 {
+    font-size: 1.25rem !important; /* Было 1rem */
+    margin-bottom: 5px;
+    gap: 12px;
+}
+
+.title-prefix {
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.title-sub {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 8px;
+}
+
+.header-stats {
+    gap: 12px !important; /* Было 8px */
+}
+
+.stat-card {
+    padding: 9px 12px !important; /* Было 6px 8px */
+    min-width: 120px !important; /* Было 90px */
+    gap: 9px;
+}
+
+.stat-icon {
+    width: 32px !important; /* Было 25px */
+    height: 32px !important;
+}
+
+.stat-icon i {
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.stat-label {
+    font-size: 0.65rem !important; /* Было 0.5rem */
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 1.15rem !important; /* Было 0.9rem */
+    letter-spacing: 1.5px;
+}
+
+/* 8. КОНТЕНТ */
+.content-body {
+    padding: 18px !important; /* Было 12px */
+}
+
+.zone-card {
+    padding: 15px !important; /* Было 10px */
+    margin-bottom: 12px;
+}
+
+.card-icon {
+    font-size: 1.5rem !important; /* Было 1.2rem */
+    margin-bottom: 8px;
+}
+
+.card-value {
+    font-size: 1.8rem !important; /* Было 1.4rem */
+    margin-bottom: 3px;
+}
+
+.card-label {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+/* 9. ТАБЛИЦЫ */
+.data-table th {
+    padding: 6px 9px !important; /* Было 4px 6px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.data-table td {
+    padding: 5px 8px !important; /* Было 3px 5px */
+    font-size: 0.8rem !important; /* Было 0.65rem */
+}
+
+.table-container {
+    max-height: 250px !important; /* Было 200px */
+}
+
+/* 10. ФОРМЫ */
+.form-group {
+    margin-bottom: 15px !important; /* Было 10px */
+}
+
+.form-label {
+    margin-bottom: 6px !important; /* Было 4px */
+    font-size: 0.85rem !important; /* Было 0.7rem */
+    letter-spacing: 1.5px;
+}
+
+.form-input, .form-textarea {
+    padding: 8px 12px !important; /* Было 5px 8px */
+    font-size: 0.9rem !important; /* Было 0.75rem */
+}
+
+.form-textarea {
+    min-height: 100px !important; /* Было 80px */
+}
+
+.form-actions {
+    margin-top: 20px !important; /* Было 15px */
+    padding-top: 15px !important; /* Было 10px */
+    gap: 12px;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 9px 18px !important; /* Было 6px 12px */
+    font-size: 0.85rem !important; /* Было 0.7rem */
+    letter-spacing: 1.5px;
+}
+
+/* 11. ФУТЕР */
+.content-footer {
+    padding: 6px 12px !important; /* Было 4px 8px */
+}
+
+.transmission-log {
+    padding: 6px 9px !important; /* Было 4px 6px */
+    max-width: 400px; /* Было 300px */
+}
+
+.log-line {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 8px;
+}
+
+.command-prompt {
+    min-width: 200px !important; /* Было 150px */
+    padding: 6px 12px !important; /* Было 4px 8px */
+}
+
+.prompt-symbol {
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.input-text {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+/* 12. УВЕДОМЛЕНИЯ */
+.notification {
+    padding: 9px 12px !important; /* Было 6px 8px */
+    min-width: 250px; /* Было 200px */
+    font-size: 0.85rem !important; /* Было 0.7rem */
+}
+
+.notification-icon {
+    width: 25px !important; /* Было 20px */
+    height: 25px !important;
+    font-size: 0.85rem !important; /* Было 0.7rem */
+}
+
+.notification-title {
+    font-size: 0.9rem !important; /* Было 0.75rem */
+}
+
+.notification-content {
+    padding-left: 30px !important; /* Было 25px */
+    font-size: 0.8rem !important; /* Было 0.65rem */
+}
+
+/* 13. КНОПКИ */
+.action-btn {
+    padding: 5px 9px !important; /* Было 3px 6px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.session-panel {
+    padding: 15px !important; /* Было 10px */
+}
+
+.session-button {
+    padding: 12px !important; /* Было 10px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    margin-bottom: 6px;
+}
+
+/* 14. МЕТА-ИНФОРМАЦИЯ */
+.meta-grid {
+    gap: 12px !important; /* Было 8px */
+    margin-bottom: 12px !important; /* Было 8px */
+}
+
+.meta-label {
+    font-size: 0.65rem !important; /* Было 0.5rem */
+    letter-spacing: 1px;
+}
+
+.meta-value {
+    font-size: 0.8rem !important; /* Было 0.65rem */
+}
+
+/* 15. СКРОЛЛБАРЫ */
+::-webkit-scrollbar {
+    width: 6px !important; /* Было 4px */
+}
+
+/* 16. ИНИЦИАЛИЗАЦИЯ */
+.system-init {
+    gap: 20px; /* Было 15px */
+}
+
+.init-loader {
+    width: 65px; /* Было 50px */
+    height: 65px;
+}
+
+.init-line {
+    font-size: 0.85rem; /* Было 0.7rem */
+    letter-spacing: 2px;
+}
+
+/* 17. ОТЧЕТЫ */
+.report-card-enhanced {
+    padding: 12px !important; /* Было 8px */
+    margin-bottom: 9px;
+}
+
+.report-card-header {
+    padding: 9px 12px !important; /* Было 6px 8px */
+}
+
+.report-card-body {
+    padding: 12px !important; /* Было 8px */
+}
+
+.violator-icon {
+    width: 32px !important; /* Было 25px */
+    height: 32px !important;
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.violator-tag {
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.violator-type {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.report-description {
+    font-size: 0.85rem !important; /* Было 0.7rem */
+    padding: 9px !important; /* Было 6px */
+}
+
+/* 18. FOOTER ЛОГИНА */
+.zone-footer {
+    margin-top: 15px;
+}
+
+.footer-info {
+    padding: 12px !important; /* Было 8px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 12px;
+}
+
+/* 19. ВКЛАДКИ АККАУНТОВ */
+.account-tabs-bar {
+    padding: 6px 12px !important; /* Было 4px 8px */
+}
+
+.account-tab {
+    padding: 6px 9px !important; /* Было 4px 6px */
+    font-size: 0.75rem !important; /* Было 0.6rem */
+    gap: 6px;
+}
+
+.tab-icon {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+.tab-name {
+    max-width: 100px !important; /* Было 80px */
+}
+
+.accounts-back-btn,
+.add-account-btn {
+    width: 30px !important; /* Было 24px */
+    height: 30px !important;
+}
+
+/* 20. ДИСКОРД БЛОК */
+.sidebar-discord {
+    padding: 9px !important; /* Было 6px */
+}
+
+.contact-info i {
+    font-size: 1rem !important; /* Было 0.8rem */
+}
+
+.contact-text {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+/* 21. МЕМЫ */
+.sidebar-meme {
+    padding: 9px !important; /* Было 6px */
+}
+
+.meme-container {
+    padding: 9px !important; /* Было 6px */
+}
+
+.meme-icon {
+    font-size: 1.5rem !important; /* Было 1.2rem */
+}
+
+.meme-content {
+    font-size: 0.75rem !important; /* Было 0.6rem */
+}
+
+/* 22. ВОЗВРАЩАЕМ НЕКОТОРЫЕ ЭФФЕКТЫ ДЛЯ ЧИТАЕМОСТИ */
+.nav-button:hover,
+.stat-card:hover,
+.zone-card:hover {
+    border-color: var(--accent-green) !important;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    border-color: var(--accent-green) !important;
+    box-shadow: 0 0 8px var(--glow-green) !important;
+}
+
+/* 23. УЛУЧШАЕМ АДАПТИВНОСТЬ ДЛЯ НОВЫХ РАЗМЕРОВ */
+@media (max-width: 1200px) {
+    .zone-sidebar {
+        width: 200px !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .zone-sidebar {
+        width: 100% !important;
+    }
+    
+    .header-stats {
+        gap: 8px !important;
+    }
+    
+    .stat-card {
+        min-width: 100px !important;
+        padding: 6px 9px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .zone-title {
+        font-size: 1.2rem !important;
+    }
+    
+    .login-terminal {
+        max-width: 95% !important;
+    }
+    
+    .header-stats {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .stat-card {
+        width: 100%;
+    }
+}

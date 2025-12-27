@@ -190,6 +190,12 @@
                     <i class="fas fa-history"></i>
                     <span>СЕССИЯ</span>
                 </div>
+                <button id="manage-accounts-btn" class="session-button" style="margin-bottom: 8px;">
+                    <div class="button-core">
+                        <i class="fas fa-users"></i>
+                        <span>УПРАВЛЕНИЕ АККАУНТАМИ</span>
+                    </div>
+                </button>
                 <button id="logout-btn" class="session-button">
                     <div class="button-core">
                         <i class="fas fa-power-off"></i>
@@ -207,10 +213,37 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Мем-зона для развлечения -->
+            <div class="sidebar-meme">
+                <div class="meme-container">
+                    <div class="meme-icon">
+                        <i class="fas fa-grin-wink"></i>
+                    </div>
+                    <div class="meme-content" id="meme-content">
+                        <span>МЕМЫ ВКЛ</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Основной контент -->
         <div id="content" class="zone-content">
+            <!-- Система вкладок (табов) для управления аккаунтами -->
+            <div class="account-tabs-bar" id="account-tabs-bar" style="display:none;">
+                    <div class="tabs-container">
+                    <div class="tabs-list" id="tabs-list">
+                        <!-- Табы будут добавляться динамически -->
+                    </div>
+                    <button class="accounts-back-btn" id="accounts-back-btn" title="Вернуться к основному аккаунту">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <button class="add-account-btn" id="add-account-btn" title="Создать новый аккаунт">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+            
             <div class="content-header">
                 <div class="header-main">
                     <div class="title-container">

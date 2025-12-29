@@ -1,90 +1,40 @@
-/* ===== СИСТЕМА РАНГОВ ЗОНЫ ===== */
+/* ===== СИСТЕМА РАНГОВ ===== */
 const RANKS = {
     JUNIOR_CURATOR: { name: "МЛАДШИЙ КУРАТОР", level: 1, access: ["mlk_reports"] },
     CURATOR: { name: "КУРАТОР", level: 2, access: ["mlk_reports"] },
     SENIOR_CURATOR: { name: "СТАРШИЙ КУРАТОР", level: 3, access: ["mlk_reports", "all_reports", "users"] },
     ADMIN: { name: "АДМИНИСТРАТОР", level: 4, access: ["mlk_reports", "all_reports", "whitelist", "users", "system", "bans", "ip_monitoring", "webhooks"] }
 };
-
-/* ===== РАНГ СОЗДАТЕЛЯ ===== */
-const CREATOR_RANK = { 
-    name: "СОЗДАТЕЛЬ", 
-    level: 999, 
-    access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything", "bans", "ip_monitoring", "webhooks"] 
-};
+const CREATOR_RANK = { name: "СОЗДАТЕЛЬ", level: 999, access: ["mlk_reports", "all_reports", "whitelist", "users", "passwords", "system", "everything", "bans", "ip_monitoring", "webhooks"] };
 
 /* ===== СИСТЕМНЫЕ ПЕРЕМЕННЫЕ ===== */
 let CURRENT_ROLE = null, CURRENT_USER = null, CURRENT_RANK = null, CURRENT_STATIC_ID = null;
 let reports = [], bans = [], users = [], whitelist = [], passwords = {};
-
-/* ===== ВЕБХУК ПЕРЕМЕННЫЕ ===== */
 let webhooks = [], DISCORD_WEBHOOK_URL = null, DISCORD_WEBHOOK_NAME = "Система отчетов Зоны", DISCORD_WEBHOOK_AVATAR = "https://i.imgur.com/6B7zHqj.png";
-
-/* ===== ДОПОЛНИТЕЛЬНЫЕ ПЕРЕМЕННЫЕ ДЛЯ БЕЗОПАСНОСТИ ===== */
 const MAX_ATTEMPTS = 3, LOCKOUT_TIME = 15 * 60 * 1000;
 let loginAttempts = {};
-
-/* ===== СИСТЕМА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ ===== */
-let USER_SETTINGS = {
-    theme: 'default',
-    avatar: null,
-    notifications: true,
-    compactView: false,
-    language: 'ru'
-};
-
-/* ===== СИСТЕМА ПАГИНАЦИИ И ПРОКРУТКИ ===== */
+let USER_SETTINGS = { theme: 'default', avatar: null, notifications: true, compactView: false, language: 'ru' };
 const PAGINATION_CONFIG = { itemsPerPage: 15, visiblePages: 5, maxScrollHeight: 600 };
 let currentPage = 1, totalPages = 1, currentScrollPosition = {};
 
-// Функция для тестирования входа
-window.debugLogin = function() {
-    console.log('=== DEBUG LOGIN ===');
-    console.log('CURRENT_USER:', CURRENT_USER);
-    console.log('CURRENT_RANK:', CURRENT_RANK);
-    console.log('Login screen:', document.getElementById('login-screen'));
-    console.log('Terminal:', document.getElementById('terminal'));
-    
-    // Принудительно показываем терминал
+/* ===== ФУНКЦИИ ОТЛАДКИ ===== */
+window.debugLogin = () => {
+    console.log('=== DEBUG LOGIN ===', {CURRENT_USER, CURRENT_RANK});
     const loginScreen = document.getElementById("login-screen");
     const terminal = document.getElementById("terminal");
-    
-    if (loginScreen) {
-        loginScreen.style.display = "none";
-        loginScreen.style.visibility = "hidden";
-        loginScreen.style.opacity = "0";
-    }
-    
-    if (terminal) {
-        terminal.style.display = "flex";
-        terminal.style.visibility = "visible";
-        terminal.style.opacity = "1";
-    }
-    
-    // Если есть пользователь, показываем интерфейс
-    if (CURRENT_USER) {
-        setupSidebar();
-        renderSystem();
-    }
+    if (loginScreen) loginScreen.style.display = loginScreen.style.visibility = loginScreen.style.opacity = "none";
+    if (terminal) terminal.style.display = "flex", terminal.style.visibility = terminal.style.opacity = "visible";
+    if (CURRENT_USER) setupSidebar(), renderSystem();
 };
-
-// Тестовая функция для быстрого входа
-window.testLogin = async function(username, password) {
+window.testLogin = async (username, password) => {
     document.getElementById('username').value = username;
     document.getElementById('password').value = password;
     await login();
 };
 
-// Вызовите в консоли: testLogin('Tihiy', 'creator123')
-
-/* ===== УЛУЧШЕННАЯ АДАПТИВНОСТЬ И СКРОЛЛ ===== */
-function adjustInterfaceHeights() {
-    const scrollableContainers = document.querySelectorAll('.scrollable-container');
-    const contentBody = document.getElementById('content-body');
-    const sidebar = document.querySelector('.zone-sidebar');
-    const terminal = document.getElementById('terminal');
-    
-    scrollableContainers.forEach(container => {
+/* ===== АДАПТИВНОСТЬ И СКРОЛЛ ===== */
+const adjustInterfaceHeights = () => {
+    document.querySelectorAll('.scrollable-container').forEach(container => {
         const parent = container.closest('.form-container, .terminal-screen, .zone-card');
         if (parent) {
             const maxHeight = Math.min(parent.clientHeight - 20, PAGINATION_CONFIG.maxScrollHeight);
@@ -93,29 +43,19 @@ function adjustInterfaceHeights() {
             if (currentScrollPosition[containerId]) container.scrollTop = currentScrollPosition[containerId];
         }
     });
-    
+    const contentBody = document.getElementById('content-body'), sidebar = document.querySelector('.zone-sidebar'), terminal = document.getElementById('terminal');
     if (contentBody && terminal) {
         const header = document.querySelector('.content-header'), footer = document.querySelector('.content-footer');
         if (header && footer) {
             const terminalHeight = terminal.clientHeight, headerHeight = header.offsetHeight, footerHeight = footer.offsetHeight;
             const availableHeight = terminalHeight - headerHeight - footerHeight - 40;
             contentBody.style.minHeight = Math.max(availableHeight, 400) + 'px';
-            contentBody.style.maxHeight = availableHeight + 'px';
-            contentBody.style.overflowY = 'auto';
         }
     }
-    
     if (sidebar) sidebar.style.maxHeight = (window.innerHeight - 100) + 'px', sidebar.style.overflowY = 'auto';
+};
 
-    // Prevent forcing internal scrolling for main content areas so modules can expand naturally
-    if (contentBody) {
-        contentBody.style.minHeight = '';
-        contentBody.style.maxHeight = '';
-        contentBody.style.overflowY = '';
-    }
-}
-
-function setupAutoScroll() {
+const setupAutoScroll = () => {
     document.querySelectorAll('.scrollable-container').forEach(container => {
         const hasVerticalScroll = container.scrollHeight > container.clientHeight;
         container.style.paddingRight = hasVerticalScroll ? '15px' : '10px';
@@ -124,311 +64,74 @@ function setupAutoScroll() {
         });
     });
     addScrollStyles();
-}
+};
 
-function addScrollStyles() {
+const addScrollStyles = () => {
     if (!document.querySelector('#scroll-styles')) {
         const style = document.createElement('style');
         style.id = 'scroll-styles';
-        style.textContent = `
-            /* Prefer document scrolling; only specific small lists keep internal scroll */
-            .scrollable-container{overflow:visible;overflow-x:hidden;padding-right:10px}
-            .scrollable-container::-webkit-scrollbar{width:8px}.scrollable-container::-webkit-scrollbar-track{background:#1e201c;border-radius:4px}
-            .scrollable-container::-webkit-scrollbar-thumb{background:#4a4a3a;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb:hover{background:#5a5a4a}
-            .table-container thead{position:sticky;top:0;background:#1e201c;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.3)}
-            .report-form-scrollable{display:flex;flex-direction:column;height:100%}.report-creation-container{flex:1;overflow-y:auto;padding-right:10px}
-            /* Allow forms and modules to expand naturally instead of forcing height/hidden overflow */
-            .form-container.with-scroll{display:flex;flex-direction:column;height:auto;overflow:visible}
-            .form-container.with-scroll>.table-container{flex:1;min-height:0}
-            .scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}
-            .scroll-btn:hover{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;transform:scale(1.1)}#scroll-to-top{bottom:70px;right:20px}#scroll-to-bottom{bottom:20px;right:20px}
-            
-            /* Стили для пагинации */
-            .pagination-container{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;padding:8px;width:100%;}
-            .pagination-btn{padding:6px 12px;background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;cursor:pointer;font-size:0.85rem;transition:all 0.2s;border-radius:3px;min-width:34px;height:34px;display:flex;align-items:center;justify-content:center;}
-            .pagination-btn:hover{background:rgba(60,62,56,0.8);border-color:#8f9779;color:#c0b070}
-            .pagination-btn.active{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;font-weight:bold}
-            .pagination-btn:disabled{opacity:0.5;cursor:not-allowed}
-            .page-info{color:#8f9779;font-size:0.85rem;margin:0 15px;white-space:nowrap;}
-            .items-per-page-selector{display:flex;align-items:center;gap:8px;color:#8f9779;font-size:0.85rem;}
-            .items-per-page-selector select{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;padding:4px 8px;border-radius:3px;font-size:0.85rem;}
-            .scroll-indicator{position:absolute;right:5px;top:50%;transform:translateY(-50%);color:#4a4a3a;font-size:0.8rem;pointer-events:none}
-
-            /* Стили для контейнера с отчетами */
-            .reports-container{display:flex;flex-direction:column;gap:12px;padding:5px;}
-            .report-card{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;border-radius:4px;padding:15px;transition:all 0.2s;}
-            .report-card:hover{border-color:#5a5a4a;background:rgba(40,42,36,0.9);}
-                        /* Стили для отображения ошибок входа */
-            /* Стили для ошибок входа (над формой) */
-            #login-error {
-                position: relative;
-                z-index: 10;
-                margin: 15px 0;
-            }
-            
-            .login-error-box {
-                background: rgba(30, 32, 28, 0.9);
-                border: 1px solid;
-                border-radius: 4px;
-                padding: 12px 15px;
-                color: #8f9779;
-                font-size: 0.9rem;
-                display: flex;
-                align-items: flex-start;
-                gap: 10px;
-                animation: fadeIn 0.3s ease;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(5px);
-            }
-            
-            .login-error-box i {
-                font-size: 1.1rem;
-                margin-top: 2px;
-            }
-            
-            .login-error-box .error-content {
-                flex: 1;
-            }
-            
-            .login-error-box .error-title {
-                font-weight: 500;
-                margin-bottom: 5px;
-                font-size: 0.95rem;
-            }
-            
-            .login-error-box .error-message {
-                line-height: 1.4;
-                font-size: 0.85rem;
-            }
-            
-            /* Стили для системных уведомлений (всплывающих, внизу экрана) */
-            .notification {
-                position: fixed;
-                bottom: 20px;
-                right: 20px;
-                z-index: 9999;
-                padding: 12px 20px;
-                border-radius: 4px;
-                color: #1e201c;
-                font-weight: 500;
-                font-size: 0.9rem;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-                transform: translateY(100px);
-                opacity: 0;
-                transition: all 0.3s ease;
-                max-width: 350px;
-                backdrop-filter: blur(5px);
-            }
-            
-            .notification.show {
-                transform: translateY(0);
-                opacity: 1;
-            }
-            
-            .notification.info {
-                background: rgba(192, 176, 112, 0.9);
-                border: 1px solid #c0b070;
-            }
-            
-            .notification.success {
-                background: rgba(140, 180, 60, 0.9);
-                border: 1px solid #8cb43c;
-            }
-            
-            .notification.warning {
-                background: rgba(192, 176, 112, 0.9);
-                border: 1px solid #c0b070;
-            }
-            
-            .notification.error {
-                background: rgba(180, 60, 60, 0.9);
-                border: 1px solid #b43c3c;
-            }
-            
-            /* Анимации */
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
-            
-            @keyframes slideIn {
-                from { transform: translateY(100px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-                // В функцию addScrollStyles() добавьте:
-.action-buttons .action-btn.delete {
-    background: rgba(180, 60, 60, 0.2) !important;
-    border-color: #b43c3c !important;
-    color: #b43c3c !important;
-    transition: all 0.2s;
-}
-
-.action-buttons .action-btn.delete:hover {
-    background: rgba(180, 60, 60, 0.3) !important;
-    transform: scale(1.05);
-}
-// В функцию addScrollStyles() добавьте:
-.action-buttons .delete-btn {
-    background: rgba(180, 60, 60, 0.2) !important;
-    border: 1px solid #b43c3c !important;
-    color: #b43c3c !important;
-    transition: all 0.2s;
-    cursor: pointer;
-}
-
-.action-buttons .delete-btn:hover {
-    background: rgba(180, 60, 60, 0.4) !important;
-    border-color: #ff4d4d !important;
-    color: #ff4d4d !important;
-    transform: scale(1.05);
-}
-
-.action-buttons .delete-btn:active {
-    transform: scale(0.95);
-}
-    // Добавьте в addScrollStyles():
-/* Кнопка удаления всех пользователей */
-.btn-delete-all {
-    background: linear-gradient(145deg, rgba(180, 60, 60, 0.2), rgba(160, 50, 50, 0.1)) !important;
-    border: 2px solid #b43c3c !important;
-    color: #b43c3c !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.5px;
-    transition: all 0.3s;
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-delete-all:hover {
-    background: linear-gradient(145deg, rgba(180, 60, 60, 0.3), rgba(160, 50, 50, 0.2)) !important;
-    border-color: #ff4d4d !important;
-    color: #ff4d4d !important;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(180, 60, 60, 0.3);
-}
-
-.btn-delete-all:active {
-    transform: translateY(0);
-}
-
-.btn-delete-all::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    transition: left 0.5s;
-}
-
-.btn-delete-all:hover::before {
-    left: 100%;
-}
-
-/* Модальное окно удаления всех */
-#delete-all-confirmation:focus {
-    border-color: #b43c3c;
-    box-shadow: 0 0 0 2px rgba(180, 60, 60, 0.2);
-}
-        `;
+        style.textContent = `.scrollable-container{overflow:visible;overflow-x:hidden;padding-right:10px}.scrollable-container::-webkit-scrollbar{width:8px}.scrollable-container::-webkit-scrollbar-track{background:#1e201c;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb{background:#4a4a3a;border-radius:4px}.scrollable-container::-webkit-scrollbar-thumb:hover{background:#5a5a4a}.table-container thead{position:sticky;top:0;background:#1e201c;z-index:10;box-shadow:0 2px 5px rgba(0,0,0,0.3)}.report-form-scrollable{display:flex;flex-direction:column;height:100%}.report-creation-container{flex:1;overflow-y:auto;padding-right:10px}.form-container.with-scroll{display:flex;flex-direction:column;height:auto;overflow:visible}.form-container.with-scroll>.table-container{flex:1;min-height:0}.scroll-btn{width:40px;height:40px;background:rgba(30,32,28,0.9);border:1px solid #4a4a3a;color:#8f9779;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all 0.3s;position:fixed;z-index:1000}.scroll-btn:hover{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;transform:scale(1.1)}#scroll-to-top{bottom:70px;right:20px}#scroll-to-bottom{bottom:20px;right:20px}.pagination-container{display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;padding:8px;width:100%;}.pagination-btn{padding:6px 12px;background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;cursor:pointer;font-size:0.85rem;transition:all 0.2s;border-radius:3px;min-width:34px;height:34px;display:flex;align-items:center;justify-content:center;}.pagination-btn:hover{background:rgba(60,62,56,0.8);border-color:#8f9779;color:#c0b070}.pagination-btn.active{background:rgba(192,176,112,0.2);border-color:#c0b070;color:#c0b070;font-weight:bold}.pagination-btn:disabled{opacity:0.5;cursor:not-allowed}.page-info{color:#8f9779;font-size:0.85rem;margin:0 15px;white-space:nowrap;}.items-per-page-selector{display:flex;align-items:center;gap:8px;color:#8f9779;font-size:0.85rem;}.items-per-page-selector select{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;color:#8f9779;padding:4px 8px;border-radius:3px;font-size:0.85rem;}.reports-container{display:flex;flex-direction:column;gap:12px;padding:5px;}.report-card{background:rgba(40,42,36,0.8);border:1px solid #4a4a3a;border-radius:4px;padding:15px;transition:all 0.2s;}.report-card:hover{border-color:#5a5a4a;background:rgba(40,42,36,0.9;}#login-error{position:relative;z-index:10;margin:15px 0}.login-error-box{background:rgba(30,32,28,0.9);border:1px solid;border-radius:4px;padding:12px 15px;color:#8f9779;font-size:0.9rem;display:flex;align-items:flex-start;gap:10px;animation:fadeIn 0.3s ease;box-shadow:0 4px 12px rgba(0,0,0,0.3);backdrop-filter:blur(5px)}.notification{position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px 20px;border-radius:4px;color:#1e201c;font-weight:500;font-size:0.9rem;box-shadow:0 4px 12px rgba(0,0,0,0.3);transform:translateY(100px);opacity:0;transition:all 0.3s ease;max-width:350px;backdrop-filter:blur(5px)}.notification.show{transform:translateY(0);opacity:1}.notification.info{background:rgba(192,176,112,0.9);border:1px solid #c0b070}.notification.success{background:rgba(140,180,60,0.9);border:1px solid #8cb43c}.notification.warning{background:rgba(192,176,112,0.9);border:1px solid #c0b070}.notification.error{background:rgba(180,60,60,0.9);border:1px solid #b43c3c}@keyframes fadeIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}@keyframes slideIn{from{transform:translateY(100px);opacity:0}to{transform:translateY(0);opacity:1}}.action-buttons .action-btn.delete,.action-buttons .delete-btn{background:rgba(180,60,60,0.2)!important;border:1px solid #b43c3c!important;color:#b43c3c!important;transition:all 0.2s}.delete-btn:hover{background:rgba(180,60,60,0.4)!important;border-color:#ff4d4d!important;color:#ff4d4d!important;transform:scale(1.05)}.btn-delete-all{background:linear-gradient(145deg,rgba(180,60,60,0.2),rgba(160,50,50,0.1))!important;border:2px solid #b43c3c!important;color:#b43c3c!important;font-weight:600!important;letter-spacing:0.5px;transition:all 0.3s;position:relative;overflow:hidden}.btn-delete-all:hover{background:linear-gradient(145deg,rgba(180,60,60,0.3),rgba(160,50,50,0.2))!important;border-color:#ff4d4d!important;color:#ff4d4d!important;transform:translateY(-2px);box-shadow:0 5px 15px rgba(180,60,60,0.3)}.btn-delete-all::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);transition:left 0.5s}.btn-delete-all:hover::before{left:100%}#delete-all-confirmation:focus{border-color:#b43c3c;box-shadow:0 0 0 2px rgba(180,60,60,0.2)}`;
         document.head.appendChild(style);
     }
-}
-function addScrollButtons() {
+};
+
+const addScrollButtons = () => {
     if (!document.getElementById('scroll-buttons')) {
         document.body.insertAdjacentHTML('beforeend', `<div id="scroll-buttons"><button id="scroll-to-top" class="scroll-btn" style="display:none"><i class="fas fa-arrow-up"></i></button><button id="scroll-to-bottom" class="scroll-btn"><i class="fas fa-arrow-down"></i></button></div>`);
         document.getElementById('scroll-to-top').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
         document.getElementById('scroll-to-bottom').addEventListener('click', () => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }));
         window.addEventListener('scroll', handleScroll);
     }
-}
+};
 
-function handleScroll() {
+const handleScroll = () => {
     const scrollTopBtn = document.getElementById('scroll-to-top'), scrollBottomBtn = document.getElementById('scroll-to-bottom');
     if (scrollTopBtn) scrollTopBtn.style.display = window.scrollY > 200 ? 'flex' : 'none';
     if (scrollBottomBtn) scrollBottomBtn.style.display = window.scrollY + window.innerHeight >= document.body.scrollHeight - 100 ? 'none' : 'flex';
-}
+};
 
-function renderPagination(containerId, currentPage, totalPages, callback) {
+/* ===== ПАГИНАЦИЯ ===== */
+const renderPagination = (containerId, currentPage, totalPages, callback) => {
     const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    // Если всего 1 страница - не показываем пагинацию
-    if (totalPages <= 1) {
-        container.innerHTML = '<div style="color: #8f9779; font-size: 0.85rem;">Страница 1 из 1</div>';
+    if (!container || totalPages <= 1) {
+        if (container) container.innerHTML = '<div style="color: #8f9779; font-size: 0.85rem;">Страница 1 из 1</div>';
         return;
     }
     
     let html = `<div class="pagination-container">`;
+    if (currentPage > 1) html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница"><i class="fas fa-chevron-left"></i></button>`;
+    else html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-chevron-left"></i></button>`;
     
-    // Кнопка "Назад"
-    if (currentPage > 1) {
-        html += `<button onclick="${callback}(${currentPage - 1})" class="pagination-btn" title="Предыдущая страница">
-                    <i class="fas fa-chevron-left"></i>
-                 </button>`;
-    } else {
-        html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                    <i class="fas fa-chevron-left"></i>
-                 </button>`;
-    }
-    
-    // Первая страница
     if (currentPage > 3) {
         html += `<button onclick="${callback}(1)" class="pagination-btn">1</button>`;
         if (currentPage > 4) html += `<span style="color: #8f9779; padding: 0 5px;">...</span>`;
     }
     
-    // Страницы вокруг текущей
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
+    const startPage = Math.max(1, currentPage - 2), endPage = Math.min(totalPages, currentPage + 2);
+    for (let i = startPage; i <= endPage; i++) html += `<button onclick="${callback}(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">${i}</button>`;
     
-    for (let i = startPage; i <= endPage; i++) {
-        html += `<button onclick="${callback}(${i})" class="pagination-btn ${i === currentPage ? 'active' : ''}">${i}</button>`;
-    }
-    
-    // Последняя страница
     if (currentPage < totalPages - 2) {
         if (currentPage < totalPages - 3) html += `<span style="color: #8f9779; padding: 0 5px;">...</span>`;
         html += `<button onclick="${callback}(${totalPages})" class="pagination-btn">${totalPages}</button>`;
     }
     
-    // Кнопка "Вперед"
-    if (currentPage < totalPages) {
-        html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница">
-                    <i class="fas fa-chevron-right"></i>
-                 </button>`;
-    } else {
-        html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                    <i class="fas fa-chevron-right"></i>
-                 </button>`;
-    }
+    if (currentPage < totalPages) html += `<button onclick="${callback}(${currentPage + 1})" class="pagination-btn" title="Следующая страница"><i class="fas fa-chevron-right"></i></button>`;
+    else html += `<button class="pagination-btn" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-chevron-right"></i></button>`;
     
-    // Информация о странице
-    html += `<div class="page-info">Страница ${currentPage} из ${totalPages}</div>`;
-    
-    html += `</div>`;
-    
+    html += `<div class="page-info">Страница ${currentPage} из ${totalPages}</div></div>`;
     container.innerHTML = html;
-}
-/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
-/* ===== ФУНКЦИЯ ДЛЯ ИЗМЕНЕНИЯ КОЛИЧЕСТВА ЭЛЕМЕНТОВ НА СТРАНИЦЕ ===== */
-function changeItemsPerPage(callback, value) {
+};
+
+window.changeItemsPerPage = (callback, value) => {
     PAGINATION_CONFIG.itemsPerPage = parseInt(value);
-    
-    if (callback === 'renderReportsWithPagination') {
-        renderReportsWithPagination(1);
-    } else if (callback === 'renderUsersWithPagination') {
-        renderUsersWithPagination(1);
-    } else if (callback === 'renderMLKListPaginated') {
-        renderMLKListPaginated(1);
-    } else if (callback === 'renderWhitelistWithPagination') {
-        renderWhitelistWithPagination(1);
-    } else if (callback === 'renderBansWithPagination') {
-        renderBansWithPagination(1);
-    } else if (callback === 'renderIPStatsWithPagination') {
-        renderIPStatsWithPagination(1);
-    }
-}
+    if (callback === 'renderReportsWithPagination') renderReportsWithPagination(1);
+    else if (callback === 'renderUsersWithPagination') renderUsersWithPagination(1);
+    else if (callback === 'renderMLKListPaginated') renderMLKListPaginated(1);
+    else if (callback === 'renderWhitelistWithPagination') renderWhitelistWithPagination(1);
+    else if (callback === 'renderBansWithPagination') renderBansWithPagination(1);
+    else if (callback === 'renderIPStatsWithPagination') renderIPStatsWithPagination(1);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); addScrollButtons(); }, 500);
     window.addEventListener('resize', () => setTimeout(() => { setupAutoScroll(); adjustInterfaceHeights(); }, 100));
@@ -2334,27 +2037,18 @@ function isIPLocked(ip) {
 function completeLogin() {
     const loginScreen = document.getElementById("login-screen");
     const terminal = document.getElementById("terminal");
+    const tabsBar = document.getElementById('account-tabs-bar');
     
     console.log('=== COMPLETE LOGIN START ===');
-    console.log('Login screen found:', !!loginScreen);
-    console.log('Terminal found:', !!terminal);
     
     if (loginScreen && terminal) {
-        // ПРИМЕНЯЕМ CSS КЛАССЫ вместо прямого style
-        loginScreen.classList.add('hidden');
-        loginScreen.classList.remove('visible');
-        
-        terminal.classList.remove('hidden');
-        terminal.classList.add('visible');
-        
-        // Принудительно устанавливаем стили
+        // Скрываем экран входа
         loginScreen.style.display = 'none';
         loginScreen.style.visibility = 'hidden';
-        loginScreen.style.opacity = '0';
         
+        // Показываем терминал
         terminal.style.display = 'flex';
         terminal.style.visibility = 'visible';
-        terminal.style.opacity = '1';
         
         console.log('Screens switched');
         
@@ -2369,13 +2063,20 @@ function completeLogin() {
         
         localStorage.setItem('mlk_session', JSON.stringify(sessionData));
         
-        // Загружаем данные и инициализируем интерфейс
+        // Загружаем данные
         loadData(() => {
             console.log('Data loaded after login');
             
-            // Загружаем вкладки
+            // Загружаем сохраненные вкладки
             loadAccountTabsFromStorage();
+            
+            // Создаем/обновляем основную вкладку
             addMainAccountTab();
+            
+            // ПОКАЗЫВАЕМ ПАНЕЛЬ ВКЛАДОК (она должна быть видна с основной вкладкой)
+            if (tabsBar && accountTabs.length > 0) {
+                tabsBar.style.display = 'flex';
+            }
             
             // Настраиваем интерфейс
             setupSidebar();
@@ -2388,30 +2089,16 @@ function completeLogin() {
                 renderMLKScreen();
             }
             
-            // Принудительное обновление
+            // Обновляем интерфейс
             setTimeout(() => {
-                if (loginScreen.style.display !== 'none') {
-                    console.warn('Login screen still visible, forcing hide');
-                    loginScreen.style.display = 'none';
-                    loginScreen.style.visibility = 'hidden';
-                }
-                
-                if (terminal.style.display === 'none') {
-                    console.warn('Terminal hidden, forcing show');
-                    terminal.style.display = 'flex';
-                }
-                
                 adjustInterfaceHeights();
+                setupAutoScroll();
             }, 100);
         });
         
     } else {
         console.error('ERROR: Login screen or terminal not found');
-        console.log('Login screen:', loginScreen);
-        console.log('Terminal:', terminal);
     }
-    
-    console.log('=== COMPLETE LOGIN END ===');
 }
 
 /* ===== ФУНКЦИИ УПРАВЛЕНИЯ ВКЛАДКАМИ ===== */
@@ -3375,41 +3062,50 @@ function addMainAccountTab() {
     // Получаем доступы основного аккаунта
     const mainAccess = CURRENT_RANK?.access || RANKS.JUNIOR_CURATOR.access;
     
-    // Если уже есть таб основного аккаунта - обновляем его
+    // Ищем, есть ли уже вкладка основного аккаунта
     const existingMainIndex = accountTabs.findIndex(t => t.isMain);
+    
+    const mainTabData = {
+        id: 'main-' + CURRENT_STATIC_ID,
+        name: CURRENT_USER,
+        login: CURRENT_USER,
+        rankLevel: CURRENT_RANK?.level || null,
+        rankName: CURRENT_RANK?.name || null,
+        access: mainAccess,
+        createdAt: new Date().toLocaleString(),
+        isMinimized: false,
+        isMain: true,
+        isClosable: true, // ДОБАВЛЯЕМ ВОЗМОЖНОСТЬ ЗАКРЫТИЯ
+        data: {},
+        savedUserData: {
+            username: CURRENT_USER,
+            role: CURRENT_ROLE,
+            rankName: CURRENT_RANK?.name,
+            rankLevel: CURRENT_RANK?.level,
+            staticId: CURRENT_STATIC_ID
+        }
+    };
+    
     if (existingMainIndex !== -1) {
-        accountTabs[existingMainIndex] = {
-            id: 'main-' + Date.now(),
-            name: CURRENT_USER,
-            login: CURRENT_USER,
-            rankLevel: CURRENT_RANK?.level || null,
-            rankName: CURRENT_RANK?.name || null,
-            access: mainAccess,
-            createdAt: new Date().toLocaleString(),
-            isMinimized: false,
-            isMain: true,
-            data: {}
-        };
+        // Обновляем существующую основную вкладку
+        accountTabs[existingMainIndex] = mainTabData;
+        console.log('Обновлена основная вкладка:', mainTabData.name);
     } else {
-        // Создаем новый основной таб
-        const mainTab = {
-            id: 'main-' + Date.now(),
-            name: CURRENT_USER,
-            login: CURRENT_USER,
-            rankLevel: CURRENT_RANK?.level || null,
-            rankName: CURRENT_RANK?.name || null,
-            access: mainAccess,
-            createdAt: new Date().toLocaleString(),
-            isMinimized: false,
-            isMain: true,
-            data: {}
-        };
-        accountTabs.unshift(mainTab);
+        // Создаем новую основную вкладку и добавляем в начало
+        accountTabs.unshift(mainTabData);
+        console.log('Создана новая основная вкладка:', mainTabData.name);
     }
     
+    // Устанавливаем активной первую вкладку
     activeAccountTab = 0;
-    renderAccountTabs();
-    switchAccount(0);
+    
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
+    
+    console.log('Основная вкладка добавлена/обновлена:', {
+        totalTabs: accountTabs.length,
+        mainTab: mainTabData
+    });
 }
 
 function createAccountTab(accountName, accountLogin, rankLevel, access = null) {
@@ -3466,6 +3162,19 @@ function closeAccountTab(tabId) {
     if (index === -1) return;
     
     const tab = accountTabs[index];
+    const isMainTab = tab.isMain;
+    
+    // Подтверждение для закрытия основной вкладки
+    if (isMainTab) {
+        if (!confirm(`Закрыть основной аккаунт "${tab.name}"?\n\nЭто приведет к выходу из системы и показу экрана входа.`)) {
+            return;
+        }
+    } else {
+        if (!confirm(`Закрыть вкладку "${tab.name}"?`)) {
+            return;
+        }
+    }
+    
     accountTabs.splice(index, 1);
     
     // Если был активный таб, переключаемся на другой
@@ -3474,43 +3183,43 @@ function closeAccountTab(tabId) {
             activeAccountTab = Math.min(index, accountTabs.length - 1);
             switchAccount(activeAccountTab);
         } else {
-            activeAccountTab = 0;
-            // Если закрыли все вкладки - показываем пустой экран
-            const content = document.getElementById("content-body");
-            if (content) {
-                content.innerHTML = `
-                    <div class="empty-screen" style="
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        height: 100%;
-                        color: #8f9779;
-                        text-align: center;
-                        padding: 40px;
-                    ">
-                        <i class="fas fa-users" style="font-size: 4rem; margin-bottom: 20px; color: #4a4a3a;"></i>
-                        <h3 style="color: #c0b070; margin-bottom: 10px;">НЕТ АКТИВНЫХ АККАУНТОВ</h3>
-                        <p style="max-width: 400px; margin-bottom: 20px;">
-                            Чтобы начать работу, создайте новый аккаунт или переключитесь на основной аккаунт.
-                        </p>
-                        <button onclick="addMainAccountTab(); renderSystem();" class="btn-primary" style="margin-top: 20px;">
-                            <i class="fas fa-user"></i> ВЕРНУТЬСЯ К ОСНОВНОМУ АККАУНТУ
-                        </button>
-                    </div>
-                `;
+            // Если закрыли ВСЕ вкладки (включая основную)
+            if (isMainTab) {
+                // Выходим из системы
+                logout();
+                return;
+            } else {
+                // Переключаемся на основную вкладку
+                const mainIndex = accountTabs.findIndex(t => t.isMain);
+                if (mainIndex !== -1) {
+                    activeAccountTab = mainIndex;
+                    switchAccount(mainIndex);
+                } else {
+                    // Если нет других вкладок - показываем экран входа
+                    logout();
+                    return;
+                }
             }
-            
-            // Обновляем отображение в шапке
-            updateMainAccountDisplay();
         }
     }
     
+    // Сохраняем изменения
+    saveAccountTabsToStorage();
     renderAccountTabs();
-    saveAccountTabsToStorage(); // Сохраняем в localStorage
-    showNotification(`Аккаунт "${tab.name}" закрыт`, 'info');
+    
+    showNotification(isMainTab ? 
+        `Основной аккаунт "${tab.name}" закрыт. Выход из системы...` : 
+        `Аккаунт "${tab.name}" закрыт`, 
+        isMainTab ? 'warning' : 'info'
+    );
+    
+    // Если закрыли основной таб - сразу выходим
+    if (isMainTab) {
+        setTimeout(() => {
+            logout();
+        }, 1500);
+    }
 }
-
 /* ===== ОЧИСТКА УСТАРЕВШИХ ВКЛАДОК ===== */
 
 function cleanupOldTabs() {
@@ -3673,55 +3382,6 @@ function addMainAccountTab() {
     });
 }
 
-function closeAccountTab(tabId) {
-    const index = accountTabs.findIndex(t => t.id === tabId);
-    if (index === -1) return;
-    
-    const tab = accountTabs[index];
-    accountTabs.splice(index, 1);
-    
-    // Если был активный таб, переключаемся на другой
-    if (index === activeAccountTab) {
-        if (accountTabs.length > 0) {
-            activeAccountTab = Math.min(index, accountTabs.length - 1);
-            switchAccount(activeAccountTab);
-        } else {
-            activeAccountTab = 0;
-            // Если закрыли все вкладки - показываем пустой экран
-            const content = document.getElementById("content-body");
-            if (content) {
-                content.innerHTML = `
-                    <div class="empty-screen" style="
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        height: 100%;
-                        color: #8f9779;
-                        text-align: center;
-                        padding: 40px;
-                    ">
-                        <i class="fas fa-users" style="font-size: 4rem; margin-bottom: 20px; color: #4a4a3a;"></i>
-                        <h3 style="color: #c0b070; margin-bottom: 10px;">НЕТ АКТИВНЫХ АККАУНТОВ</h3>
-                        <p style="max-width: 400px; margin-bottom: 20px;">
-                            Чтобы начать работу, создайте новый аккаунт или переключитесь на основной аккаунт.
-                        </p>
-                        <button onclick="addMainAccountTab(); renderSystem();" class="btn-primary" style="margin-top: 20px;">
-                            <i class="fas fa-user"></i> ВЕРНУТЬСЯ К ОСНОВНОМУ АККАУНТУ
-                        </button>
-                    </div>
-                `;
-            }
-            
-            // Обновляем отображение в шапке
-            updateMainAccountDisplay();
-        }
-    }
-    
-    renderAccountTabs();
-    showNotification(`Аккаунт "${tab.name}" закрыт`, 'info');
-}
-
 function renderAccountTabs() {
     const tabsList = document.getElementById('tabs-list');
     const tabsBar = document.getElementById('account-tabs-bar');
@@ -3733,27 +3393,45 @@ function renderAccountTabs() {
     accountTabs.forEach((tab, index) => {
         const tabEl = document.createElement('div');
         tabEl.className = 'account-tab' + (index === activeAccountTab ? ' active' : '');
+        
+        // Определяем иконку для вкладки
+        let icon = 'fa-user';
+        if (tab.isMain) icon = 'fa-home';
+        if (tab.isMinimized) icon = 'fa-window-minimize';
+        
         tabEl.innerHTML = `
             <span class="tab-icon">
-                <i class="fas ${tab.isMinimized ? 'fa-window-minimize' : (tab.isMain ? 'fa-home' : 'fa-user')}"></i>
+                <i class="fas ${icon}"></i>
             </span>
-            <span class="tab-name">${tab.name}</span>
+            <span class="tab-name">${tab.name}${tab.isMain ? ' (ОСНОВНОЙ)' : ''}</span>
             ${tab.rankName ? `<span class="tab-rank" style="font-size: 0.7rem; color: #8cb43c;">${tab.rankName}</span>` : ''}
             <button class="tab-minimize" onclick="event.stopPropagation(); minimizeAccountTab('${tab.id}')" title="Свернуть/развернуть">
                 ${tab.isMinimized ? '▢' : '▁'}
             </button>
-            ${!tab.isMain ? `<button class="tab-close" onclick="event.stopPropagation(); closeAccountTab('${tab.id}')" title="Закрыть">×</button>` : ''}
+            ${tab.isClosable !== false ? `
+                <button class="tab-close" onclick="event.stopPropagation(); closeAccountTab('${tab.id}')" title="Закрыть">
+                    ×
+                </button>
+            ` : ''}
         `;
+        
         tabEl.addEventListener('click', () => switchAccount(index));
         tabsList.appendChild(tabEl);
     });
     
-    // Показываем панель вкладок если есть хотя бы один таб
+    // ПОКАЗЫВАЕМ панель вкладок всегда, если есть хотя бы один таб
     if (tabsBar) {
         tabsBar.style.display = accountTabs.length > 0 ? 'flex' : 'none';
+        
+        // Автоматически прокручиваем к активной вкладке
+        setTimeout(() => {
+            const activeTab = tabsList.querySelector('.account-tab.active');
+            if (activeTab) {
+                activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }, 100);
     }
 }
-
 // Инициализация обработчиков событий при загрузке
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== DOM LOADED ===');
@@ -3774,7 +3452,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setInterval(updateTime, 1000);
     updateTime();
     
-    // ВАЖНО: Инициализируем отображение по умолчанию
+    // Инициализируем отображение по умолчанию
     const loginScreen = document.getElementById("login-screen");
     const terminal = document.getElementById("terminal");
     
@@ -3808,9 +3486,17 @@ document.addEventListener('DOMContentLoaded', function() {
         loadData(() => {
             console.log('Data loaded after session restore');
             
-            // Загружаем вкладки
+            // Загружаем сохраненные вкладки
             loadAccountTabsFromStorage();
+            
+            // Создаем основную вкладку
             addMainAccountTab();
+            
+            // ПОКАЗЫВАЕМ ПАНЕЛЬ ВКЛАДОК СРАЗУ
+            const tabsBar = document.getElementById('account-tabs-bar');
+            if (tabsBar && accountTabs.length > 0) {
+                tabsBar.style.display = 'flex';
+            }
             
             // Настраиваем интерфейс
             setupSidebar();
@@ -4282,7 +3968,7 @@ function setupSidebar() {
     // Загружаем настройки пользователя
     loadUserSettings();
     
-    // Добавляем аватар в сайдбар (только один раз, не дублируем при повторном входе)
+    // Добавляем аватар в сайдбар
     const userInfo = document.querySelector('.user-terminal .display-line:nth-child(2)');
     const avatarLine = document.querySelector('.user-terminal .display-line[data-avatar="true"]');
     if (userInfo && !avatarLine) {
@@ -4307,7 +3993,7 @@ function setupSidebar() {
     addNavButton(navMenu, 'fas fa-user-circle', 'МОЙ ПРОФИЛЬ', () => {
         renderProfile();
         updateTitleAndPrompt('МОЙ ПРОФИЛЬ', 'НАСТРОЙКА ПРОФИЛЯ ПОЛЬЗОВАТЕЛЯ');
-    }, 'profile', true); // data-access="profile", always-visible=true
+    }, 'profile', true);
     
     // Пароль создателя (только для создателя)
     if (CURRENT_USER.toLowerCase() === "tihiy") {
@@ -4385,12 +4071,13 @@ function setupSidebar() {
         }, 'all_reports', false);
     }
     
-    // В конце функции setupSidebar(), перед logoutBtn, добавьте:
-if (accountTabs.length > 1) {
-    addNavButton(navMenu, 'fas fa-layer-group', 'УПРАВЛЕНИЕ ВКЛАДКАМИ', () => {
-        manageAccountTabs();
-    }, null, false);
-}
+    // УПРАВЛЕНИЕ ВКЛАДКАМИ - УБИРАЕМ ЭТОТ ПУНКТ
+    // Добавляем кнопку управления вкладками только если есть дополнительные вкладки
+    if (accountTabs.length > 1) {
+        addNavButton(navMenu, 'fas fa-layer-group', 'УПРАВЛЕНИЕ ВКЛАДКАМИ', () => {
+            manageAccountTabs();
+        }, null, false);
+    }
     
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) logoutBtn.onclick = logout;
@@ -4407,7 +4094,6 @@ if (accountTabs.length > 1) {
         } 
     }, 100);
 }
-
 /* ===== ФУНКЦИЯ ДЛЯ СОЗДАНИЯ ЗАГОЛОВКОВ КАТЕГОРИЙ ===== */
 function addCategoryHeader(container, title, icon = 'fa-folder') {
     const header = document.createElement('div');
@@ -4468,32 +4154,25 @@ function addNavButton(container, icon, text, onClick, dataAccess = null, alwaysV
     container.appendChild(button);
 }
 window.logout = function logout() {
-    console.log('Logout called, saving tabs before logout...');
+    console.log('Logout called');
     
-    // Сохраняем ВСЕ текущие вкладки
-    saveAccountTabsToStorage();
-    
-    console.log('Tabs saved to localStorage:', {
-        totalTabs: accountTabs.length,
-        tabs: accountTabs.map(t => ({ name: t.name, isMain: t.isMain }))
-    });
-    
-    // Очищаем текущие вкладки в памяти
-    accountTabs = [];
-    activeAccountTab = 0;
-    
-    // Очищаем данные сессии
+    // Очищаем все данные сессии
     CURRENT_ROLE = null;
     CURRENT_USER = null;
     CURRENT_RANK = null;
     CURRENT_STATIC_ID = null;
     localStorage.removeItem('mlk_session');
     
+    // Очищаем ВСЕ вкладки
+    accountTabs = [];
+    activeAccountTab = 0;
+    saveAccountTabsToStorage();
+    
     const terminal = document.getElementById('terminal');
     const loginScreen = document.getElementById('login-screen');
     const tabsBar = document.getElementById('account-tabs-bar');
     
-    // Прячем терминал, показываем экран входа
+    // Прячем терминал и панель вкладок, показываем экран входа
     if (terminal && loginScreen) { 
         terminal.style.display = 'none'; 
         loginScreen.style.display = 'flex'; 
@@ -4517,7 +4196,19 @@ window.logout = function logout() {
     // Сбрасываем активные кнопки навигации
     document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
     
-    showNotification("Сессия завершена. Вкладки сохранены.", "info");
+    // Обновляем заголовок экрана входа
+    const loginTitle = document.querySelector('.zone-title');
+    if (loginTitle) {
+        loginTitle.innerHTML = `<span class="title-part">СИСТЕМА</span><span class="title-part">ОТЧЕТОВ</span>`;
+    }
+    
+    // Обновляем предупреждение
+    const loginWarning = document.querySelector('.login-warning');
+    if (loginWarning) {
+        loginWarning.innerHTML = `<i class="fas fa-terminal"></i><span>ВХОД В СИСТЕМУ ОТЧЕТОВ ЗОНЫ</span>`;
+    }
+    
+    showNotification("Сессия завершена", "info");
 }
 
 /* ===== УВЕДОМЛЕНИЯ ===== */
@@ -7926,12 +7617,14 @@ function returnToMainAccount() {
     showNotification('Возвращено к основному аккаунту', 'info');
 }
 
-function showCreateAccountModal() {
-    let modal = document.getElementById('create-account-modal');
+window.showCreateAccountModal = function() {
+    let modal = document.getElementById("create-account-modal");
+    
+    // Если модальное окно не существует, создаем его
     if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'create-account-modal';
-        modal.className = 'create-account-modal';
+        modal = document.createElement("div");
+        modal.id = "create-account-modal";
+        modal.className = "create-account-modal";
         modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">Создать новый аккаунт</div>
@@ -7954,15 +7647,65 @@ function showCreateAccountModal() {
         `;
         document.body.appendChild(modal);
     }
-    modal.classList.add('show');
-    const focusEl = document.getElementById('new-account-login');
-    if (focusEl) focusEl.focus();
-}
+    
+    // Всегда сбрасываем поля формы при открытии
+    const passwordInput = document.getElementById("new-account-password");
+    const rankSelect = document.getElementById("new-account-rank");
+    
+    if (passwordInput) passwordInput.value = "";
+    if (rankSelect) rankSelect.value = "1";
+    
+    // Показываем модальное окно
+    modal.classList.add("show");
+    modal.style.display = "flex";
+    
+    // Фокусируемся на поле ввода логина
+    if (loginInput) {
+        setTimeout(() => loginInput.focus(), 100);
+    }
+};
 
-function closeCreateAccountModal() {
+// Добавьте это в ваш существующий код где-нибудь после определения других функций
+window.closeCreateAccountModal = function() {
     const modal = document.getElementById('create-account-modal');
-    if (modal) modal.classList.remove('show');
-}
+    if (modal) {
+        modal.classList.remove('show');
+        
+        // Используем setTimeout чтобы анимация успела отработать
+        setTimeout(() => {
+            modal.style.display = 'none';
+            
+            // Очищаем поля формы
+            const loginInput = document.getElementById('new-account-login');
+            const passwordInput = document.getElementById('new-account-password');
+            const rankSelect = document.getElementById('new-account-rank');
+            
+            if (loginInput) loginInput.value = '';
+            if (passwordInput) passwordInput.value = '';
+            if (rankSelect) rankSelect.value = '1';
+        }, 300); // Время должно соответствовать CSS transition
+    }
+};
+
+// Также добавьте функцию для закрытия модального окна по нажатию на фон
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('create-account-modal');
+    if (modal && modal.classList.contains('show')) {
+        if (e.target === modal) {
+            closeCreateAccountModal();
+        }
+    }
+});
+
+// Закрытие по Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('create-account-modal');
+        if (modal && modal.classList.contains('show')) {
+            closeCreateAccountModal();
+        }
+    }
+});
 
 window.confirmCreateAccount = async function() {
     const loginEl = document.getElementById('new-account-login');
